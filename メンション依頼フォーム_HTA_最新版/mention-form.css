@@ -961,13 +961,13 @@ select:focus{
     width:100%;
 }
 
-/* 4～6名目はカードを拡張せず、右側に浮かせて表示する。 */
+/* 4～8名目はカードを拡張せず、右側に浮かせて表示する。 */
 .proxy-ca-float-panel{
     position:absolute;
     z-index:1300;
     left:174px;
     top:-2px;
-    width:198px;
+    width:186px;
     padding:12px;
     border:1px solid #cdbbd9;
     border-radius:9px;
@@ -981,12 +981,13 @@ select:focus{
     line-height:24px;
     margin-bottom:8px;
     color:#684f73;
-    font-size:13px;
+    font-size:15px;
     font-weight:bold;
     text-align:left;
 }
 
 .proxy-ca-float-panel input[type="text"]{
+    display:block;
     width:100%;
 }
 
@@ -1039,7 +1040,7 @@ select:focus{
 /* 見出しと中心を揃え、パネル右端にも入力欄と同じ余白を確保。 */
 .proxy-ca-float-toggle.proxy-ca-float-open{
     top:11px;
-    left:335px;
+    left:323px;
     right:auto;
     width:24px;
     height:24px;

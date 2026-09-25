@@ -36,6 +36,11 @@
         "RequestID"
     ];
 
+    // Eight-name schema; keep the six-name schema unchanged for existing Pending files.
+    var HEADER_PROXY8 = HEADER_LATEST.slice(0, 13).concat(
+        ["\u4ee3\u7406CA7", "\u4ee3\u7406CA8"], HEADER_LATEST.slice(13)
+    );
+
     // Previous v28.23 schema retained so already-created 16-column Pending files can replay.
     var HEADER_V2823 = [
         "\u9001\u4fe1\u65e5\u6642",
@@ -727,6 +732,9 @@
         }
 
         // Rollout-day safety: never mix schemas in one CSV.
+        if (schema === "proxy8") {
+            return fso.BuildPath(folder, safeBase + "_" + dateKey + "_proxy8.csv");
+        }
         if (schema === "latest") {
             return fso.BuildPath(folder, safeBase + "_" + dateKey + "_proxy6.csv");
         }
@@ -802,6 +810,7 @@
 
 
     function detectHeader(row) {
+        if (headerMatches(row, HEADER_PROXY8)) { return "proxy8"; }
         if (headerMatches(row, HEADER_LATEST)) { return "latest"; }
         if (headerMatches(row, HEADER_V2823)) { return "v2823"; }
         if (headerMatches(row, HEADER_V2822)) { return "v2822"; }
@@ -819,6 +828,7 @@
 
 
     function expectedColumnCount(schema) {
+        if (schema === "proxy8") { return HEADER_PROXY8.length; }
         if (schema === "latest") { return HEADER_LATEST.length; }
         if (schema === "v2823") { return HEADER_V2823.length; }
         if (schema === "v2822") { return HEADER_V2822.length; }
@@ -827,6 +837,7 @@
 
 
     function headerLine(schema) {
+        if (schema === "proxy8") { return HEADER_PROXY8.join(","); }
         if (schema === "latest") { return HEADER_LATEST.join(","); }
         if (schema === "v2823") { return HEADER_V2823.join(","); }
         if (schema === "v2822") { return HEADER_V2822.join(","); }
@@ -840,16 +851,17 @@
 
 
     function baseNameFromRow(row, schema) {
-        return String(row[(schema === "latest" || schema === "v2823") ? 1 : 2] || "");
+        return String(row[(schema === "proxy8" || schema === "latest" || schema === "v2823") ? 1 : 2] || "");
     }
 
 
     function requestNoFromRow(row, schema) {
-        return String(row[(schema === "latest" || schema === "v2823") ? 3 : 4] || "");
+        return String(row[(schema === "proxy8" || schema === "latest" || schema === "v2823") ? 3 : 4] || "");
     }
 
 
     function requestIdFromRow(row, schema) {
+        if (schema === "proxy8") { return String(row[20] || ""); }
         if (schema === "latest") { return String(row[18] || ""); }
         if (schema === "v2823") { return String(row[15] || ""); }
         return String(row[1] || "");
