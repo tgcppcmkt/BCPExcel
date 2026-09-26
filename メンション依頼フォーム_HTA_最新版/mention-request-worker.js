@@ -630,9 +630,7 @@
     function showSuccessPopup() {
         try {
             var message =
-                "\u30e1\u30f3\u30b7\u30e7\u30f3\u4f9d\u983c\u306e\u9001\u4fe1\u304c\u5b8c\u4e86\u3057\u307e\u3057\u305f\u3002" +
-                "\r\n\r\n" +
-                "\u5171\u6709CSV\u3078\u306e\u66f8\u304d\u8fbc\u307f\u3068\u78ba\u8a8d\u304c\u5b8c\u4e86\u3057\u3066\u3044\u307e\u3059\u3002";
+                "\u30e1\u30f3\u30b7\u30e7\u30f3\u4f9d\u983c\u304c\u5b8c\u4e86\u3057\u307e\u3057\u305f";
 
             // Timeout 0: keep the completion notice visible until OK is pressed.
             // 64      = MB_ICONINFORMATION
