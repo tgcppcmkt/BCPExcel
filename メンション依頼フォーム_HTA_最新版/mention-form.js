@@ -53,6 +53,11 @@ var TYPE_OPTIONS = [
     "⑮ その他の個別対応"
 ];
 
+var HOLIDAY_TYPE_OPTIONS = ["", "⑯", "⑰", "⑱"];
+var HOLIDAY_MASTER_NAME = "休日マスタ.txt";
+var typeCalendarDateKey = "";
+var typeCalendarTimer = null;
+
 var visibleRequestCount = 1;
 var layoutTimer = null;
 var revealTimer = null;
@@ -376,6 +381,7 @@ function initApp(){
 
     populateBases();
     populateTypes();
+    startTypeCalendarWatcher();
     setRequesterName();
 
     try{
@@ -470,16 +476,96 @@ function populateBases(){
 }
 
 function populateTypes(){
-    var i,j,sel,opt;
+    var today=new Date();
+    var calendar=getTypeCalendar(today);
+    var options=calendar.options;
+    var i,j,sel,opt,previousValue;
     for(i=1;i<=3;i++){
         sel=$("type"+i);
+        previousValue=sel.value;
         while(sel.options.length>0){ sel.remove(0); }
-        for(j=0;j<TYPE_OPTIONS.length;j++){
+        for(j=0;j<options.length;j++){
             opt=document.createElement("option");
-            opt.value=TYPE_OPTIONS[j];
-            opt.text=(TYPE_OPTIONS[j]==="" ? "選択してください" : TYPE_OPTIONS[j]);
+            opt.value=options[j];
+            opt.text=(options[j]==="" ? (calendar.error || "選択してください") : options[j]);
             sel.add(opt);
+            if(options[j]===previousValue){ sel.selectedIndex=j; }
         }
+        sel.title=calendar.error;
+    }
+    typeCalendarDateKey=formatDate(today);
+}
+
+function readHolidayMaster(){
+    var stream=null;
+    var error="休日マスタ.txtを読み込めません。ファイルを確認してください";
+    try{
+        var fso=new ActiveXObject("Scripting.FileSystemObject");
+        var path=fso.BuildPath(getCurrentFolderPath(),HOLIDAY_MASTER_NAME);
+        stream=new ActiveXObject("ADODB.Stream");
+        stream.Type=2;
+        stream.Charset="utf-8";
+        stream.Open();
+        stream.LoadFromFile(path);
+        var text=stream.ReadText(-1).replace(/^\uFEFF/,"");
+        stream.Close();
+        stream=null;
+
+        var dates={},years={};
+        var lines=text.split(/\r\n|\r|\n/);
+        var i,line,match,year,month,day,date;
+        for(i=0;i<lines.length;i++){
+            line=lines[i].replace(/^\s+|\s+$/g,"");
+            if(!line || line.charAt(0)==="#"){ continue; }
+            error="休日マスタ.txtの"+(i+1)+"行目の日付を確認してください";
+            match=/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})(?:\s+#.*)?$/.exec(line);
+            if(!match){ throw new Error(error); }
+            year=parseInt(match[1],10);
+            month=parseInt(match[2],10);
+            day=parseInt(match[3],10);
+            date=new Date(year,month-1,day);
+            if(date.getFullYear()!==year || date.getMonth()!==month-1 || date.getDate()!==day){
+                throw new Error(error);
+            }
+            dates[formatDate(date)]=true;
+            years[String(year)]=true;
+        }
+        return {dates:dates,years:years,error:""};
+    }catch(err){
+        try{ if(stream){ stream.Close(); } }catch(closeErr){}
+        return {dates:{},years:{},error:error};
+    }
+}
+
+function getTypeCalendar(date){
+    // 土日はマスタに依存せず、祝日は編集可能な日付一覧で判定する。
+    if(date.getDay()===0 || date.getDay()===6){
+        return {options:HOLIDAY_TYPE_OPTIONS,error:""};
+    }
+    var master=readHolidayMaster();
+    if(master.error){ return {options:[""],error:master.error}; }
+    if(!master.years[String(date.getFullYear())]){
+        return {options:[""],error:"休日マスタ.txtに"+date.getFullYear()+"年の祝日を追加してください"};
+    }
+    return {options:master.dates[formatDate(date)] ? HOLIDAY_TYPE_OPTIONS : TYPE_OPTIONS,error:""};
+}
+
+function refreshTypeCalendarIfDateChanged(){
+    if(typeCalendarDateKey!==formatDate(new Date())){ populateTypes(); }
+}
+
+function startTypeCalendarWatcher(){
+    if(typeCalendarTimer){ return; }
+    typeCalendarTimer=window.setInterval(refreshTypeCalendarIfDateChanged,60000);
+    // 日付をまたいだ直後の操作も、クリック・キー処理より先に更新する。
+    if(document.addEventListener){
+        document.addEventListener("click",refreshTypeCalendarIfDateChanged,true);
+        document.addEventListener("keydown",refreshTypeCalendarIfDateChanged,true);
+        window.addEventListener("focus",refreshTypeCalendarIfDateChanged,false);
+    }else if(document.attachEvent){
+        document.attachEvent("onmousedown",refreshTypeCalendarIfDateChanged);
+        document.attachEvent("onkeydown",refreshTypeCalendarIfDateChanged);
+        window.attachEvent("onfocus",refreshTypeCalendarIfDateChanged);
     }
 }
 
