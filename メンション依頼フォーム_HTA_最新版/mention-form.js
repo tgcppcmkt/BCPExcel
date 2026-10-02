@@ -498,19 +498,41 @@ function populateTypes(){
 
 function readHolidayMaster(){
     var stream=null;
+    var path="";
+    var stage="保存場所の確認";
+    var adoError="";
     var error="休日マスタ.txtを読み込めません。ファイルを確認してください";
     try{
         var fso=new ActiveXObject("Scripting.FileSystemObject");
-        var path=fso.BuildPath(getCurrentFolderPath(),HOLIDAY_MASTER_NAME);
-        stream=new ActiveXObject("ADODB.Stream");
-        stream.Type=2;
-        stream.Charset="utf-8";
-        stream.Open();
-        stream.LoadFromFile(path);
-        var text=stream.ReadText(-1).replace(/^\uFEFF/,"");
-        stream.Close();
-        stream=null;
+        path=fso.BuildPath(getCurrentFolderPath(),HOLIDAY_MASTER_NAME);
+        if(!fso.FileExists(path)){
+            return {dates:{},years:{},error:"休日マスタ.txtが見つかりません。確認先："+path};
+        }
+        var text="";
+        try{
+            stage="ADODBでの読込み";
+            stream=new ActiveXObject("ADODB.Stream");
+            stream.Type=2;
+            stream.Charset="utf-8";
+            stream.Open();
+            stream.LoadFromFile(path);
+            text=stream.ReadText(-1).replace(/^\uFEFF/,"");
+            stream.Close();
+            stream=null;
+        }catch(adoErr){
+            adoError=holidayMasterErrorDetail(adoErr);
+            try{ if(stream){ stream.Close(); } }catch(adoCloseErr){}
+            stream=null;
+            stage="FSOでの読込み";
+            // 日付・#コメントの区切りはASCIIなので、既存FSOでも判定できる。
+            // UTF-8 BOMのWindows日本語/欧文環境での表現だけを先頭から除去する。
+            stream=fso.OpenTextFile(path,1,false,0);
+            text=stream.ReadAll().replace(/^(?:\uFEFF|\u00EF\u00BB\u00BF|[\uFFFD?]\uFF7B\uFF7F)/,"");
+            stream.Close();
+            stream=null;
+        }
 
+        stage="日付の確認";
         var dates={},years={};
         var lines=text.split(/\r\n|\r|\n/);
         var i,line,match,year,month,day,date;
@@ -533,8 +555,21 @@ function readHolidayMaster(){
         return {dates:dates,years:years,error:""};
     }catch(err){
         try{ if(stream){ stream.Close(); } }catch(closeErr){}
+        if(stage!=="日付の確認"){
+            error="休日マスタ.txtを読み込めません（"+stage+"）。\n確認先："+(path || "取得できません")+
+                  "\nエラー："+holidayMasterErrorDetail(err);
+            if(adoError){ error+="\nADODBエラー："+adoError; }
+        }
         return {dates:{},years:{},error:error};
     }
+}
+
+function holidayMasterErrorDetail(err){
+    var code="";
+    if(err && typeof err.number==="number"){
+        code="0x"+(err.number>>>0).toString(16).toUpperCase()+" ";
+    }
+    return code+String(err && (err.description || err.message) || err);
 }
 
 function getTypeCalendar(date){
