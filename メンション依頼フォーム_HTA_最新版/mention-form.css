@@ -1298,3 +1298,8 @@ select:focus{
     word-wrap:normal;
     overflow:visible;
 }
+
+
+/* v28.31.2: the viewport can be smaller than three fixed-size request cards. */
+html { height:100%; overflow:auto; }
+body { min-height:100%; overflow:visible; }
