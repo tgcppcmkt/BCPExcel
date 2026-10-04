@@ -264,7 +264,7 @@
       .ca-link-button { padding-left: 8px; padding-right: 8px; margin-right: 8px; }
     }
     /* 説明表示を省き、既存の高さ計算でランキングへ空き領域を渡す。 */
-    .tagline, .prototype-badge, .support-heading-note, .summary-caption,
+    .tagline, .prototype-badge, .prototype-status, .support-heading-note, .summary-caption,
     .capacity-components, .capacity-timing, .capacity-controls-note, .detail-header,
     #rankingFooter, #pageFooter { display: none; }
   </style>
@@ -812,7 +812,7 @@
         }
       }
       if (!visible) {
-        html.push(staffData.length ? '<tr><td colspan="8" class="empty-state"><strong>該当する担当者・CAが見つかりませんでした</strong>名前を変えて検索するか、検索欄をクリアしてください。</td></tr>' : '<tr><td colspan="8" class="empty-state"><strong>データはまだ集計されていません</strong>「ログ集計」でCSVと振分表を取り込んでください。</td></tr>');
+        html.push(staffData.length ? '<tr><td colspan="8" class="empty-state"><strong>該当する担当者・CAが見つかりませんでした</strong>名前を変えて検索するか、検索欄をクリアしてください。</td></tr>' : '<tr><td colspan="8" class="empty-state"><strong>データはまだ集計されていません</strong>「ログ集計」ボタンで取り込んでください。</td></tr>');
       }
       replaceRankingRows(html.join(""), reused);
       tableDataVersion = dataVersion; detailSearchText = searchText;
@@ -1279,7 +1279,7 @@
     <div class="dashboard" id="dashboard"><div class="ranking-pane" id="rankingPane">
     <div class="ranking-card">
       <div class="ranking-heading">
-        <div class="heading-title"><h2>担当者ランキング</h2><p class="ranking-description">担当者名を選択すると、当日の担当CAを表示</p></div>
+        <div class="heading-title"><h2>担当者別ランキング</h2><p class="ranking-description">担当者名を選択すると、当日の担当CAを表示されます</p></div>
         <div class="heading-count">表示 <strong id="visibleStaff">0</strong> ／ <span id="staffTotal">0</span> 名 &nbsp;・&nbsp; 全 <span id="caTotal">0</span> CA</div>
       </div>
       <div class="toolbar">
