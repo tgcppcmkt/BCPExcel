@@ -521,7 +521,7 @@ var WorkloadShare = (function () {
     function timeText(date) { return date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate()) + " " + pad(date.getHours()) + ":" + pad(date.getMinutes()) + ":" + pad(date.getSeconds()); }
     function json(value) { return JSON.stringify(value).replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029"); }
     function own(object, name) { return Object.prototype.hasOwnProperty.call(object, name); }
-    function empty(day) { return { schemaVersion: 2, date: day, supports: [], commits: [], revision: 0, ids: {} }; }
+    function empty(day) { return { schemaVersion: 2, date: day, supports: [], commits: [], revision: 0, ids: {}, caChecks: [] }; }
     function legacyHeader(day) {
         return 'var WorkloadDaily = ' + json({ schemaVersion: 1, date: day, supports: [], commits: [] }) + ';\n' +
             'function WorkloadDailyAppend(record) {\n' +
@@ -548,6 +548,11 @@ var WorkloadShare = (function () {
             if (!row.completedAt && keyOf(row.organization, row.caName) === key) { result.push(row); }
         }
         return result;
+    }
+    function checked(state, key) {
+        var i, rows = state.caChecks || [];
+        for (i = 0; i < rows.length; i++) { if (keyOf(rows[i].organization, rows[i].caName) === key) { return rows[i]; } }
+        return null;
     }
     function apply(state, record) {
         var i, j, item, found, key, list;
@@ -586,6 +591,14 @@ var WorkloadShare = (function () {
                 for (j = 0; j < state.commits.length; j++) { if (state.commits[j] === found) { state.commits.splice(j, 1); break; } }
             }
         }
+        if (record.caChecks) {
+            if (Object.prototype.toString.call(record.caChecks) !== "[object Array]") { throw new Error("共有履歴のCAチェック情報が不正です。"); }
+            for (i = 0; i < record.caChecks.length; i++) {
+                item = record.caChecks[i]; validateIdentity(item); validateTime(item.checkedAt);
+                if (item.id !== record.id || checked(state, keyOf(item.organization, item.caName))) { throw new Error("共有履歴のCAチェックが重複しています。"); }
+                state.caChecks.push({ id: item.id, organization: item.organization, caName: item.caName, checkedAt: item.checkedAt });
+            }
+        }
         state.ids["@" + record.id] = true; state.revision++;
     }
     function parseLegacy(text, day) {
@@ -601,10 +614,12 @@ var WorkloadShare = (function () {
         return state;
     }
     function encode(state) {
-        var ids = [], id;
+        var ids = [], id, value;
         for (id in state.ids) { if (own(state.ids, id)) { ids.push(id.slice(1)); } }
-        return JSON.stringify({ schemaVersion: 2, date: state.date, supports: state.supports, commits: state.commits,
-            revision: state.revision, operations: ids }, null, 2) + "\n";
+        value = { schemaVersion: 2, date: state.date, supports: state.supports, commits: state.commits,
+            revision: state.revision, operations: ids };
+        if (state.caChecks && state.caChecks.length) { value.caChecks = state.caChecks; }
+        return JSON.stringify(value, null, 2) + "\n";
     }
     function parse(text, day) {
         var value, state = empty(day), i, row, ids = {}, id, arrayTag = "[object Array]";
@@ -626,6 +641,14 @@ var WorkloadShare = (function () {
             if (row.completedAt) { apply(state, { id: "f-" + i, supports: [row], commits: [] }); }
         }
         for (i = 0; i < value.commits.length; i++) { apply(state, { id: "c-" + i, supports: [], commits: [value.commits[i]] }); }
+        if (typeof value.caChecks !== "undefined") {
+            if (Object.prototype.toString.call(value.caChecks) !== arrayTag) { throw new Error("共有JSONのCAチェック情報が不正です。"); }
+            for (i = 0; i < value.caChecks.length; i++) {
+                row = value.caChecks[i]; validateIdentity(row); validateTime(row.checkedAt);
+                if (typeof row.id !== "string" || !own(ids, "@" + row.id) || checked(state, keyOf(row.organization, row.caName))) { throw new Error("共有JSONのCAチェックが不正です。"); }
+                state.caChecks.push({ id: row.id, organization: row.organization, caName: row.caName, checkedAt: row.checkedAt });
+            }
+        }
         state.ids = ids; state.revision = value.revision;
         return state;
     }
@@ -719,7 +742,11 @@ var WorkloadShare = (function () {
         var record = { id: id, supports: [], commits: [] }, key = keyOf(action.organization, action.caName), list = active(state, key), i, row, name = trim(action.supportName), stamp = timeText(now);
         validateIdentity(action);
         if (own(state.ids, "@" + id)) { return record; }
-        if (action.kind === "commit") {
+        if (action.kind === "check") {
+            if (checked(state, key)) { return record; }
+            if (committed(state, key)) { throw new Error("このCAはコミット済みです。先にコミットを取り消してください。"); }
+            record.caChecks = [{ id: id, organization: trim(action.organization), caName: trim(action.caName), checkedAt: stamp }];
+        } else if (action.kind === "commit") {
             if (committed(state, key)) { return record; }
             if (now.getHours() < 17) { throw new Error("コミットは17:00以降に行えます。"); }
             for (i = 0; i < list.length; i++) {
@@ -750,7 +777,7 @@ var WorkloadShare = (function () {
     }
     function persist(fso, path, lock, state, record) {
         var backup = join(lock, "before.json"), stage = join(lock, "after.json"), after, recovery, failure, recoveryError, publishing = false;
-        if (!record.supports.length && !record.commits.length && !(record.cancelCommits && record.cancelCommits.length)) { return state; }
+        if (!record.supports.length && !record.commits.length && !(record.cancelCommits && record.cancelCommits.length) && !(record.caChecks && record.caChecks.length)) { return state; }
         after = parse(encode(state), state.date); apply(after, record);
         fso.CopyFile(path, backup, false);
         try {
@@ -796,7 +823,7 @@ var WorkloadShare = (function () {
         if (!nativeMode()) {
             try {
                 state = lastState && lastState.date === day ? lastState : empty(day);
-                if (current.action) { record = makeRecord(state, current.action, current.id, new Date()); if (record.supports.length || record.commits.length || (record.cancelCommits && record.cancelCommits.length)) { apply(state, record); } }
+                if (current.action) { record = makeRecord(state, current.action, current.id, new Date()); if (record.supports.length || record.commits.length || (record.cancelCommits && record.cancelCommits.length) || (record.caChecks && record.caChecks.length)) { apply(state, record); } }
             } catch (previewError) { error = previewError; }
             finish(error, state); return;
         }
@@ -841,12 +868,73 @@ var WorkloadShare = (function () {
         request(null, null);
         pollTimer = window.setInterval(function () { if (!current && !queue.length) { request(null, null); } }, 3000);
     }
+    function pendingWrites() {
+        var jobs = [], i, job;
+        if (current && current.action) { jobs.push(current); }
+        for (i = 0; i < queue.length; i++) { if (queue[i].action) { jobs.push(queue[i]); } }
+        for (i = 0; i < jobs.length; i++) {
+            job = jobs[i]; jobs[i] = { id: job.id, date: job.date, action: job.action };
+        }
+        return jobs;
+    }
+    function handoffPendingWrites() {
+        var jobs = pendingWrites(), fso, root, worker, name, path, shell, executable;
+        if (!jobs.length) { return ""; }
+        if (!nativeMode()) { throw new Error("書き込みの引継ぎはWindowsのHTAで利用できます。"); }
+        fso = new ActiveXObject("Scripting.FileSystemObject"); root = rootFolder(fso);
+        worker = join(root, "workload-save-worker.hta");
+        name = "save-" + session + "-" + (++sequence).toString(36) + ".json"; path = join(root, name);
+        /* 操作IDを保った控えを作り、別プロセスの起動後だけ元の待機を止める。 */
+        create(fso, path, JSON.stringify({ schemaVersion: 1, jobs: jobs }, null, 2) + "\n");
+        JSON.parse(read(fso, path));
+        try {
+            if (!fso.FileExists(worker)) { throw new Error("保存継続用の workload-save-worker.hta を同じフォルダに配置してください。"); }
+            shell = new ActiveXObject("WScript.Shell");
+            executable = shell.ExpandEnvironmentStrings("%SystemRoot%\\System32\\mshta.exe");
+            if (/["\r\n]/.test(worker + executable)) { throw new Error("保存継続用のパスが不正です。"); }
+            shell.Run('"' + executable + '" "' + worker + '" --save ' + name, 0, false);
+        } catch (launchError) {
+            throw new Error("保存処理を引き継げません。フォームを閉じず、保存完了を待ってください。\n操作の控え：" + path + "\n" + (launchError.message || launchError.description || String(launchError)));
+        }
+        stop(); return path;
+    }
+    function resumePendingWrites(name, callback) {
+        var fso, root, path, value, i, job, ids = {}, left, ended = false;
+        stop();
+        if (!nativeMode() || !/^save-[a-z0-9-]+\.json$/i.test(name)) { callback(new Error("保存継続の指定が不正です。"), ""); return; }
+        fso = new ActiveXObject("Scripting.FileSystemObject"); root = rootFolder(fso); path = join(root, name);
+        try {
+            value = JSON.parse(read(fso, path));
+            if (!value || value.schemaVersion !== 1 || Object.prototype.toString.call(value.jobs) !== "[object Array]" || !value.jobs.length) { throw new Error("保留した操作の形式が不正です。"); }
+            for (i = 0; i < value.jobs.length; i++) {
+                job = value.jobs[i];
+                if (!job || typeof job.id !== "string" || !/^[a-z0-9-]+$/i.test(job.id) || own(ids, "@" + job.id) || typeof job.date !== "string" || !/^\d{8}$/.test(job.date) || !job.action || typeof job.action.kind !== "string" || !/^(add|finish|commit|cancelCommit|check)$/.test(job.action.kind)) { throw new Error("保留した操作が不正です。"); }
+                validateIdentity(job.action); ids["@" + job.id] = true;
+            }
+        } catch (readError) { callback(readError, path); return; }
+        left = value.jobs.length; stopped = false;
+        function completed(error) {
+            if (ended) { return; }
+            if (error) { ended = true; stop(); callback(error, path); return; }
+            if (--left) { return; }
+            ended = true; stop();
+            try { fso.DeleteFile(path, true); }
+            catch (cleanupError) { callback(new Error("共有保存は完了しましたが、操作の控えを削除できませんでした。\n" + (cleanupError.message || String(cleanupError))), path); return; }
+            callback(null, path);
+        }
+        for (i = 0; i < value.jobs.length; i++) {
+            job = value.jobs[i]; queue.push({ action: job.action, callback: completed, id: job.id, date: job.date, attempts: 0 });
+        }
+        pump();
+    }
     return {
         start: start, stop: stop, refresh: function () { request(null, null); },
+        hasPendingWrites: function () { return pendingWrites().length > 0; }, handoffPendingWrites: handoffPendingWrites, resumePendingWrites: resumePendingWrites,
+        checkCA: function (ca, callback) { request({ kind: "check", organization: ca.organization, caName: ca.name }, callback); },
         addSupport: function (ca, name, callback) { request({ kind: "add", organization: ca.organization, caName: ca.name, supportName: name }, callback); },
         finishSupport: function (ca, entryId, callback) { request({ kind: "finish", organization: ca.organization, caName: ca.name, entryId: entryId }, callback); },
         commitCA: function (ca, callback) { request({ kind: "commit", organization: ca.organization, caName: ca.name }, callback); },
         cancelCommitCA: function (ca, revision, callback) { request({ kind: "cancelCommit", organization: ca.organization, caName: ca.name, committedAt: ca.committedAt, revision: revision }, callback); },
-        keyOf: keyOf, dayKey: dayKey, activeForCA: active, committedForCA: committed, parseDay: parse, headerForDay: function (day) { return encode(empty(day)); }, parseLegacyDay: parseLegacy
+        keyOf: keyOf, dayKey: dayKey, activeForCA: active, committedForCA: committed, checkedForCA: checked, parseDay: parse, headerForDay: function (day) { return encode(empty(day)); }, parseLegacyDay: parseLegacy
     };
 }());

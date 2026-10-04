@@ -1,0 +1,34 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta http-equiv="X-UA-Compatible" content="IE=9" />
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>業務量モニター 共有保存</title>
+  <hta:application id="workloadSaveApplication" applicationname="WorkloadSaveWorker"
+    singleinstance="no" caption="no" sysmenu="no" scroll="no" showintaskbar="no"
+    maximizebutton="no" minimizebutton="no" windowstate="minimize" />
+  <script type="text/javascript" src="workload-main.js"></script>
+  <script type="text/javascript">
+    function saveError(error, path) {
+      var message = "フォームを閉じた後の共有保存で確認が必要です。\n操作の控えは削除していません。管理者に確認してください。\n" +
+        (path ? "操作の控え：" + path + "\n" : "") + (error.message || error.description || String(error));
+      try { new ActiveXObject("WScript.Shell").Popup(message, 0, "業務量モニター 保存エラー", 4112); }
+      catch (popupError) { window.alert(message); }
+    }
+    window.onload = function () {
+      var name = "", match;
+      try {
+        match = /\s--save\s+(save-[a-z0-9-]+\.json)(?:\s|$)/i.exec(document.getElementById("workloadSaveApplication").commandLine);
+        if (!match) { window.close(); return; }
+        name = match[1];
+        try { window.moveTo(-32000, -32000); window.resizeTo(1, 1); } catch (hiddenWindow) {}
+        WorkloadShare.resumePendingWrites(name, function (error, path) {
+          if (error) { saveError(error, path || name); }
+          window.close();
+        });
+      } catch (startError) { saveError(startError, name); window.close(); }
+    };
+  </script>
+</head>
+<body></body>
+</html>

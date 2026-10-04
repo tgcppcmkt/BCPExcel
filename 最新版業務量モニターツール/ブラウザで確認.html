@@ -78,6 +78,10 @@
     .ranking-description { margin: 0; color: #4e5d72; font-size: 11px; }
     .heading-count { width: 190px; text-align: right; color: #526178; font-size: 11px; }
     .heading-count strong { color: #4b5c74; font-weight: 700; }
+    .team-ca-check-summary { padding: 0 22px 12px; }
+    .team-ca-check-item { display: inline-block; width: 50%; padding: 3px 12px 3px 0; font-size: 11px; line-height: 20px; vertical-align: top; }
+    .team-ca-check-name { display: inline-block; width: 55%; color: #465873; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+    .team-ca-check-count { display: inline-block; width: 45%; color: #a83e53; white-space: nowrap; vertical-align: middle; }
     .toolbar { display: table; width: 100%; padding: 0 22px 16px; }
     .toolbar-left, .toolbar-right { display: table-cell; vertical-align: middle; }
     .toolbar-right { text-align: right; white-space: nowrap; }
@@ -127,6 +131,9 @@
     .staff-name { position: relative; padding: 4px 28px 4px 0; display: block; width: 100%; text-align: left; color: #33445d; background: transparent; border: 0; border-radius: 4px; font-size: 15px; font-weight: 700; line-height: 26px; }
     .staff-name:hover { color: #5848b8; }
     .ca-count { margin-left: 9px; color: #586780; font-size: 10px; font-weight: 600; }
+    .staff-ca-meta { display: inline-block; white-space: nowrap; vertical-align: middle; }
+    .staff-ca-check { display: inline-block; margin-left: 8px; color: #a83e53; font-size: 10px; font-weight: 700; line-height: 1.5; }
+    .staff-ca-check.checked { color: #2f7351; }
     .expand-indicator { position: absolute; right: 1px; top: 6px; width: 21px; height: 21px; border-radius: 5px; background: #f0f2f8; color: #617087; text-align: center; line-height: 20px; font-size: 15px; font-weight: 600; }
     .expanded .expand-indicator { background: #e8e3f8; color: #5945ac; }
     .metric-value { font-family: "Segoe UI", Meiryo, sans-serif; font-size: 18px; line-height: 1.3; font-weight: 700; color: #3d4f69; }
@@ -152,6 +159,11 @@
     .ca-table tr.committed td { background: #eceff3; color: #77808d; }
     .ca-table tr.committed .ca-name-label, .ca-table tr.committed .ca-organization, .ca-table tr.committed .ca-total { color: #77808d; }
     .ca-table tr.committed button:disabled { cursor: default; color: #838b96; background: #e5e8ed; border-color: #d1d7df; }
+    .ca-table tr.ca-unchecked td { background: #f4f6f9; }
+    .ca-table td.ca-check-cell { text-align: left; padding: 6px 4px; }
+    .ca-check-button { width: 100%; padding: 5px 2px; border: 1px solid #e5cbd0; border-radius: 5px; color: #a83e53; background: #fff7f8; font-size: 10px; line-height: 1.5; white-space: nowrap; }
+    .ca-check-button.checked, .ca-table tr.committed .ca-check-button.checked { color: #2f7351; border-color: #c9e0d2; background: #eff7f2; }
+    .ca-check-button:disabled { cursor: default; }
     .ca-commit-button:not(:disabled) { cursor: pointer; color: #60469a; background: #f8f5ff; }
     .ca-commit-button:not(:disabled):hover { background: #eee8fb; }
     .prototype-note.share-error { color: #a83e53; }
@@ -198,6 +210,7 @@
     .modal-button.confirm:hover { background: #523c9f; }
     .toast { position: fixed; bottom: 26px; right: 26px; display: none; z-index: 1100; max-width: 540px; padding: 11px 18px; border: 1px solid #dcd8ed; border-radius: 9px; color: #574674; background: #fdfcff; box-shadow: 0 5px 22px rgba(51, 44, 78, .12); font-size: 12px; }
     .toast.error { background: #fff9fa; border-color: #ead2d8; color: #973a51; }
+    .share-error-notice { display: none; position: fixed; right: 26px; bottom: 86px; z-index: 1101; max-width: 540px; max-height: 220px; overflow: auto; padding: 11px 18px; border: 1px solid #e4b8c0; border-radius: 9px; color: #973a51; background: #fff2f4; font-size: 12px; white-space: pre-line; word-wrap: break-word; }
     @media screen and (min-width: 1280px) {
       .dashboard { display: table; table-layout: fixed; }
       .ranking-pane, .overview-pane { display: table-cell; }
@@ -286,6 +299,7 @@
     var dataVersion = 0, tableDataVersion = -1, detailSearchText = "";
     var searchTimer = null, detailTimer = null, detailQueue = [], detailNeedsSize = false;
     var pinnedStaffRow = null, pinnedStaffDetail = null, pinnedStaffHTML = "";
+    var teamCheckHTML = "";
     var excludedAssignmentTypes = ["担当なし", "札幌担当", "新潟担当", "首都圏担当"];
 
     function byId(id) { return document.getElementById(id); }
@@ -388,6 +402,39 @@
       }
     }
     function teamNameOf(staff) { return trim(staff.team || "") || "未設定"; }
+    function uncheckedCountFor(staff) {
+      var count = 0, i;
+      for (i = 0; i < staff.cas.length; i++) { if (!staff.cas[i].checked) { count++; } }
+      return count;
+    }
+    function staffCheckHTML(staff) {
+      var checked = uncheckedCountFor(staff) === 0;
+      return '<span id="staff-check-' + staff.id + '" class="staff-ca-check' + (checked ? ' checked' : '') + '">' + (checked ? 'CAチェック済' : 'CAチェック未') + '</span>';
+    }
+    function renderCheckOverview() {
+      var i, staff, pending, label, checked, name, key, teams = [], counts = {}, html = [], next, changed;
+      var summary = byId("teamCheckSummary");
+      for (i = 0; i < staffData.length; i++) {
+        staff = staffData[i]; pending = uncheckedCountFor(staff); checked = pending === 0;
+        label = byId("staff-check-" + staff.id);
+        if (label && label.className !== "staff-ca-check" + (checked ? " checked" : "")) {
+          label.className = "staff-ca-check" + (checked ? " checked" : "");
+          setText(label, checked ? "CAチェック済" : "CAチェック未");
+        }
+        if (!pending) { continue; }
+        name = teamNameOf(staff); key = "@" + name;
+        if (!Object.prototype.hasOwnProperty.call(counts, key)) { teams.push(name); counts[key] = 0; }
+        counts[key] += pending;
+      }
+      for (i = 0; i < teams.length; i++) {
+        name = teams[i];
+        html.push('<span class="team-ca-check-item"><span class="team-ca-check-name" title="' + esc(name) + '">' + esc(name) + '</span><span class="team-ca-check-count">CAチェック未 <strong>' + format(counts["@" + name]) + '</strong> CA</span></span>');
+      }
+      next = html.join(""); changed = next !== teamCheckHTML;
+      if (changed) { summary.innerHTML = next; teamCheckHTML = next; }
+      summary.style.display = next ? "block" : "none";
+      return changed;
+    }
     function rankedStaff() {
       var result = [], i;
       for (i = 0; i < staffData.length; i++) {
@@ -477,10 +524,13 @@
       status.className = "prototype-note" + (!importBusy && sharedError ? " share-error" : "");
       setText(status, importBusy && importPhase ? importPhase : sharedError ? "共有状態を更新できません：" + sharedError :
         (shareWriteBusy ? "共有ファイルへ保存中…" : (staffData.length ? "" : "未集計 ／ サポート・コミットを共有")));
+      var notice = byId("shareErrorNotice");
+      setText(notice, sharedError ? "共有状態を更新できません。表示が最新でない可能性があります。\n" + sharedError : "");
+      notice.style.display = sharedError ? "block" : "none";
     }
     function projectShared(data) {
       var i, j, ca, key, list, mark, n, row, same, staff;
-      var active = {}, commits = {}, changes = { cas: [], counts: false, staffs: {} };
+      var active = {}, commits = {}, checks = {}, changes = { cas: [], counts: false, staffs: {}, rebuild: {} };
       /* 履歴は一度だけ組織＋CA名で索引化する。CAごとの全履歴走査を避ける。 */
       if (sharedSnapshot) {
         for (i = 0; i < sharedSnapshot.supports.length; i++) {
@@ -492,19 +542,24 @@
           row = sharedSnapshot.commits[i]; key = WorkloadShare.keyOf(row.organization, row.caName);
           if (!commits[key]) { commits[key] = row; }
         }
+        for (i = 0; i < (sharedSnapshot.caChecks || []).length; i++) {
+          row = sharedSnapshot.caChecks[i]; checks[WorkloadShare.keyOf(row.organization, row.caName)] = true;
+        }
       }
       for (i = 0; i < data.length; i++) {
         staff = data[i];
         for (j = 0; j < data[i].cas.length; j++) {
           ca = data[i].cas[j];
           ca.supportEntries = ca.supportEntries || []; ca.committedAt = ca.committedAt || "";
+          ca.checked = !!ca.checked;
           key = sharedSnapshot ? WorkloadShare.keyOf(ca.organization, ca.name) : "";
           list = active[key] || []; mark = commits[key];
-          same = (ca.committedAt || "") === (mark ? mark.committedAt : "") && ca.supports.length === list.length;
+          same = (ca.committedAt || "") === (mark ? mark.committedAt : "") && ca.supports.length === list.length && ca.checked === !!checks[key];
           for (n = 0; same && n < list.length; n++) {
             if (ca.supports[n] !== list[n].supportName || !ca.supportEntries || ca.supportEntries[n] !== list[n].id) { same = false; }
           }
           if (same) { continue; }
+          if (ca.checked !== !!checks[key]) { changes.rebuild["@" + ca.id] = true; }
           if ((ca.committedAt || "") !== (mark ? mark.committedAt : "")) {
             changes.counts = true; delete cachedTotals["@" + staff.id]; cachedGlobal = null;
           }
@@ -513,6 +568,7 @@
           ca.supports = []; ca.supportEntries = []; ca.committedAt = "";
           for (n = 0; n < list.length; n++) { ca.supports.push(list[n].supportName); ca.supportEntries.push(list[n].id); }
           if (mark) { ca.committedAt = mark.committedAt; }
+          ca.checked = !!checks[key];
         }
       }
       return changes;
@@ -528,8 +584,14 @@
       if (changes.counts) {
         for (i = 0; i < changes.cas.length; i++) { refreshCARow(changes.cas[i]); }
         renderSummary(); renderCapacity(); renderTable();
+        for (key in changes.staffs) {
+          if (Object.prototype.hasOwnProperty.call(changes.staffs, key)) { orderDetailRows(changes.staffs[key]); }
+        }
       } else {
-        for (i = 0; i < changes.cas.length; i++) { refreshSupports(changes.cas[i], true); }
+        for (i = 0; i < changes.cas.length; i++) {
+          if (changes.rebuild["@" + changes.cas[i].id]) { refreshCARow(changes.cas[i]); }
+          else { refreshSupports(changes.cas[i], true); }
+        }
         for (key in changes.staffs) {
           if (!Object.prototype.hasOwnProperty.call(changes.staffs, key)) { continue; }
           staff = changes.staffs[key]; label = byId("supportCount-" + staff.id);
@@ -537,6 +599,7 @@
         }
         if (force && !editing && byId("supportInput")) { renderTable(true); }
       }
+      if (renderCheckOverview()) { resizeRanking(); }
       list.scrollTop = scroll;
       target = focus && byId(focus); if (target && !target.disabled) { try { target.focus(); } catch (ignore) {} }
       refreshStaffPin();
@@ -589,6 +652,7 @@
       }
     }
     function closeImportSession() {
+      beforeClose(null, true);
       cancelDetailRender();
       if (searchTimer) { window.clearTimeout(searchTimer); searchTimer = null; }
       if (supportBlurTimer) { window.clearTimeout(supportBlurTimer); supportBlurTimer = null; }
@@ -596,6 +660,19 @@
       if (importPreparationTimer) { window.clearTimeout(importPreparationTimer); importPreparationTimer = null; }
       if (typeof WorkloadImport !== "undefined" && typeof WorkloadImport.releaseNativeExcel === "function") {
         WorkloadImport.releaseNativeExcel();
+      }
+    }
+    function beforeClose(e, unloading) {
+      if (typeof WorkloadShare === "undefined" || !WorkloadShare.hasPendingWrites()) { return; }
+      try { WorkloadShare.handoffPendingWrites(); }
+      catch (error) {
+        var message = "書き込みを引き継げませんでした。フォームを閉じず、保存完了を待ってください。\n" + (error.message || error.description || String(error));
+        if (unloading) {
+          try { new ActiveXObject("WScript.Shell").Popup(message, 0, "業務量モニター 保存エラー", 4112); }
+          catch (popupError) { window.alert(message); }
+        } else { window.alert(message); }
+        e = e || window.event; if (e) { e.returnValue = message; }
+        return message;
       }
     }
     function requestLogAggregate() {
@@ -649,7 +726,7 @@
       window.alert(message);
     }
     function supportHTML(ca) {
-      var html = [], slot, name, isEditing, lastClass, disabled = ca.committedAt ? ' disabled="disabled"' : "";
+      var html = [], slot, name, isEditing, lastClass, disabled = ca.committedAt || !ca.checked ? ' disabled="disabled"' : "";
       for (slot = 0; slot < 3; slot++) {
         lastClass = slot === 2 ? " last" : "";
         isEditing = editing && editing.caId === ca.id && editing.slot === slot;
@@ -679,26 +756,40 @@
       disabled = ca.committedAt ? ' disabled="disabled"' : "";
       unsorted = ca.committedAt ? 0 : ca.unsorted; unread = ca.committedAt ? 0 : ca.unread; flag = ca.committedAt ? 0 : ca.flag;
       nameClass = searchText && normalized(ca.name).indexOf(searchText) !== -1 ? " name-match" : "";
-      html.push('<tr id="ca-row-' + ca.id + '" class="' + (ca.committedAt ? 'committed' : '') + '"><td class="ca-name-cell' + nameClass + '"><span class="ca-name-label" title="' + esc(ca.name) + ' CA">' + esc(ca.name) + '<span class="ca-suffix">CA</span></span>');
+      html.push('<tr id="ca-row-' + ca.id + '" class="' + (ca.committedAt ? 'committed' : ca.checked ? '' : 'ca-unchecked') + '"><td class="ca-name-cell' + nameClass + '"><span class="ca-name-label" title="' + esc(ca.name) + ' CA">' + esc(ca.name) + '<span class="ca-suffix">CA</span></span>');
       html.push('<span class="ca-links"><button type="button" class="ca-link-button calib-button"' + disabled + ' title="' + esc(ca.calibUrl || 'CALIB（リンク未設定）') + '" aria-label="' + esc(ca.name) + ' CAのCALIB" onclick="WorkloadUI.showCALinkStatus(\'' + ca.id + '\',\'CALIB\')">CALIB</button><button type="button" class="ca-link-button canvas-button"' + disabled + ' title="' + esc(ca.canvasUrl || 'Canvas（リンク未設定）') + '" aria-label="' + esc(ca.name) + ' CAのCanvas" onclick="WorkloadUI.showCALinkStatus(\'' + ca.id + '\',\'Canvas\')">Canvas</button><span class="ca-link-message" id="ca-link-message-' + ca.id + '" role="status" aria-live="polite"></span></span>');
       if (ca.organization) { html.push('<span class="ca-organization" title="組織：' + esc(ca.organization) + '">' + esc(ca.organization) + '</span>'); }
       html.push('</td>');
+      html.push('<td class="ca-check-cell"><button type="button" id="ca-check-' + ca.id + '" class="ca-check-button' + (ca.checked ? ' checked' : '') + '"' + (ca.checked || ca.committedAt ? ' disabled="disabled"' : '') + ' aria-pressed="' + (ca.checked ? 'true' : 'false') + '" title="' + (ca.checked ? 'CAチェック済' : 'CAを確認後、サポート・コミットを有効にします') + '" onclick="WorkloadUI.requestCACheck(\'' + ca.id + '\')">' + (ca.checked ? 'CAチェック済' : 'CAチェック未') + '</button></td>');
       html.push('<td class="ca-unsorted">' + format(unsorted) + '</td><td class="ca-unread">' + format(unread) + '</td><td class="ca-flag">' + format(flag) + '</td>');
       html.push('<td class="ca-total">' + format(unread + flag) + '</td>');
-      html.push('<td class="support-cell"><div class="support-layout"><span class="support-names" id="supports-' + ca.id + '">' + supportHTML(ca) + '</span><span class="ca-commit-action"><button type="button" class="ca-commit-button" id="commit-' + ca.id + '" title="' + (ca.committedAt ? 'コミットを取り消します（コミット時刻：' + esc(ca.committedAt) + '）' : 'このCAをコミット完了にします') + '" aria-label="' + esc(ca.name) + ' CAの' + (ca.committedAt ? 'コミット取消' : 'コミット') + '" onclick="WorkloadUI.requestCommit(\'' + ca.id + '\')">' + (ca.committedAt ? 'コミット取消' : 'コミット') + '</button></span></div></td></tr>');
+      html.push('<td class="support-cell"><div class="support-layout"><span class="support-names" id="supports-' + ca.id + '">' + supportHTML(ca) + '</span><span class="ca-commit-action"><button type="button" class="ca-commit-button" id="commit-' + ca.id + '"' + (!ca.committedAt && !ca.checked ? ' disabled="disabled"' : '') + ' title="' + (ca.committedAt ? 'コミットを取り消します（コミット時刻：' + esc(ca.committedAt) + '）' : 'このCAをコミット完了にします') + '" aria-label="' + esc(ca.name) + ' CAの' + (ca.committedAt ? 'コミット取消' : 'コミット') + '" onclick="WorkloadUI.requestCommit(\'' + ca.id + '\')">' + (ca.committedAt ? 'コミット取消' : 'コミット') + '</button></span></div></td></tr>');
       return html.join("");
     }
+    function rankedCAs(staff) {
+      var result = [], i, ca;
+      for (i = 0; i < staff.cas.length; i++) {
+        ca = staff.cas[i];
+        result.push({ ca: ca, total: ca.committedAt ? 0 : ca.unread + ca.flag, originalOrder: i });
+      }
+      result.sort(function (a, b) {
+        return (b.total - a.total) || (a.originalOrder - b.originalOrder);
+      });
+      for (i = 0; i < result.length; i++) { result[i] = result[i].ca; }
+      return result;
+    }
     function detailHTML(staff, deferred) {
-      var html = [], i;
+      var html = [], i, cas;
       html.push('<tr class="detail-row" id="detail-' + staff.id + '"><td class="detail-cell" colspan="8">');
       html.push('<div class="detail-header"><strong>' + esc(staff.name) + ' さんの担当CA</strong><span class="detail-note">サポートはCAごとに最大3名</span></div>');
       html.push('<table class="ca-table" aria-label="' + esc(staff.name) + 'さんの担当CA別内訳">');
-      html.push('<colgroup><col style="width:33%" /><col style="width:9%" /><col style="width:10%" /><col style="width:9%" /><col style="width:10%" /><col style="width:29%" /></colgroup>');
+      html.push('<colgroup><col style="width:30%" /><col style="width:10%" /><col style="width:8%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:27%" /></colgroup>');
       html.push('<tbody id="ca-body-' + staff.id + '">');
       if (!deferred) {
-        for (i = 0; i < staff.cas.length; i++) { html.push(caRowHTML(staff.cas[i])); }
+        cas = rankedCAs(staff);
+        for (i = 0; i < cas.length; i++) { html.push(caRowHTML(cas[i])); }
       }
-      if (!staff.cas.length) { html.push('<tr><td class="ca-empty" colspan="6">担当CAはありません。</td></tr>'); }
+      if (!staff.cas.length) { html.push('<tr><td class="ca-empty" colspan="7">担当CAはありません。</td></tr>'); }
       html.push('</tbody></table></td></tr>');
       return html.join("");
     }
@@ -720,6 +811,25 @@
       source = tableRows(caRowHTML(ca));
       target.parentNode.replaceChild(source.firstChild, target);
     }
+    function orderDetailRows(staff) {
+      var body = byId("ca-body-" + staff.id), cas, i, row, next, fixed, moved;
+      if (!body) { return; }
+      for (i = 0; i < detailQueue.length; i++) {
+        if (detailQueue[i].body === body) { detailQueue[i].reorder = true; return; }
+      }
+      cas = rankedCAs(staff); next = body.firstChild; fixed = document.activeElement;
+      while (fixed && fixed.parentNode !== body) { fixed = fixed.parentNode; }
+      for (i = 0; i < cas.length; i++) {
+        row = byId("ca-row-" + cas[i].id);
+        if (!row || row.parentNode !== body) { continue; }
+        if (row === next) { next = next.nextSibling; }
+        else if (row === fixed) {
+          /* 入力・操作中の行は動かさず、他の行を移してフォーカスを保つ。 */
+          while (next !== row) { moved = next; next = next.nextSibling; body.appendChild(moved); }
+          next = row.nextSibling;
+        } else { body.insertBefore(row, next); }
+      }
+    }
     function cancelDetailRender() {
       if (detailTimer) { window.clearTimeout(detailTimer); detailTimer = null; }
       detailQueue = []; detailNeedsSize = false;
@@ -727,7 +837,7 @@
     function queueDetail(staff) {
       var body = byId("ca-body-" + staff.id);
       if (!body || !staff.cas.length) { return; }
-      detailQueue.push({ staff: staff, body: body, next: 0 });
+      detailQueue.push({ staff: staff, body: body, cas: rankedCAs(staff), next: 0 });
       detailNeedsSize = true;
       if (!detailTimer) { detailTimer = window.setTimeout(paintDetailBatch, 0); }
     }
@@ -737,10 +847,13 @@
       while (detailQueue.length) {
         task = detailQueue[0];
         if (byId("ca-body-" + task.staff.id) !== task.body) { detailQueue.shift(); continue; }
-        end = Math.min(task.next + 32, task.staff.cas.length);
-        for (i = task.next; i < end; i++) { html.push(caRowHTML(task.staff.cas[i])); }
+        end = Math.min(task.next + 32, task.cas.length);
+        for (i = task.next; i < end; i++) { html.push(caRowHTML(task.cas[i])); }
         appendTableRows(task.body, html.join("")); task.next = end;
-        if (task.next === task.staff.cas.length) { detailQueue.shift(); }
+        if (task.next === task.cas.length) {
+          detailQueue.shift();
+          if (task.reorder) { orderDetailRows(task.staff); }
+        }
         /* 1回32CAまでに分割し、間に入力・クリック・描画を処理できるようにする。 */
         /* 列幅の読み取りによる強制レイアウトは、最初と最後の描画だけにする。 */
         if (detailNeedsSize || !detailQueue.length) {
@@ -784,7 +897,7 @@
         barWidth = maxTotal ? Math.round(t.total / maxTotal * 100) : 0;
         html.push('<tr class="staff-row' + (opened ? ' expanded' : '') + '" id="staff-row-' + staff.id + '">');
         html.push('<td class="rank-cell"><span class="rank-number' + (i < 3 ? ' leading' : '') + '">' + (i + 1) + '</span></td>');
-        html.push('<td class="staff-cell"><button type="button" class="staff-name" id="staff-button-' + staff.id + '" aria-expanded="' + (opened ? 'true' : 'false') + '" aria-controls="detail-' + staff.id + '" title="担当CAごとの内訳を' + (opened ? '閉じる' : '開く') + '" onclick="WorkloadUI.toggleStaff(\'' + staff.id + '\')">' + esc(staff.name) + '<span class="ca-count">' + staff.cas.length + ' CA</span><span class="expand-indicator" aria-hidden="true">' + (opened ? '−' : '＋') + '</span></button></td>');
+        html.push('<td class="staff-cell"><button type="button" class="staff-name" id="staff-button-' + staff.id + '" aria-expanded="' + (opened ? 'true' : 'false') + '" aria-controls="detail-' + staff.id + '" title="担当CAごとの内訳を' + (opened ? '閉じる' : '開く') + '" onclick="WorkloadUI.toggleStaff(\'' + staff.id + '\')">' + esc(staff.name) + '<span class="staff-ca-meta"><span class="ca-count">' + staff.cas.length + ' CA</span>' + staffCheckHTML(staff) + '</span><span class="expand-indicator" aria-hidden="true">' + (opened ? '−' : '＋') + '</span></button></td>');
         html.push('<td class="team-cell"><button type="button" class="team-badge' + (selectedTeam === teamNameOf(staff) ? ' active' : '') + '" id="team-button-' + staff.id + '" aria-label="' + esc(teamNameOf(staff)) + 'のランキングを表示" aria-pressed="' + (selectedTeam === teamNameOf(staff) ? 'true' : 'false') + '" title="' + esc(teamNameOf(staff)) + 'のランキングを表示' + (excludedReason(staff) ? ' ／ 件数・対応余力の対象から除外：' + esc(excludedReason(staff)) : '') + '" onclick="WorkloadUI.filterByTeam(\'' + staff.id + '\')">' + esc(teamNameOf(staff)) + '</button></td>');
         html.push('<td class="staff-unsorted"><span class="metric-value unsorted">' + format(t.unsorted) + '</span></td>');
         html.push('<td class="staff-unread"><span class="metric-value">' + format(t.unread) + '</span></td>');
@@ -811,6 +924,7 @@
       }
       byId("teamFilterBar").style.display = selectedTeam ? "block" : "none";
       setText(byId("teamFilterName"), selectedTeam);
+      renderCheckOverview();
       updateCommitVisibility();
       resizeRanking();
     }
@@ -904,7 +1018,7 @@
     }
     function startSupport(caId, slot) {
       var ca = findCA(caId), input;
-      if (shareWriteBusy || !ca || ca.committedAt || slot < 0 || slot > 2 || slot < ca.supports.length || ca.supports.length >= 3) { return; }
+      if (shareWriteBusy || !ca || ca.committedAt || !ca.checked || slot < 0 || slot > 2 || slot < ca.supports.length || ca.supports.length >= 3) { return; }
       if (!commitSupport(true, function () { startSupport(caId, slot); })) { return; }
       ca = findCA(caId);
       if (slot < ca.supports.length) { slot = ca.supports.length; }
@@ -955,7 +1069,7 @@
       target.setAttribute("aria-expanded", expanded[id] ? "true" : "false");
       target.title = "担当CAごとの内訳を" + (expanded[id] ? "閉じる" : "開く");
       spans = target.getElementsByTagName("span");
-      if (spans.length > 1) { setText(spans[1], expanded[id] ? "−" : "＋"); }
+      if (spans.length > 1) { setText(spans[spans.length - 1], expanded[id] ? "−" : "＋"); }
       updateCommitVisibility(); resizeRanking();
       if (target) { target.focus(); }
     }
@@ -1028,7 +1142,7 @@
       var ca;
       if (!commitSupport(true, function () { requestRemoval(caId, slot); })) { return; }
       ca = findCA(caId);
-      if (!ca || ca.committedAt || slot < 0 || slot >= ca.supports.length) { return; }
+      if (!ca || ca.committedAt || !ca.checked || slot < 0 || slot >= ca.supports.length) { return; }
       pendingRemoval = { caId: caId, slot: slot, name: ca.supports[slot], entryId: ca.supportEntries[slot] };
       setText(byId("removalName"), ca.supports[slot]);
       setText(byId("removalCA"), ca.name);
@@ -1062,6 +1176,7 @@
     function requestCommit(caId) {
       var ca = findCA(caId), button;
       if (shareWriteBusy || importBusy || pendingRemoval || !ca || (!ca.committedAt && new Date().getHours() < 17)) { return; }
+      if (!ca.committedAt && !ca.checked) { return; }
       if (!commitSupport(true, function () { requestCommit(caId); })) { return; }
       if (ca.committedAt) { cancelCommit(caId); return; }
       if (!window.confirm(ca.name + " CAはコミット完了でよいでしょうか？\n組織：" + ca.organization)) { return; }
@@ -1084,6 +1199,19 @@
         if (error) { if (button) { button.disabled = false; } sharedSaveError(error, snapshot); return; }
         if (snapshot) { sharedSnapshot = snapshot; } sharedError = "";
         applyShared(true); shareStatus(); toast(ca.name + " CAのコミットを取り消しました。");
+      });
+    }
+    function requestCACheck(caId) {
+      var ca = findCA(caId), button;
+      if (shareWriteBusy || importBusy || pendingRemoval || !ca || ca.checked || ca.committedAt) { return; }
+      if (!commitSupport(true, function () { requestCACheck(caId); })) { return; }
+      button = byId("ca-check-" + caId); if (button) { button.disabled = true; }
+      setShareBusy(true);
+      WorkloadShare.checkCA(ca, function (error, snapshot) {
+        setShareBusy(false);
+        if (error) { if (button) { button.disabled = false; } sharedSaveError(error, snapshot); return; }
+        if (snapshot) { sharedSnapshot = snapshot; } sharedError = "";
+        applyShared(true); shareStatus(); toast(ca.name + " CAをチェック済みにしました。");
       });
     }
     function globalKey(e) {
@@ -1192,6 +1320,7 @@
       if (commitTimer) { window.clearInterval(commitTimer); commitTimer = null; }
       if (importPreparationTimer) { window.clearTimeout(importPreparationTimer); importPreparationTimer = null; }
       byId("toast").style.display = "none";
+      byId("shareErrorNotice").style.display = "none";
       byId("removalOverlay").style.display = "none";
       byId("supportConfirmOverlay").style.display = "none";
       byId("removalConfirm").disabled = false; byId("removalCancel").disabled = false;
@@ -1220,6 +1349,7 @@
       resizeRanking();
       updateCommitVisibility();
       commitTimer = window.setInterval(updateCommitVisibility, 30000);
+      window.onbeforeunload = beforeClose;
       window.onunload = closeImportSession;
       /* フォームの描画後に初回の取込用Excelを準備する。集計終了後は再起動しない。 */
       importPreparationTimer = window.setTimeout(prepareLogImport, 150);
@@ -1231,6 +1361,7 @@
       capturedTimeKey: capturedTimeKey,
       requestLogAggregate: requestLogAggregate,
       requestCommit: requestCommit,
+      requestCACheck: requestCACheck,
       showCALinkStatus: showCALinkStatus,
       toggleStaff: toggleStaff,
       collapseAll: collapseAll,
@@ -1269,28 +1400,28 @@
         <div class="heading-title"><h2>担当者別ランキング</h2><p class="ranking-description">担当者名を選択すると、当日の担当CAを表示されます</p></div>
         <div class="heading-count">表示 <strong id="visibleStaff">0</strong> ／ <span id="staffTotal">0</span> 名 &nbsp;・&nbsp; 全 <span id="caTotal">0</span> CA</div>
       </div>
+      <div id="teamCheckSummary" class="team-ca-check-summary" role="status" aria-live="polite" style="display:none"></div>
       <div class="toolbar">
         <div class="toolbar-left">
           <div class="search-box"><span class="search-icon" aria-hidden="true"></span><input type="text" id="searchInput" title="担当者・CA名で検索" aria-label="担当者・CA名で検索" onfocus="WorkloadUI.searchFocus(true)" onblur="WorkloadUI.searchFocus(false)" onkeyup="WorkloadUI.applySearch()" oninput="WorkloadUI.applySearch()" onchange="WorkloadUI.applySearch()" /><label for="searchInput" id="searchPlaceholder" class="search-placeholder">担当者・CA名で検索</label><button type="button" class="search-clear" id="searchClear" title="検索をクリア" aria-label="検索をクリア" onclick="WorkloadUI.clearSearch()">×</button></div>
           <select id="sortSelect" class="sort-select" aria-label="ランキングの並び順" onchange="WorkloadUI.applySort()"><option value="total">合計が多い順</option><option value="unread">純粋未読が多い順</option><option value="flag">フラグが多い順</option><option value="unsorted">未仕分が多い順</option></select>
         </div>
-        <div class="toolbar-right"><button type="button" class="quiet-button" onclick="WorkloadUI.collapseAll()">すべて閉じる</button></div>
       </div>
-      <div id="teamFilterBar" class="team-filter-bar" style="display:none" aria-live="polite"><span class="team-filter-label">表示チーム</span><strong id="teamFilterName" class="team-filter-name"></strong><span class="team-filter-rank">チーム内順位</span><button type="button" id="clearTeamFilter" class="team-filter-clear" onclick="WorkloadUI.clearTeamFilter()">全チームに戻す</button><p class="team-filter-note">件数・対応余力は全体の値です。</p></div>
+      <div id="teamFilterBar" class="team-filter-bar" style="display:none" aria-live="polite"><span class="team-filter-label">表示チーム</span><strong id="teamFilterName" class="team-filter-name"></strong><span class="team-filter-rank">チーム内順位</span><button type="button" id="clearTeamFilter" class="team-filter-clear" onclick="WorkloadUI.clearTeamFilter()">全チームに戻す</button></div>
       <div class="ranking-header-wrap" id="rankingHeader">
       <table class="ranking-table" aria-label="ランキングの項目">
-        <colgroup><col style="width:5%" /><col style="width:18%" /><col style="width:10%" /><col style="width:9%" /><col style="width:10%" /><col style="width:9%" /><col style="width:10%" /><col style="width:29%" /></colgroup>
+        <colgroup><col style="width:5%" /><col style="width:25%" /><col style="width:10%" /><col style="width:8%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:27%" /></colgroup>
         <thead><tr><th scope="col" class="rank-heading">順位</th><th scope="col" class="staff-heading">担当者</th><th scope="col" id="heading-team" class="team-heading">チーム</th><th scope="col" id="heading-unsorted">未仕分</th><th scope="col" id="heading-unread">純粋未読</th><th scope="col" id="heading-flag">フラグ</th><th scope="col" id="heading-total" class="active-sort">合計</th><th scope="col" class="support-heading">サポート投入状況<span class="support-heading-note">人数／担当CA別の氏名</span></th></tr></thead>
       </table></div>
       <div class="ranking-scroll-wrap">
       <div class="pinned-staff" id="pinnedStaff" role="group" aria-label="展開中の担当者">
       <table class="ranking-table" aria-label="展開中の担当者の業務量">
-        <colgroup><col style="width:5%" /><col style="width:18%" /><col style="width:10%" /><col style="width:9%" /><col style="width:10%" /><col style="width:9%" /><col style="width:10%" /><col style="width:29%" /></colgroup>
+        <colgroup><col style="width:5%" /><col style="width:25%" /><col style="width:10%" /><col style="width:8%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:27%" /></colgroup>
         <tbody id="pinnedStaffBody"></tbody>
       </table></div>
       <div class="ranking-scroll" id="rankingScroll" tabindex="0" aria-label="担当者ランキング一覧">
       <table class="ranking-table" aria-label="担当者別の業務量ランキング">
-        <colgroup><col style="width:5%" /><col style="width:18%" /><col style="width:10%" /><col style="width:9%" /><col style="width:10%" /><col style="width:9%" /><col style="width:10%" /><col style="width:29%" /></colgroup>
+        <colgroup><col style="width:5%" /><col style="width:25%" /><col style="width:10%" /><col style="width:8%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:27%" /></colgroup>
         <tbody id="rankingBody"></tbody>
       </table></div>
       </div>
@@ -1336,5 +1467,6 @@
     </div></div>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="shareErrorNotice" class="share-error-notice" role="alert" aria-live="polite"></div>
 </body>
 </html>
