@@ -95,7 +95,7 @@ var WorkloadImport = (function () {
     function planPaths(date, config) {
         var c = validateConfig(config);
         return {
-            unreadFolder: joinPath(c.paths.unreadRoot, dateFolder(date, c.unread.folderFormat)),
+            unreadFolder: joinPath(joinPath(c.paths.unreadRoot, dateFolder(date, "yyyymm")), dateFolder(date, c.unread.folderFormat)),
             flagFolder: joinPath(c.paths.flagRoot, dateFolder(date, c.flag.folderFormat)),
             assignmentFile: windowsPath(c.paths.assignmentFile)
         };
@@ -292,12 +292,23 @@ var WorkloadImport = (function () {
     function readNativeCSV(path, charset) {
         var stream = null, bytes = null, text, usedCharset;
         try {
+            if (WorkloadFileIO.required()) {
+                var loaded = WorkloadFileIO.run("csv", path, charset);
+                text = loaded.text; usedCharset = loaded.charset;
+            } else {
+                try {
             stream = new ActiveXObject("ADODB.Stream"); stream.Type = 1; stream.Open(); stream.LoadFromFile(path);
             usedCharset = charset;
             if (String(charset).toLowerCase() === "auto") {
                 bytes = new VBArray(stream.Read()).toArray(); usedCharset = detectCharset(bytes);
             }
             bytes = null; stream.Position = 0; stream.Type = 2; stream.Charset = usedCharset; text = stream.ReadText(-1);
+                } catch (readError) {
+                    if (!WorkloadFileIO.blocked(readError)) { throw readError; }
+                    if (stream) { try { stream.Close(); } catch (closeBlocked) {} } stream = null; bytes = null;
+                    loaded = WorkloadFileIO.run("csv", path, charset); text = loaded.text; usedCharset = loaded.charset;
+                }
+            }
             if (/\uFFFD/.test(text)) { throw new Error("文字化けを検出しました。workload-config.js の charset を utf-8 または shift_jis に指定してお試しください。"); }
             return { rows: parseCSV(text), charset: usedCharset };
         } catch (e) { throw new Error("CSVを読み込めません：" + path + "\n" + (e.message || e.description || String(e))); }
@@ -500,6 +511,67 @@ var WorkloadImport = (function () {
         prepareNativeExcel: prepareNativeExcel, releaseNativeExcel: releaseNativeExcel };
 }());
 
+/* ADOのドメイン制限時だけ、許可されたWindows Script HostへファイルI/Oを委ねる。 */
+var WorkloadFileIO = (function () {
+    var useHost = false;
+    function blocked(error) {
+        var message = String(error.message || error.description || error);
+        if ((Number(error.number) & 65535) === 3716 ||
+            /(?:another domain|across domains|他のドメイン|別のドメイン)/i.test(message) && /(?:data source|データ\s*ソース)/i.test(message)) {
+            useHost = true; return true;
+        }
+        return false;
+    }
+    function literal(value) { return JSON.stringify(String(value)).replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029"); }
+    function run(mode, path, charset, text) {
+        var fso = null, shell = null, file = null, folder = "", ownsFolder = false, script, result, input, executable, source, response, code, first, second;
+        try {
+            fso = new ActiveXObject("Scripting.FileSystemObject");
+            folder = String(fso.GetSpecialFolder(2)) + "\\" + fso.GetTempName(); fso.CreateFolder(folder); ownsFolder = true;
+            script = folder + "\\io.js"; result = folder + "\\result.txt"; input = folder + "\\input.txt";
+            if (mode === "create") {
+                file = fso.CreateTextFile(input, false, true); file.Write(text); file.Close(); file = null;
+            }
+            /* JSONは実行しない。固定の処理と、文字列として引用したパスだけをスクリプトに渡す。 */
+            source = 'var mode=' + literal(mode) + ', target=' + literal(path) + ', charset=' + literal(charset || "utf-8") +
+                ', result=' + literal(result) + ', input=' + literal(input) + ';\n' +
+                'var detectCharset=' + String(WorkloadImport.detectCharset) + ';\n' +
+                'var fso=new ActiveXObject("Scripting.FileSystemObject"), stream=null, output=null, file=null, content="", status="OK", code=0;\n' +
+                'try {\n' +
+                '  stream=new ActiveXObject("ADODB.Stream");\n' +
+                '  if(mode==="create") {\n' +
+                '    file=fso.OpenTextFile(input,1,false,-1); content=file.ReadAll(); file.Close(); file=null;\n' +
+                '    stream.Type=2; stream.Charset="utf-8"; stream.Open(); stream.WriteText(content.replace(/\\n/g,"\\r\\n"));\n' +
+                '    stream.Position=0; stream.Type=1; stream.Position=3;\n' +
+                '    output=new ActiveXObject("ADODB.Stream"); output.Type=1; output.Open(); output.Write(stream.Read(-1)); output.SaveToFile(target,1); content="";\n' +
+                '  } else {\n' +
+                '    stream.Type=1; stream.Open(); stream.LoadFromFile(target);\n' +
+                '    if(mode==="csv" && charset.toLowerCase()==="auto") { charset=detectCharset(new VBArray(stream.Read()).toArray()); }\n' +
+                '    stream.Position=0; stream.Type=2; stream.Charset=charset; content=stream.ReadText(-1);\n' +
+                '  }\n' +
+                '} catch(e) { status="ERROR"; content=String(e.message || e.description || e); code=1; }\n' +
+                'finally { if(file) { try { file.Close(); } catch(ignoreFile) {} } if(output) { try { output.Close(); } catch(ignoreOutput) {} } if(stream) { try { stream.Close(); } catch(ignoreStream) {} } }\n' +
+                'file=fso.CreateTextFile(result,false,true); file.Write(status+"\\n"+charset+"\\n"+content); file.Close(); WScript.Quit(code);\n';
+            file = fso.CreateTextFile(script, false, true); file.Write(source); file.Close(); file = null;
+            shell = new ActiveXObject("WScript.Shell"); executable = shell.ExpandEnvironmentStrings("%SystemRoot%\\System32\\cscript.exe");
+            if (/["\r\n]/.test(executable + script)) { throw new Error("ファイル読込の補助処理のパスが不正です。"); }
+            code = shell.Run('"' + executable + '" //B //Nologo //E:JScript //T:30 "' + script + '"', 0, true);
+            if (!fso.FileExists(result)) { throw new Error("Windows Script Hostの利用可否、または共有フォルダの接続を確認してください。補助処理の応答がありません。"); }
+            file = fso.OpenTextFile(result, 1, false, -1); response = file.ReadAll(); file.Close(); file = null;
+            first = response.indexOf("\n"); second = response.indexOf("\n", first + 1);
+            if (first < 0 || second < 0) { throw new Error("ファイル読込の補助処理の応答が不正です。"); }
+            if (code !== 0 || response.slice(0, first) !== "OK") { throw new Error(response.slice(second + 1) || "ファイル読込の補助処理に失敗しました。"); }
+            return { charset: response.slice(first + 1, second), text: response.slice(second + 1) };
+        } catch (hostError) {
+            throw new Error("共有ファイル・CSVの読み書きに必要な補助処理を実行できません。\n" + (hostError.message || hostError.description || String(hostError)));
+        } finally {
+            if (file) { try { file.Close(); } catch (fileClose) {} } file = null; shell = null;
+            if (fso && ownsFolder) { try { fso.DeleteFolder(folder, true); } catch (tempCleanup) {} } fso = null;
+        }
+    }
+    return { required: function () { return useHost; }, blocked: blocked, run: run };
+}());
+
 /*
  * 日付別の共有履歴。ES3 / Windows HTA。
  * 同じ共有フォルダの全フォームでWORKLOAD_LOCKを使い、再読込してから追記する。
@@ -521,7 +593,7 @@ var WorkloadShare = (function () {
     function timeText(date) { return date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate()) + " " + pad(date.getHours()) + ":" + pad(date.getMinutes()) + ":" + pad(date.getSeconds()); }
     function json(value) { return JSON.stringify(value).replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029"); }
     function own(object, name) { return Object.prototype.hasOwnProperty.call(object, name); }
-    function empty(day) { return { schemaVersion: 2, date: day, supports: [], commits: [], revision: 0, ids: {}, caChecks: [] }; }
+    function empty(day) { return { schemaVersion: 2, date: day, supports: [], commits: [], revision: 0, ids: {}, caChecks: [], supportRequests: [] }; }
     function legacyHeader(day) {
         return 'var WorkloadDaily = ' + json({ schemaVersion: 1, date: day, supports: [], commits: [] }) + ';\n' +
             'function WorkloadDailyAppend(record) {\n' +
@@ -551,6 +623,11 @@ var WorkloadShare = (function () {
     }
     function checked(state, key) {
         var i, rows = state.caChecks || [];
+        for (i = 0; i < rows.length; i++) { if (keyOf(rows[i].organization, rows[i].caName) === key) { return rows[i]; } }
+        return null;
+    }
+    function supportRequested(state, key) {
+        var i, rows = state.supportRequests || [];
         for (i = 0; i < rows.length; i++) { if (keyOf(rows[i].organization, rows[i].caName) === key) { return rows[i]; } }
         return null;
     }
@@ -599,6 +676,24 @@ var WorkloadShare = (function () {
                 state.caChecks.push({ id: item.id, organization: item.organization, caName: item.caName, checkedAt: item.checkedAt });
             }
         }
+        if (record.supportRequests) {
+            if (Object.prototype.toString.call(record.supportRequests) !== "[object Array]") { throw new Error("共有履歴のサポ希望情報が不正です。"); }
+            for (i = 0; i < record.supportRequests.length; i++) {
+                item = record.supportRequests[i]; validateIdentity(item); validateTime(item.requestedAt);
+                key = keyOf(item.organization, item.caName);
+                if (item.id !== record.id || supportRequested(state, key) || committed(state, key)) { throw new Error("共有履歴のサポ希望が重複しているか、コミット済みです。"); }
+                state.supportRequests.push({ id: item.id, organization: item.organization, caName: item.caName, requestedAt: item.requestedAt });
+            }
+        }
+        if (record.cancelSupportRequests) {
+            if (Object.prototype.toString.call(record.cancelSupportRequests) !== "[object Array]") { throw new Error("共有履歴のサポ希望取消情報が不正です。"); }
+            for (i = 0; i < record.cancelSupportRequests.length; i++) {
+                item = record.cancelSupportRequests[i]; validateIdentity(item);
+                found = supportRequested(state, keyOf(item.organization, item.caName));
+                if (!found || found.id !== item.id) { throw new Error("取り消すサポ希望が共有履歴と一致しません。"); }
+                for (j = 0; j < state.supportRequests.length; j++) { if (state.supportRequests[j] === found) { state.supportRequests.splice(j, 1); break; } }
+            }
+        }
         state.ids["@" + record.id] = true; state.revision++;
     }
     function parseLegacy(text, day) {
@@ -619,6 +714,7 @@ var WorkloadShare = (function () {
         value = { schemaVersion: 2, date: state.date, supports: state.supports, commits: state.commits,
             revision: state.revision, operations: ids };
         if (state.caChecks && state.caChecks.length) { value.caChecks = state.caChecks; }
+        if (state.supportRequests && state.supportRequests.length) { value.supportRequests = state.supportRequests; }
         return JSON.stringify(value, null, 2) + "\n";
     }
     function parse(text, day) {
@@ -649,6 +745,14 @@ var WorkloadShare = (function () {
                 state.caChecks.push({ id: row.id, organization: row.organization, caName: row.caName, checkedAt: row.checkedAt });
             }
         }
+        if (typeof value.supportRequests !== "undefined") {
+            if (Object.prototype.toString.call(value.supportRequests) !== arrayTag) { throw new Error("共有JSONのサポ希望情報が不正です。"); }
+            for (i = 0; i < value.supportRequests.length; i++) {
+                row = value.supportRequests[i]; validateIdentity(row); validateTime(row.requestedAt);
+                if (typeof row.id !== "string" || !own(ids, "@" + row.id) || supportRequested(state, keyOf(row.organization, row.caName))) { throw new Error("共有JSONのサポ希望が不正です。"); }
+                state.supportRequests.push({ id: row.id, organization: row.organization, caName: row.caName, requestedAt: row.requestedAt });
+            }
+        }
         state.ids = ids; state.revision = value.revision;
         return state;
     }
@@ -670,18 +774,29 @@ var WorkloadShare = (function () {
     }
     function read(fso, path) {
         var stream = null;
+        if (WorkloadFileIO.required()) { return WorkloadFileIO.run("read", path, "utf-8").text; }
         try {
             stream = new ActiveXObject("ADODB.Stream"); stream.Type = 2; stream.Charset = "utf-8"; stream.Open();
             stream.LoadFromFile(path); return stream.ReadText(-1);
+        } catch (readError) {
+            if (!WorkloadFileIO.blocked(readError)) { throw readError; }
+            if (stream) { try { stream.Close(); } catch (closeBlocked) {} } stream = null;
+            return WorkloadFileIO.run("read", path, "utf-8").text;
         } finally { if (stream) { try { stream.Close(); } catch (ignore) {} } stream = null; }
     }
     function create(fso, path, text) {
         var stream = null, output = null;
+        if (WorkloadFileIO.required()) { WorkloadFileIO.run("create", path, "utf-8", text); return; }
         try {
             stream = new ActiveXObject("ADODB.Stream"); stream.Type = 2; stream.Charset = "utf-8"; stream.Open();
             stream.WriteText(text.replace(/\n/g, "\r\n")); stream.Position = 0; stream.Type = 1; stream.Position = 3;
             output = new ActiveXObject("ADODB.Stream"); output.Type = 1; output.Open(); output.Write(stream.Read(-1));
             output.SaveToFile(path, 1); // adSaveCreateNotExist / UTF-8のBOMを除いた標準JSON
+        } catch (writeError) {
+            if (!WorkloadFileIO.blocked(writeError)) { throw writeError; }
+            if (output) { try { output.Close(); } catch (closeBlockedOutput) {} } output = null;
+            if (stream) { try { stream.Close(); } catch (closeBlockedStream) {} } stream = null;
+            WorkloadFileIO.run("create", path, "utf-8", text);
         } finally {
             if (output) { try { output.Close(); } catch (outputClose) {} }
             if (stream) { try { stream.Close(); } catch (streamClose) {} } output = null; stream = null;
@@ -742,7 +857,20 @@ var WorkloadShare = (function () {
         var record = { id: id, supports: [], commits: [] }, key = keyOf(action.organization, action.caName), list = active(state, key), i, row, name = trim(action.supportName), stamp = timeText(now);
         validateIdentity(action);
         if (own(state.ids, "@" + id)) { return record; }
-        if (action.kind === "check") {
+        if (action.kind === "supportRequest") {
+            if (typeof action.requested !== "boolean") { throw new Error("サポ希望の指定が不正です。"); }
+            row = supportRequested(state, key);
+            if (action.requested) {
+                if (committed(state, key)) { throw new Error("このCAはコミット済みです。先にコミットを取り消してください。"); }
+                if (row) { return record; }
+                record.supportRequests = [{ id: id, organization: trim(action.organization), caName: trim(action.caName), requestedAt: stamp }];
+            } else {
+                if (!row) { return record; }
+                /* 古い画面から、他のフォームが新しく設定した希望を取り消さない。 */
+                if (row.id !== action.requestId) { throw new Error("サポ希望が更新されています。最新の状態を確認してから、もう一度取り消してください。"); }
+                record.cancelSupportRequests = [{ id: row.id, organization: row.organization, caName: row.caName }];
+            }
+        } else if (action.kind === "check") {
             if (checked(state, key)) { return record; }
             if (committed(state, key)) { throw new Error("このCAはコミット済みです。先にコミットを取り消してください。"); }
             record.caChecks = [{ id: id, organization: trim(action.organization), caName: trim(action.caName), checkedAt: stamp }];
@@ -777,7 +905,7 @@ var WorkloadShare = (function () {
     }
     function persist(fso, path, lock, state, record) {
         var backup = join(lock, "before.json"), stage = join(lock, "after.json"), after, recovery, failure, recoveryError, publishing = false;
-        if (!record.supports.length && !record.commits.length && !(record.cancelCommits && record.cancelCommits.length) && !(record.caChecks && record.caChecks.length)) { return state; }
+        if (!record.supports.length && !record.commits.length && !(record.cancelCommits && record.cancelCommits.length) && !(record.caChecks && record.caChecks.length) && !(record.supportRequests && record.supportRequests.length) && !(record.cancelSupportRequests && record.cancelSupportRequests.length)) { return state; }
         after = parse(encode(state), state.date); apply(after, record);
         fso.CopyFile(path, backup, false);
         try {
@@ -823,7 +951,7 @@ var WorkloadShare = (function () {
         if (!nativeMode()) {
             try {
                 state = lastState && lastState.date === day ? lastState : empty(day);
-                if (current.action) { record = makeRecord(state, current.action, current.id, new Date()); if (record.supports.length || record.commits.length || (record.cancelCommits && record.cancelCommits.length) || (record.caChecks && record.caChecks.length)) { apply(state, record); } }
+                if (current.action) { record = makeRecord(state, current.action, current.id, new Date()); if (record.supports.length || record.commits.length || (record.cancelCommits && record.cancelCommits.length) || (record.caChecks && record.caChecks.length) || (record.supportRequests && record.supportRequests.length) || (record.cancelSupportRequests && record.cancelSupportRequests.length)) { apply(state, record); } }
             } catch (previewError) { error = previewError; }
             finish(error, state); return;
         }
@@ -908,7 +1036,7 @@ var WorkloadShare = (function () {
             if (!value || value.schemaVersion !== 1 || Object.prototype.toString.call(value.jobs) !== "[object Array]" || !value.jobs.length) { throw new Error("保留した操作の形式が不正です。"); }
             for (i = 0; i < value.jobs.length; i++) {
                 job = value.jobs[i];
-                if (!job || typeof job.id !== "string" || !/^[a-z0-9-]+$/i.test(job.id) || own(ids, "@" + job.id) || typeof job.date !== "string" || !/^\d{8}$/.test(job.date) || !job.action || typeof job.action.kind !== "string" || !/^(add|finish|commit|cancelCommit|check)$/.test(job.action.kind)) { throw new Error("保留した操作が不正です。"); }
+                if (!job || typeof job.id !== "string" || !/^[a-z0-9-]+$/i.test(job.id) || own(ids, "@" + job.id) || typeof job.date !== "string" || !/^\d{8}$/.test(job.date) || !job.action || typeof job.action.kind !== "string" || !/^(add|finish|commit|cancelCommit|check|supportRequest)$/.test(job.action.kind)) { throw new Error("保留した操作が不正です。"); }
                 validateIdentity(job.action); ids["@" + job.id] = true;
             }
         } catch (readError) { callback(readError, path); return; }
@@ -931,6 +1059,7 @@ var WorkloadShare = (function () {
         start: start, stop: stop, refresh: function () { request(null, null); },
         hasPendingWrites: function () { return pendingWrites().length > 0; }, handoffPendingWrites: handoffPendingWrites, resumePendingWrites: resumePendingWrites,
         checkCA: function (ca, callback) { request({ kind: "check", organization: ca.organization, caName: ca.name }, callback); },
+        setSupportRequest: function (ca, requested, callback) { request({ kind: "supportRequest", organization: ca.organization, caName: ca.name, requested: requested, requestId: ca.supportRequestId || "" }, callback); },
         addSupport: function (ca, name, callback) { request({ kind: "add", organization: ca.organization, caName: ca.name, supportName: name }, callback); },
         finishSupport: function (ca, entryId, callback) { request({ kind: "finish", organization: ca.organization, caName: ca.name, entryId: entryId }, callback); },
         commitCA: function (ca, callback) { request({ kind: "commit", organization: ca.organization, caName: ca.name }, callback); },
