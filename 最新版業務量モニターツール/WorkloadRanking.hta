@@ -743,7 +743,7 @@
       }, 50); /* 集計中の表示を描画してから、Excelの選択待ちに入る。 */
     }
     function showCALinkStatus(caId, systemName) {
-      var ca = findCA(caId), url, message;
+      var ca = findCA(caId), url, message, today;
       if (!ca || ca.committedAt) { return; }
       message = byId("ca-link-message-" + caId);
       url = systemName === "CALIB" ? ca.calibUrl : ca.canvasUrl;
@@ -753,6 +753,11 @@
         return;
       }
       if (message) { setText(message, ""); message.style.display = "none"; }
+      if (systemName === "Canvas") {
+        today = new Date();
+        url += (url.charAt(url.length - 1) === "/" ? "" : "/") + today.getFullYear() + "/" +
+          ("0" + (today.getMonth() + 1)).slice(-2) + "/" + ("0" + today.getDate()).slice(-2);
+      }
       try { WorkloadImport.openLink(url); }
       catch (e) { toast(systemName + "を開けません：" + (e.message || e.description || String(e)), true); }
     }
