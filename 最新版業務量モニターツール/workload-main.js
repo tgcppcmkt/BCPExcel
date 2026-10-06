@@ -289,8 +289,14 @@ var WorkloadImport = (function () {
         return "utf-8";
     }
     function isHTA() { return /\.hta$/i.test(String(window.location.pathname)) && typeof ActiveXObject !== "undefined"; }
-    function readNativeCSV(path, charset) {
-        var stream = null, bytes = null, text, usedCharset;
+    function csvInUseError(error) {
+        var number = Number(error.number) & 65535, message = String(error.message || error.description || error);
+        return number === 5 || number === 32 || number === 33 || number === 70 || number === 75 || number === 3002 || number === 3003 ||
+            /(?:sharing violation|used by another process|being used|file could not be opened|cannot open (?:the )?file|permission denied|access(?: is)? denied|共有違反|他のプロセス|別のプロセス|使用中|アクセス.*拒否|ファイル.*開(?:けません|くことができません))/i.test(message);
+    }
+    function readNativeCSV(path, charset, fromCopy) {
+        var stream = null, bytes = null, text, usedCharset, reading = true;
+        var fso = null, folder = "", ownsFolder = false, copyPath, file, originalSize, originalModified;
         try {
             if (WorkloadFileIO.required()) {
                 var loaded = WorkloadFileIO.run("csv", path, charset);
@@ -309,10 +315,38 @@ var WorkloadImport = (function () {
                     loaded = WorkloadFileIO.run("csv", path, charset); text = loaded.text; usedCharset = loaded.charset;
                 }
             }
+            reading = false;
             if (/\uFFFD/.test(text)) { throw new Error("文字化けを検出しました。workload-config.js の charset を utf-8 または shift_jis に指定してお試しください。"); }
             return { rows: parseCSV(text), charset: usedCharset };
-        } catch (e) { throw new Error("CSVを読み込めません：" + path + "\n" + (e.message || e.description || String(e))); }
-        finally { if (stream) { try { stream.Close(); } catch (ignore) {} } stream = null; bytes = null; }
+        } catch (e) {
+            /* 使用中等で直接読めないCSVだけを、原本に触れず一度だけ一時コピーから読み直す。 */
+            if (reading && !fromCopy && csvInUseError(e)) {
+                if (stream) { try { stream.Close(); } catch (closeBeforeCopy) {} } stream = null; bytes = null;
+                try {
+                    fso = new ActiveXObject("Scripting.FileSystemObject");
+                    folder = String(fso.GetSpecialFolder(2)) + "\\" + fso.GetTempName();
+                    fso.CreateFolder(folder); ownsFolder = true; copyPath = folder + "\\source.csv";
+                    file = fso.GetFile(path); originalSize = Number(file.Size); originalModified = String(file.DateLastModified); file = null;
+                    fso.CopyFile(path, copyPath, false);
+                    if (Number(fso.GetFile(copyPath).Size) !== originalSize) {
+                        throw new Error("CSVの一時コピーが不完全です。保存完了後に再実行してください。");
+                    }
+                    file = fso.GetFile(path);
+                    if (Number(file.Size) !== originalSize || String(file.DateLastModified) !== originalModified) {
+                        throw new Error("CSVがコピー中に更新されました。保存完了後に再実行してください。");
+                    }
+                    file = null;
+                    return readNativeCSV(copyPath, charset, true);
+                } catch (copyError) {
+                    throw new Error("CSVを読み込めません：" + path + "\n通常の読込：" + (e.message || e.description || String(e)) +
+                        "\n一時コピーからの読込：" + (copyError.message || copyError.description || String(copyError)));
+                }
+            }
+            throw new Error("CSVを読み込めません：" + path + "\n" + (e.message || e.description || String(e)));
+        } finally {
+            if (stream) { try { stream.Close(); } catch (ignore) {} } stream = null; bytes = null; file = null;
+            if (fso && ownsFolder) { try { fso.DeleteFolder(folder, true); } catch (copyCleanup) {} } fso = null;
+        }
     }
     function pickerFolder(fso, folder, parent) {
         if (fso.FolderExists(folder)) { return { path: folder, allowSubfolders: false }; }
