@@ -171,18 +171,22 @@
     .ca-table td.ca-empty { text-align: left; color: #5a687e; padding: 15px 16px; }
     .ca-suffix { color: #626d81; margin-left: 5px; font-size: 10px; font-weight: 600; }
     .ca-table .ca-total { color: #5340a0; font-weight: 700; }
-    .ca-table td.support-cell { text-align: left; padding-left: 17px; white-space: nowrap; }
+    .ca-table td.support-cell { text-align: left; padding-left: 12px; white-space: nowrap; }
     .support-layout { display: table; width: 100%; table-layout: fixed; }
-    .support-request-control { display: table-cell; width: 26px; vertical-align: middle; }
+    .staff-support-top { white-space: nowrap; }
+    .staff-support-top .support-request-toggle { height: 22px; line-height: 22px; }
+    .staff-support-top .support-count { margin-left: 6px; vertical-align: middle; }
     .support-request-toggle { display: inline-block; width: 22px; height: 30px; border-radius: 4px; line-height: 30px; text-align: center; cursor: pointer; }
     .support-request-toggle.requested { background: #fff0f1; }
     .support-request-toggle input { width: 15px; height: 15px; margin: 0; vertical-align: middle; cursor: pointer; }
     .support-request-toggle input:disabled { cursor: default; }
     .support-names { display: table-cell; vertical-align: middle; }
     .ca-commit-action { display: none; vertical-align: middle; }
-    .commit-visible .ca-commit-action, .ca-table tr.committed .ca-commit-action { display: table-cell; width: 90px; padding-left: 8px; }
-    .ca-commit-button { width: 82px; height: 31px; padding: 4px 5px; border: 1px solid #d7d0e8; border-radius: 5px; background: #f5f2fc; color: #77698f; font-size: 11px; white-space: nowrap; cursor: default; }
-    .support-slot { position: relative; display: inline-block; width: 30%; max-width: 110px; height: 30px; margin-right: 3%; vertical-align: middle; }
+    .commit-visible .ca-commit-action, .ca-table tr.committed .ca-commit-action { display: block; }
+    .commit-visible .ca-check-button.checked, .ca-table tr.committed .ca-check-button { display: none; }
+    .ca-table tr.ca-unchecked .ca-commit-action { display: none; }
+    .ca-commit-button { width: 100%; height: 31px; padding: 4px 5px; border: 1px solid #d7d0e8; border-radius: 5px; background: #f5f2fc; color: #77698f; font-size: 11px; white-space: nowrap; cursor: default; }
+    .support-slot { position: relative; display: inline-block; width: 32%; height: 30px; margin-right: 2%; vertical-align: middle; }
     .support-slot.last { margin-right: 0; }
     .support-button { width: 100%; height: 30px; display: block; border-radius: 5px; padding: 4px 7px; line-height: 20px; font-size: 11px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
     .support-filled { color: #415774; background: #edf2fa; border: 1px solid #dbe3f0; }
@@ -409,7 +413,14 @@
     }
     function hasSupportRequest(staff) {
       var i;
-      for (i = 0; i < staff.cas.length; i++) { if (!staff.cas[i].committedAt && staff.cas[i].supportRequested) { return true; } }
+      if (!staff.supportRequested) { return false; }
+      for (i = 0; i < staff.cas.length; i++) { if (!staff.cas[i].committedAt) { return true; } }
+      return false;
+    }
+    function supportRequestEnabled(staff) {
+      var i;
+      if (!staff || !staff.cas.length || uncheckedCountFor(staff)) { return false; }
+      for (i = 0; i < staff.cas.length; i++) { if (!staff.cas[i].committedAt) { return true; } }
       return false;
     }
     function supportWantedHTML(staff) {
@@ -417,8 +428,9 @@
       return '<span class="support-wanted" id="support-wanted-' + staff.id + '" style="display:' + (wanted ? 'block' : 'none') + '">' + (wanted ? 'サポ希望' : '') + '</span>';
     }
     function refreshStaffSupport(staff) {
-      var count = byId("supportCount-" + staff.id), label = byId("support-wanted-" + staff.id), wanted = hasSupportRequest(staff);
+      var count = byId("supportCount-" + staff.id), label = byId("support-wanted-" + staff.id), control = byId("staff-support-request-control-" + staff.id), wanted = hasSupportRequest(staff);
       if (count) { setText(count, supportCountFor(staff) + "名"); }
+      if (control) { control.innerHTML = supportRequestHTML(staff); }
       if (label) { setText(label, wanted ? "サポ希望" : ""); label.style.display = wanted ? "block" : "none"; }
     }
     function teamNameOf(staff) { return trim(staff.team || "") || "未設定"; }
@@ -549,7 +561,7 @@
       notice.style.display = sharedError ? "block" : "none";
     }
     function projectShared(data) {
-      var i, j, ca, key, list, mark, n, row, same, staff, wanted;
+      var i, j, ca, key, list, mark, n, row, same, staff, wanted, staffMark, staffWanted;
       var active = {}, commits = {}, checks = {}, requests = {}, changes = { cas: [], counts: false, staffs: {}, rebuild: {} };
       /* 履歴は一度だけ組織＋CA名で索引化する。CAごとの全履歴走査を避ける。 */
       if (sharedSnapshot) {
@@ -570,13 +582,14 @@
         }
       }
       for (i = 0; i < data.length; i++) {
-        staff = data[i];
+        staff = data[i]; staffMark = requests[WorkloadShare.staffSupportKey(staff)]; staffWanted = !!staffMark;
         for (j = 0; j < data[i].cas.length; j++) {
           ca = data[i].cas[j];
           ca.supportEntries = ca.supportEntries || []; ca.committedAt = ca.committedAt || "";
           ca.checked = !!ca.checked;
           key = sharedSnapshot ? WorkloadShare.keyOf(ca.organization, ca.name) : "";
           list = active[key] || []; mark = commits[key]; wanted = requests[key];
+          if (wanted) { staffWanted = true; }
           same = (ca.committedAt || "") === (mark ? mark.committedAt : "") && ca.supports.length === list.length && ca.checked === !!checks[key] && (ca.supportRequestId || "") === (wanted ? wanted.id : "");
           for (n = 0; same && n < list.length; n++) {
             if (ca.supports[n] !== list[n].supportName || !ca.supportEntries || ca.supportEntries[n] !== list[n].id) { same = false; }
@@ -593,6 +606,10 @@
           if (mark) { ca.committedAt = mark.committedAt; }
           ca.checked = !!checks[key];
           if (wanted || typeof ca.supportRequested !== "undefined") { ca.supportRequested = !!wanted; ca.supportRequestId = wanted ? wanted.id : ""; }
+        }
+        if (!!staff.supportRequested !== staffWanted || (staff.supportRequestId || "") !== (staffMark ? staffMark.id : "")) {
+          staff.supportRequested = staffWanted; staff.supportRequestId = staffMark ? staffMark.id : "";
+          changes.staffs["@" + staff.id] = staff;
         }
       }
       return changes;
@@ -758,7 +775,7 @@
           html.push('<input type="text" id="supportInput" class="support-input" maxlength="30" aria-label="' + esc(ca.name) + ' CAのサポート氏名" title="Enterまたは入力欄から移動すると投入を確認、Escで取消" value="' + esc(editing.draft) + '" onkeyup="WorkloadUI.syncDraft()" oninput="WorkloadUI.syncDraft()" onkeydown="return WorkloadUI.supportKey(event)" onblur="WorkloadUI.supportBlur()" />');
         } else if (slot < ca.supports.length) {
           name = ca.supports[slot];
-          html.push('<button type="button" id="support-' + ca.id + '-' + slot + '" class="support-button support-filled"' + disabled + ' title="' + esc(name) + '（クリックでサポート解除）" aria-label="' + esc(name) + 'さんのサポート解除" onclick="WorkloadUI.requestRemoval(\'' + ca.id + '\',' + slot + ')">' + esc(name) + '</button>');
+          html.push('<button type="button" id="support-' + ca.id + '-' + slot + '" class="support-button support-filled"' + disabled + ' title="' + esc(name) + '" aria-label="' + esc(name) + 'さんのサポート解除" onclick="WorkloadUI.requestRemoval(\'' + ca.id + '\',' + slot + ')">' + esc(name) + '</button>');
         } else {
           html.push('<button type="button" id="support-' + ca.id + '-' + slot + '" class="support-button support-empty"' + disabled + ' aria-label="' + esc(ca.name) + ' CAの空欄' + (slot + 1) + 'にサポート氏名を入力" title="空欄をクリックして氏名を入力" onclick="WorkloadUI.startSupport(\'' + ca.id + '\',' + slot + ')">＋ 追加</button>');
         }
@@ -766,13 +783,12 @@
       }
       return html.join("");
     }
-    function supportRequestHTML(ca) {
-      return '<label class="support-request-toggle' + (ca.supportRequested ? ' requested' : '') + '" title="優先的にサポートを希望（チェックでオン／オフ）"><input type="checkbox" id="support-request-' + ca.id + '"' + (ca.supportRequested ? ' checked="checked"' : '') + (ca.committedAt || !ca.checked ? ' disabled="disabled"' : '') + ' aria-label="' + esc(ca.name) + ' CAのサポ希望" onclick="WorkloadUI.requestSupportWanted(\'' + ca.id + '\')" /></label>';
+    function supportRequestHTML(staff) {
+      return '<label class="support-request-toggle' + (staff.supportRequested ? ' requested' : '') + '" title="優先的にサポートを希望（チェックでオン／オフ）"><input type="checkbox" id="support-request-' + staff.id + '"' + (staff.supportRequested ? ' checked="checked"' : '') + (!supportRequestEnabled(staff) ? ' disabled="disabled"' : '') + ' aria-label="' + esc(staff.name) + 'さんのサポ希望" onclick="WorkloadUI.requestSupportWanted(\'' + staff.id + '\')" /></label>';
     }
     function refreshSupports(ca, onlyCA) {
-      var cell = byId("supports-" + ca.id), control = byId("support-request-control-" + ca.id), staff;
+      var cell = byId("supports-" + ca.id), staff;
       if (cell) { cell.innerHTML = supportHTML(ca); }
-      if (control) { control.innerHTML = supportRequestHTML(ca); }
       if (!onlyCA) {
         staff = caStaffIndex["@" + ca.id]; if (staff) { refreshStaffSupport(staff); }
       }
@@ -786,10 +802,11 @@
       html.push('<span class="ca-links"><button type="button" class="ca-link-button calib-button"' + disabled + ' title="' + esc(ca.calibUrl || 'CALIB（リンク未設定）') + '" aria-label="' + esc(ca.name) + ' CAのCALIB" onclick="WorkloadUI.showCALinkStatus(\'' + ca.id + '\',\'CALIB\')">CALIB</button><button type="button" class="ca-link-button canvas-button"' + disabled + ' title="' + esc(ca.canvasUrl || 'Canvas（リンク未設定）') + '" aria-label="' + esc(ca.name) + ' CAのCanvas" onclick="WorkloadUI.showCALinkStatus(\'' + ca.id + '\',\'Canvas\')">Canvas</button><span class="ca-link-message" id="ca-link-message-' + ca.id + '" role="status" aria-live="polite"></span></span>');
       if (ca.organization) { html.push('<span class="ca-organization" title="組織：' + esc(ca.organization) + '">' + esc(ca.organization) + '</span>'); }
       html.push('</td>');
-      html.push('<td class="ca-check-cell"><button type="button" id="ca-check-' + ca.id + '" class="ca-check-button' + (ca.checked ? ' checked' : '') + '"' + (ca.checked || ca.committedAt ? ' disabled="disabled"' : '') + ' aria-pressed="' + (ca.checked ? 'true' : 'false') + '" title="' + (ca.checked ? 'CAチェック済' : 'CAを確認後、サポート・コミットを有効にします') + '" onclick="WorkloadUI.requestCACheck(\'' + ca.id + '\')">' + (ca.checked ? 'CAチェック済' : 'CAチェック未') + '</button></td>');
+      html.push('<td class="ca-check-cell"><button type="button" id="ca-check-' + ca.id + '" class="ca-check-button' + (ca.checked ? ' checked' : '') + '"' + (ca.checked || ca.committedAt ? ' disabled="disabled"' : '') + ' aria-pressed="' + (ca.checked ? 'true' : 'false') + '" title="' + (ca.checked ? 'CAチェック済' : 'CAを確認後、サポート・コミットを有効にします') + '" onclick="WorkloadUI.requestCACheck(\'' + ca.id + '\')">' + (ca.checked ? 'CAチェック済' : 'CAチェック未') + '</button>');
+      html.push('<span class="ca-commit-action"><button type="button" class="ca-commit-button" id="commit-' + ca.id + '"' + (!ca.committedAt && !ca.checked ? ' disabled="disabled"' : '') + ' title="' + (ca.committedAt ? 'コミットを取り消します（コミット時刻：' + esc(ca.committedAt) + '）' : 'このCAをコミット完了にします') + '" aria-label="' + esc(ca.name) + ' CAの' + (ca.committedAt ? 'コミット取消' : 'コミット') + '" onclick="WorkloadUI.requestCommit(\'' + ca.id + '\')">' + (ca.committedAt ? 'コミット取消' : 'コミット') + '</button></span></td>');
       html.push('<td class="ca-unsorted">' + format(unsorted) + '</td><td class="ca-unread">' + format(unread) + '</td><td class="ca-flag">' + format(flag) + '</td>');
       html.push('<td class="ca-total">' + format(unread + flag) + '</td>');
-      html.push('<td class="support-cell"><div class="support-layout"><span class="support-request-control" id="support-request-control-' + ca.id + '">' + supportRequestHTML(ca) + '</span><span class="support-names" id="supports-' + ca.id + '">' + supportHTML(ca) + '</span><span class="ca-commit-action"><button type="button" class="ca-commit-button" id="commit-' + ca.id + '"' + (!ca.committedAt && !ca.checked ? ' disabled="disabled"' : '') + ' title="' + (ca.committedAt ? 'コミットを取り消します（コミット時刻：' + esc(ca.committedAt) + '）' : 'このCAをコミット完了にします') + '" aria-label="' + esc(ca.name) + ' CAの' + (ca.committedAt ? 'コミット取消' : 'コミット') + '" onclick="WorkloadUI.requestCommit(\'' + ca.id + '\')">' + (ca.committedAt ? 'コミット取消' : 'コミット') + '</button></span></div></td></tr>');
+      html.push('<td class="support-cell"><div class="support-layout"><span class="support-names" id="supports-' + ca.id + '">' + supportHTML(ca) + '</span></div></td></tr>');
       return html.join("");
     }
     function rankedCAs(staff) {
@@ -809,7 +826,7 @@
       html.push('<tr class="detail-row" id="detail-' + staff.id + '"><td class="detail-cell" colspan="8">');
       html.push('<div class="detail-header"><strong>' + esc(staff.name) + ' さんの担当CA</strong><span class="detail-note">サポートはCAごとに最大3名</span></div>');
       html.push('<table class="ca-table" aria-label="' + esc(staff.name) + 'さんの担当CA別内訳">');
-      html.push('<colgroup><col style="width:26%" /><col style="width:10%" /><col style="width:8%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:31%" /></colgroup>');
+      html.push('<colgroup><col style="width:24%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>');
       html.push('<tbody id="ca-body-' + staff.id + '">');
       if (!deferred) {
         cas = rankedCAs(staff);
@@ -929,7 +946,7 @@
         html.push('<td class="staff-unread"><span class="metric-value">' + format(t.unread) + '</span></td>');
         html.push('<td class="staff-flag"><span class="metric-value flag">' + format(t.flag) + '</span></td>');
         html.push('<td class="staff-total"><span class="metric-value total-value">' + format(t.total) + '</span><div class="load-track" title="合計件数の比較（最多の担当者を100%として表示）"><span class="load-fill" style="width:' + barWidth + '%"></span></div></td>');
-        html.push('<td class="staff-support"><span class="support-count" id="supportCount-' + staff.id + '" title="担当CA全体のサポート人数（同じ氏名は1名として集計）">' + supportCountFor(staff) + '名</span>' + supportWantedHTML(staff) + '</td></tr>');
+        html.push('<td class="staff-support"><span class="staff-support-top"><span id="staff-support-request-control-' + staff.id + '">' + supportRequestHTML(staff) + '</span><span class="support-count" id="supportCount-' + staff.id + '" title="担当CA全体のサポート人数（同じ氏名は1名として集計）">' + supportCountFor(staff) + '名</span></span>' + supportWantedHTML(staff) + '</td></tr>');
         if (opened) {
           oldDetail = canReuse && byId("detail-" + staff.id);
           if (oldDetail) {
@@ -1240,19 +1257,20 @@
         applyShared(true); shareStatus(); toast(ca.name + " CAをチェック済みにしました。");
       });
     }
-    function requestSupportWanted(caId) {
-      var ca = findCA(caId), control = byId("support-request-" + caId), wanted;
+    function requestSupportWanted(staffId) {
+      var staff = staffIndex["@" + staffId], control = byId("support-request-" + staffId), pin = byId("pinned-support-request-" + staffId), wanted;
       /* 保存成功までは表示を元の状態に戻し、失敗時に希望だけが残らないようにする。 */
-      if (control && ca) { control.checked = !!ca.supportRequested; }
-      if (shareWriteBusy || importBusy || pendingRemoval || !ca || ca.committedAt || !ca.checked) { return; }
-      if (!commitSupport(true, function () { requestSupportWanted(caId); })) { return; }
-      wanted = !ca.supportRequested;
-      if (control) { control.disabled = true; } setShareBusy(true);
-      WorkloadShare.setSupportRequest(ca, wanted, function (error, snapshot) {
+      if (control && staff) { control.checked = !!staff.supportRequested; }
+      if (pin && staff) { pin.checked = !!staff.supportRequested; }
+      if (shareWriteBusy || importBusy || pendingRemoval || !supportRequestEnabled(staff)) { return; }
+      if (!commitSupport(true, function () { requestSupportWanted(staffId); })) { return; }
+      wanted = !staff.supportRequested;
+      if (control) { control.disabled = true; } if (pin) { pin.disabled = true; } setShareBusy(true);
+      WorkloadShare.setStaffSupportRequest(staff, wanted, function (error, snapshot) {
         setShareBusy(false);
-        if (error) { if (control) { control.disabled = false; } sharedSaveError(error, snapshot); return; }
+        if (error) { refreshStaffSupport(staff); sharedSaveError(error, snapshot); refreshStaffPin(); return; }
         if (snapshot) { sharedSnapshot = snapshot; } sharedError = "";
-        applyShared(true); shareStatus(); toast(ca.name + " CAのサポ希望を" + (wanted ? "設定" : "解除") + "しました。");
+        applyShared(true); shareStatus(); toast(staff.name + "さんのサポ希望を" + (wanted ? "設定" : "解除") + "しました。");
       });
     }
     function globalKey(e) {
@@ -1452,18 +1470,18 @@
       <div id="teamFilterBar" class="team-filter-bar" style="display:none" aria-live="polite"><span class="team-filter-label">表示チーム</span><strong id="teamFilterName" class="team-filter-name"></strong><span class="team-filter-rank">チーム内順位</span><button type="button" id="clearTeamFilter" class="team-filter-clear" onclick="WorkloadUI.clearTeamFilter()">全チームに戻す</button></div>
       <div class="ranking-header-wrap" id="rankingHeader">
       <table class="ranking-table" aria-label="ランキングの項目">
-        <colgroup><col style="width:5%" /><col style="width:21%" /><col style="width:10%" /><col style="width:8%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:31%" /></colgroup>
+        <colgroup><col style="width:5%" /><col style="width:18%" /><col style="width:10%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>
         <thead><tr><th scope="col" class="rank-heading">順位</th><th scope="col" class="staff-heading">担当者</th><th scope="col" id="heading-team" class="team-heading">チーム</th><th scope="col" id="heading-unsorted">未仕分</th><th scope="col" id="heading-unread">純粋未読</th><th scope="col" id="heading-flag">フラグ</th><th scope="col" id="heading-total" class="active-sort">合計</th><th scope="col" class="support-heading">サポート投入状況<span class="support-heading-note">人数／担当CA別の氏名</span></th></tr></thead>
       </table></div>
       <div class="ranking-scroll-wrap">
       <div class="pinned-staff" id="pinnedStaff" role="group" aria-label="展開中の担当者">
       <table class="ranking-table" aria-label="展開中の担当者の業務量">
-        <colgroup><col style="width:5%" /><col style="width:21%" /><col style="width:10%" /><col style="width:8%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:31%" /></colgroup>
+        <colgroup><col style="width:5%" /><col style="width:18%" /><col style="width:10%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>
         <tbody id="pinnedStaffBody"></tbody>
       </table></div>
       <div class="ranking-scroll" id="rankingScroll" tabindex="0" aria-label="担当者ランキング一覧">
       <table class="ranking-table" aria-label="担当者別の業務量ランキング">
-        <colgroup><col style="width:5%" /><col style="width:21%" /><col style="width:10%" /><col style="width:8%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:31%" /></colgroup>
+        <colgroup><col style="width:5%" /><col style="width:18%" /><col style="width:10%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>
         <tbody id="rankingBody"></tbody>
       </table></div>
       </div>
@@ -1493,7 +1511,7 @@
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="supportConfirmTitle" aria-describedby="supportConfirmDescription">
         <div class="modal-icon" aria-hidden="true">?</div>
         <h3 id="supportConfirmTitle">サポート投入の確認</h3>
-        <p id="supportConfirmDescription"><strong id="supportConfirmName"></strong>さんをサポート投入します。</p>
+        <p id="supportConfirmDescription">入力を確定しますか？<strong id="supportConfirmName" style="display:none"></strong></p>
         <div class="modal-buttons"><button type="button" id="supportConfirmNo" class="modal-button" onclick="WorkloadUI.rejectSupport()">いいえ</button><button type="button" id="supportConfirmYes" class="modal-button confirm" onclick="WorkloadUI.confirmSupport()">はい</button></div>
       </div>
     </div></div>

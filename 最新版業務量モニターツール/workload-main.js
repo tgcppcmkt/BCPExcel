@@ -622,6 +622,8 @@ var WorkloadShare = (function () {
         var a = trim(organization).replace(/[\s\u3000]+/g, ""), b = trim(caName).replace(/[\s\u3000]+/g, "");
         return "@" + a.length + ":" + a + "|" + b.length + ":" + b;
     }
+    /* 担当者IDを別の名前空間に置き、既存の共有JSON形式・保存処理を維持する。 */
+    function staffSupportKey(staff) { return keyOf("@WorkloadStaffSupport", staff.id); }
     function pad(value) { return value < 10 ? "0" + value : String(value); }
     function dayKey(date) { return String(date.getFullYear()) + pad(date.getMonth() + 1) + pad(date.getDate()); }
     function timeText(date) { return date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate()) + " " + pad(date.getHours()) + ":" + pad(date.getMinutes()) + ":" + pad(date.getSeconds()); }
@@ -891,7 +893,18 @@ var WorkloadShare = (function () {
         var record = { id: id, supports: [], commits: [] }, key = keyOf(action.organization, action.caName), list = active(state, key), i, row, name = trim(action.supportName), stamp = timeText(now);
         validateIdentity(action);
         if (own(state.ids, "@" + id)) { return record; }
-        if (action.kind === "supportRequest") {
+        if (action.kind === "staffSupportRequest" && action.requested === false) {
+            if (Object.prototype.toString.call(action.legacyRequests) !== "[object Array]") { throw new Error("担当者のサポ希望情報が不正です。"); }
+            record.cancelSupportRequests = [];
+            for (i = 0; i < action.legacyRequests.length; i++) {
+                row = action.legacyRequests[i]; validateIdentity(row);
+                list = supportRequested(state, keyOf(row.organization, row.caName));
+                if (!list) { continue; }
+                if (list.id !== row.requestId) { throw new Error("サポ希望が更新されています。最新の状態を確認してから、もう一度取り消してください。"); }
+                record.cancelSupportRequests.push({ id: list.id, organization: list.organization, caName: list.caName });
+            }
+        }
+        if (action.kind === "supportRequest" || action.kind === "staffSupportRequest") {
             if (typeof action.requested !== "boolean") { throw new Error("サポ希望の指定が不正です。"); }
             row = supportRequested(state, key);
             if (action.requested) {
@@ -902,7 +915,8 @@ var WorkloadShare = (function () {
                 if (!row) { return record; }
                 /* 古い画面から、他のフォームが新しく設定した希望を取り消さない。 */
                 if (row.id !== action.requestId) { throw new Error("サポ希望が更新されています。最新の状態を確認してから、もう一度取り消してください。"); }
-                record.cancelSupportRequests = [{ id: row.id, organization: row.organization, caName: row.caName }];
+                record.cancelSupportRequests = record.cancelSupportRequests || [];
+                record.cancelSupportRequests.push({ id: row.id, organization: row.organization, caName: row.caName });
             }
         } else if (action.kind === "check") {
             if (checked(state, key)) { return record; }
@@ -1070,7 +1084,7 @@ var WorkloadShare = (function () {
             if (!value || value.schemaVersion !== 1 || Object.prototype.toString.call(value.jobs) !== "[object Array]" || !value.jobs.length) { throw new Error("保留した操作の形式が不正です。"); }
             for (i = 0; i < value.jobs.length; i++) {
                 job = value.jobs[i];
-                if (!job || typeof job.id !== "string" || !/^[a-z0-9-]+$/i.test(job.id) || own(ids, "@" + job.id) || typeof job.date !== "string" || !/^\d{8}$/.test(job.date) || !job.action || typeof job.action.kind !== "string" || !/^(add|finish|commit|cancelCommit|check|supportRequest)$/.test(job.action.kind)) { throw new Error("保留した操作が不正です。"); }
+                if (!job || typeof job.id !== "string" || !/^[a-z0-9-]+$/i.test(job.id) || own(ids, "@" + job.id) || typeof job.date !== "string" || !/^\d{8}$/.test(job.date) || !job.action || typeof job.action.kind !== "string" || !/^(add|finish|commit|cancelCommit|check|supportRequest|staffSupportRequest)$/.test(job.action.kind)) { throw new Error("保留した操作が不正です。"); }
                 validateIdentity(job.action); ids["@" + job.id] = true;
             }
         } catch (readError) { callback(readError, path); return; }
@@ -1094,6 +1108,15 @@ var WorkloadShare = (function () {
         hasPendingWrites: function () { return pendingWrites().length > 0; }, handoffPendingWrites: handoffPendingWrites, resumePendingWrites: resumePendingWrites,
         checkCA: function (ca, callback) { request({ kind: "check", organization: ca.organization, caName: ca.name }, callback); },
         setSupportRequest: function (ca, requested, callback) { request({ kind: "supportRequest", organization: ca.organization, caName: ca.name, requested: requested, requestId: ca.supportRequestId || "" }, callback); },
+        staffSupportKey: staffSupportKey,
+        setStaffSupportRequest: function (staff, requested, callback) {
+            var rows = [], i, ca;
+            for (i = 0; i < staff.cas.length; i++) {
+                ca = staff.cas[i]; rows.push({ organization: ca.organization, caName: ca.name, requestId: ca.supportRequestId || "" });
+            }
+            request({ kind: "staffSupportRequest", organization: "@WorkloadStaffSupport", caName: staff.id, requested: requested,
+                requestId: staff.supportRequestId || "", legacyRequests: rows }, callback);
+        },
         addSupport: function (ca, name, callback) { request({ kind: "add", organization: ca.organization, caName: ca.name, supportName: name }, callback); },
         finishSupport: function (ca, entryId, callback) { request({ kind: "finish", organization: ca.organization, caName: ca.name, entryId: entryId }, callback); },
         commitCA: function (ca, callback) { request({ kind: "commit", organization: ca.organization, caName: ca.name }, callback); },
