@@ -235,7 +235,7 @@ var WorkloadBrowser = (function () {
         if (roots[kind]) {
             await dateStart(kind);
             var start = starts[kind], relative = await roots[kind].resolve(handle);
-            if (!relative || start && start.exact && start.day === new Date().toDateString() && relative.slice(0, -1).join("/") !== start.parts.join("/")) { throw new Error("設定した当日／当月フォルダ内のCSVを選択してください。"); }
+            if (!relative || start && start.exact && start.day === new Date().toDateString() && relative.slice(0, -1).join("/") !== start.parts.join("/")) { throw new Error((start && !start.exact ? "設定した親フォルダ内" : "設定した当日／当月フォルダ内") + "のCSVを選択してください。"); }
         }
         await rememberChoice(kind, handle);
     }
@@ -306,9 +306,7 @@ var WorkloadBrowser = (function () {
                 if (!roots[kind]) { continue; }
                 report((kind === "unread" ? "未読" : "フラグ") + "の読込フォルダを確認しています。");
                 await logPermission(roots[kind], "read", kind === "unread" ? "未読" : "フラグ", report);
-                var start = starts[kind];
-                if (!start || !start.exact || start.day !== new Date().toDateString()) { await dateStart(kind); }
-                if (!starts[kind].exact) { throw new Error((kind === "unread" ? "未読の当日" : "フラグの当月") + "フォルダが見つかりません。親フォルダ内の日付フォルダを確認してください。"); }
+                await dateStart(kind);
             }
             report("1/2 未読CSVを選択してください。");
             var unread = await pickLogFile("unread", report);
@@ -338,7 +336,6 @@ var WorkloadBrowser = (function () {
             await reloadForLogs(report);
             await logPermission(roots.weekend, "read", "土日ログ", report);
             await dateStart("weekend");
-            if (!starts.weekend.exact) { throw new Error("土日ログの当日フォルダ（yymmdd）が見つかりません。「土日ログ」に設定したログフォルダ内を確認してください。"); }
             var selectedDay = new Date().toDateString(), options = pickerOptions("weekend");
             for (var i = 0; i < 3; i++) {
                 report("土日ログ " + (i + 1) + "/3：CSVを選択してください。");
@@ -348,7 +345,7 @@ var WorkloadBrowser = (function () {
             }
             for (i = 0; i < handles.length; i++) {
                 var relative = await roots.weekend.resolve(handles[i]);
-                if (!relative || relative.slice(0, -1).join("/") !== starts.weekend.parts.join("/")) { throw new Error("土日ログの当日フォルダ内のCSVを選択してください。"); }
+                if (!relative || (starts.weekend.exact && relative.slice(0, -1).join("/") !== starts.weekend.parts.join("/"))) { throw new Error((starts.weekend.exact ? "土日ログの当日フォルダ内" : "「土日ログ」に設定した親フォルダ内") + "のCSVを選択してください。"); }
                 if (!/\.csv$/i.test(handles[i].name)) { throw new Error("土日ログにはCSVファイルを選択してください。"); }
                 for (var j = 0; j < i; j++) {
                     if (await handles[i].isSameEntry(handles[j])) { throw new Error("同じCSVが選択されています。異なる3つのCSVを選択してください。"); }
@@ -369,7 +366,7 @@ var WorkloadBrowser = (function () {
         await dateStart("weekend");
         for (var i = 0; i < 3; i++) {
             var handle = selection.handles[i], relative = await roots.weekend.resolve(handle);
-            if (selection.day !== new Date().toDateString() || !starts.weekend.exact || !relative || relative.slice(0, -1).join("/") !== starts.weekend.parts.join("/")) { throw new Error("当日の土日ログCSVをもう一度選択してください。"); }
+            if (selection.day !== new Date().toDateString() || !relative || (starts.weekend.exact && relative.slice(0, -1).join("/") !== starts.weekend.parts.join("/"))) { throw new Error("当日の土日ログCSVをもう一度選択してください。"); }
             report("土日ログ " + (i + 1) + "/3 を読み込んでいます。");
             var file = await handle.getFile(), decoded = await csv(file, "auto"); files.push(file.name);
             logs.push(WorkloadWeekend.readLog(decoded.rows, file.name));
@@ -436,7 +433,7 @@ var WorkloadBrowser = (function () {
             if (roots[kind]) {
                 await dateStart(kind);
                 var start = starts[kind], relative = await roots[kind].resolve(choice.handle);
-                if (!start.exact || !relative || relative.slice(0, -1).join("/") !== start.parts.join("/")) { throw new Error("当日／当月フォルダ内の " + choice.name + " を選び直してください。"); }
+                if (!relative || (start.exact && relative.slice(0, -1).join("/") !== start.parts.join("/"))) { throw new Error((start.exact ? "当日／当月フォルダ内の " : "設定した親フォルダ内の ") + choice.name + " を選び直してください。"); }
             }
             return await choice.handle.getFile();
         }
