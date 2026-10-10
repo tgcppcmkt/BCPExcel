@@ -217,7 +217,7 @@ var WorkloadBrowser = (function () {
     async function dateStart(kind) {
         if (!roots[kind]) { return; }
         var date = new Date(), month = date.getFullYear() + ("0" + (date.getMonth() + 1)).slice(-2), day = ("0" + (date.getMonth() + 1)).slice(-2) + ("0" + date.getDate()).slice(-2);
-        var folder = roots[kind], parts = kind === "unread" ? [month, day] : [month];
+        var folder = roots[kind], parts = kind === "weekend" ? [String(date.getFullYear()).slice(-2) + day] : kind === "unread" ? [month, day] : [month];
         try { for (var part of parts) { folder = await folder.getDirectoryHandle(part); } starts[kind] = { handle: folder, parts: parts, exact: true, day: date.toDateString() }; }
         catch (error) { if (error.name !== "NotFoundError") { throw error; } starts[kind] = { handle: roots[kind], parts: [], exact: false, day: date.toDateString() }; }
     }
@@ -325,6 +325,63 @@ var WorkloadBrowser = (function () {
             throw error;
         } finally { choosing = false; }
     }
+    async function selectWeekendLogs(progress) {
+        if (choosing) { throw new Error("ファイル選択が完了してから集計してください。"); }
+        if (typeof window.showOpenFilePicker !== "function") { throw new Error("土日ログの選択には、通常のEdgeでHTMLを開いてください。"); }
+        var missing = [], report = progress || function () {}, handles = [];
+        if (!remembered) { missing.push("共有"); }
+        if (!roots.weekend) { missing.push("土日ログ"); }
+        if (!selected.assignment) { missing.push("振分表"); }
+        if (missing.length) { throw new Error("初期設定が完了していません。画面上部の「設定」で「" + missing.join("」「") + "」を設定してください。"); }
+        choosing = true;
+        try {
+            await reloadForLogs(report);
+            await logPermission(roots.weekend, "read", "土日ログ", report);
+            await dateStart("weekend");
+            if (!starts.weekend.exact) { throw new Error("土日ログの当日フォルダ（yymmdd）が見つかりません。「土日ログ」に設定したログフォルダ内を確認してください。"); }
+            var selectedDay = new Date().toDateString(), options = pickerOptions("weekend");
+            for (var i = 0; i < 3; i++) {
+                report("土日ログ " + (i + 1) + "/3：CSVを選択してください。");
+                var choice = await logGestureAction(function () { return window.showOpenFilePicker(options); },
+                    "土日ログ " + (i + 1) + "/3 の選択画面を開きます。「CSVを選択」を押してください。", "CSVを選択", report);
+                handles.push(choice[0]);
+            }
+            for (i = 0; i < handles.length; i++) {
+                var relative = await roots.weekend.resolve(handles[i]);
+                if (!relative || relative.slice(0, -1).join("/") !== starts.weekend.parts.join("/")) { throw new Error("土日ログの当日フォルダ内のCSVを選択してください。"); }
+                if (!/\.csv$/i.test(handles[i].name)) { throw new Error("土日ログにはCSVファイルを選択してください。"); }
+                for (var j = 0; j < i; j++) {
+                    if (await handles[i].isSameEntry(handles[j])) { throw new Error("同じCSVが選択されています。異なる3つのCSVを選択してください。"); }
+                }
+            }
+            if (selected.assignment.handle) { await logPermission(selected.assignment.handle, "read", "振分表", report); }
+            if (selectedDay !== new Date().toDateString()) { throw new Error("選択中に日付が変わりました。もう一度「ログ集計」で当日のCSVを選択してください。"); }
+            return { cancelled: false, handles: handles, day: selectedDay };
+        } catch (error) {
+            if (error.name === "AbortError") { return { cancelled: true }; }
+            throw error;
+        } finally { choosing = false; }
+    }
+    async function runWeekend(previousStaff, selection, progress) {
+        if (typeof WorkloadWeekend === "undefined") { throw new Error("workload-weekend.jsをHTMLと同じフォルダに配置してください。"); }
+        if (!selection || !selection.handles || selection.handles.length !== 3) { throw new Error("土日ログのCSVを3つ選択してください。"); }
+        var config = WorkloadImport.validateConfig(), report = progress || function () {}, logs = [], files = [];
+        await dateStart("weekend");
+        for (var i = 0; i < 3; i++) {
+            var handle = selection.handles[i], relative = await roots.weekend.resolve(handle);
+            if (selection.day !== new Date().toDateString() || !starts.weekend.exact || !relative || relative.slice(0, -1).join("/") !== starts.weekend.parts.join("/")) { throw new Error("当日の土日ログCSVをもう一度選択してください。"); }
+            report("土日ログ " + (i + 1) + "/3 を読み込んでいます。");
+            var file = await handle.getFile(), decoded = await csv(file, "auto"); files.push(file.name);
+            logs.push(WorkloadWeekend.readLog(decoded.rows, file.name));
+        }
+        report("振分表を読み込んでいます。");
+        var assignmentFile = await fileOf("assignment"), roster = await WorkloadWorkbook.read(assignmentFile, config);
+        var result = WorkloadWeekend.build(logs, roster, previousStaff, config);
+        if (selection.day !== new Date().toDateString()) { throw new Error("読み込み中に日付が変わりました。もう一度集計してください。"); }
+        result.weekend.day = selection.day; result.importedAt = new Date();
+        result.sources = { weekendFiles: files, assignmentFile: assignmentFile.name, sheetName: config.assignment.sheetName };
+        return result;
+    }
     async function choose(kind) {
         if (!allowed()) { info("入力・保存・集計が完了してからファイルを選択してください。", true); return; }
         if (typeof window.showOpenFilePicker !== "function") {
@@ -424,7 +481,7 @@ var WorkloadBrowser = (function () {
                 var handle = await WorkloadBrowserStore.get("file-" + kind);
                 if (handle) { selected[kind] = { handle: handle, name: handle.name }; display(kind); }
             }
-            for (kind of ["unread", "flag"]) {
+            for (kind of ["unread", "flag", "weekend"]) {
                 handle = await WorkloadBrowserStore.get("root-" + kind);
                 if (handle) { roots[kind] = handle; node(kind + "RootName").textContent = handle.name; node(kind + "RootName").title = handle.name; await dateStart(kind).catch(function () {}); }
             }
@@ -438,6 +495,7 @@ var WorkloadBrowser = (function () {
     }
     return { init: init, choose: choose, chooseRoot: chooseRoot, connectShared: connectShared, retryShared: retryShared,
         selectLogs: selectLogs, runWeekday: runWeekday, sharedStatus: sharedStatus,
+        selectWeekendLogs: selectWeekendLogs, runWeekend: runWeekend, isChoosing: function () { return choosing; },
         exportHistory: function () { download(WorkloadShare.historyText(), WorkloadShare.dayKey(new Date()) + "_HTML履歴.json"); },
         exportPending: function () { try { download(JSON.stringify({ schemaVersion: 1, application: "WorkloadRankingHTML", jobs: WorkloadShare.pendingExport() }, null, 2), "業務量モニター_保存待ち控え.json"); } catch (error) { fail(error); } }
     };

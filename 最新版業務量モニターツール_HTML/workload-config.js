@@ -6,7 +6,7 @@
  */
 var WorkloadConfig = {
     unread: {
-        startRow: 2,                    // 1行目の見出しを除外
+        startRow: 3,                    // 1・2行目を除外
         charset: "auto",               // auto / utf-8 / shift_jis / unicode
         columns: {
             organization: "C",
@@ -17,7 +17,7 @@ var WorkloadConfig = {
         }
     },
     flag: {
-        startRow: 2,
+        startRow: 3,
         charset: "auto",
         columns: {
             organization: "C",
@@ -27,7 +27,7 @@ var WorkloadConfig = {
     },
     assignment: {
         sheetName: "CA振分表",          // この名前のシートを読みます
-        startRow: 2,
+        startRow: 3,
         columns: {
             organization: "C",
             caName: "E",

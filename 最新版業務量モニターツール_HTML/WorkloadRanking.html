@@ -388,10 +388,40 @@
       .staff-row.committed .load-track { background: #414a43; }
     }
   </style>
+  <style>
+    .weekend-only { display: none; }
+    .weekend-mode .weekday-only { display: none; }
+    .weekend-mode .weekend-only { display: block; }
+    .weekend-mode .browser-file.weekend-only { display: inline-flex; }
+    .weekend-mode .summary-item.first { width: 100%; }
+    .capacity-mode-toggle { display: inline-flex; vertical-align: middle; width: 70px; height: 31px; margin-left: 6px; border: 1px solid #dce3ed; border-radius: 5px; overflow: hidden; background: #fff; }
+    .capacity-mode-toggle button { flex: 1; border: 0; padding: 0 4px; background: transparent; color: #43566f; font-size: 11px; }
+    .capacity-mode-toggle button[aria-pressed="true"] { background: #5848b8; color: #fff; }
+    .capacity-mode-toggle button:focus-visible { outline-offset: -3px; }
+    .weekend-items { margin-bottom: 14px; padding: 6px 12px; background: #fff; border: 1px solid #dfe5ee; border-radius: 12px; }
+    .weekend-item { display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 5px 4px; border-bottom: 1px solid #edf0f5; }
+    .weekend-item:last-child { border-bottom: 0; }
+    .weekend-item label { display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; cursor: pointer; }
+    .weekend-item input { flex-shrink: 0; margin: 0; accent-color: #5848b8; }
+    .weekend-item-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .weekend-item-value { white-space: nowrap; font-size: 16px; font-weight: 700; }
+    .weekend-item.is-excluded { color: #626e7c; background: #eef1f5; border-radius: 4px; }
+    @media screen and (min-width:1280px) { .capacity-mode-toggle { width: 76px; height: 42px; } .capacity-mode-toggle button { font-size: 12px; } }
+    @media (prefers-color-scheme: dark) {
+      .capacity-mode-toggle { background: var(--wm-raised); border-color: var(--wm-border); }
+      .capacity-mode-toggle button { color: var(--wm-text); }
+      .capacity-mode-toggle button[aria-pressed="true"] { color: #f3f8f4; background: #2b6648; }
+      .weekend-items { background: var(--wm-card); border-color: var(--wm-border); }
+      .weekend-item { border-color: #415348; }
+      .weekend-item input { accent-color: var(--wm-accent); }
+      .weekend-item.is-excluded { color: var(--wm-grey-text); background: var(--wm-grey); }
+    }
+  </style>
   <script type="text/javascript" src="workload-config.js"></script>
   <script src="workload-core.js"></script>
   <script src="workload-browser.js"></script>
   <script src="workload-share.js"></script>
+  <script src="workload-weekend.js"></script>
   <script type="text/javascript">
   /*
    * 業務量モニター HTML版 v0.8.3 / ログ集計
@@ -415,6 +445,7 @@
     var capturedTime = "";
     var capturedTimeValid = false;
     var hourlyRate = 16;
+    var displayMode = "weekday", modeViews = {}, weekdayColumns = {};
     var caIndex = {}, staffIndex = {}, caStaffIndex = {}, cachedTotals = {}, cachedSupports = {}, cachedGlobal = null;
     var dataVersion = 0, tableDataVersion = -1, detailSearchText = "";
     var searchTimer = null, detailTimer = null, detailQueue = [], detailNeedsSize = false;
@@ -625,6 +656,58 @@
       setText(byId("summaryUnsorted"), format(all.unsorted));
       setText(byId("staffTotal"), staffData.length);
       setText(byId("caTotal"), all.caCount);
+      if (displayMode === "weekend" && typeof WorkloadWeekend !== "undefined") { WorkloadWeekend.render(staffData, excludedReason); }
+    }
+    function updateModeLayout() {
+      var weekend = displayMode === "weekend", ids = ["rankingHeaderCols", "rankingPinnedCols", "rankingBodyCols"], i, columns;
+      document.body.className = trim(document.body.className.replace(/\bweekend-mode\b/g, "")) + (weekend ? " weekend-mode" : "");
+      byId("modeWeekday").setAttribute("aria-pressed", weekend ? "false" : "true");
+      byId("modeWeekend").setAttribute("aria-pressed", weekend ? "true" : "false");
+      for (i = 0; i < ids.length; i++) {
+        columns = byId(ids[i]); if (!weekdayColumns[ids[i]]) { weekdayColumns[ids[i]] = columns.innerHTML; }
+        columns.innerHTML = weekend ? '<col style="width:5%" /><col style="width:27%" /><col style="width:10%" /><col style="width:9%" /><col style="width:14%" /><col style="width:35%" />' : weekdayColumns[ids[i]];
+      }
+      byId("heading-unread").style.display = byId("heading-flag").style.display = weekend ? "none" : "";
+      byId("sortUnread").hidden = byId("sortFlag").hidden = weekend;
+      byId("sortUnread").disabled = byId("sortFlag").disabled = weekend;
+      setText(byId("summaryFormula"), weekend ? "チェックした対象ログの合計" : "純粋未読 ＋ フラグ");
+      setText(byId("totalFormula"), weekend ? "合計 ＝ チェックした対象ログ　／　未仕分は合計に含めません。" : "合計 ＝ 純粋未読 ＋ フラグ　／　未仕分は合計に含めません。");
+      byId("aggregateLog").title = weekend ? "共有情報を更新し、当日の土日ログCSVを3つ選択して振分表と集計します" : "共有情報を更新してから未読CSV・フラグCSVを順に選択し、設定した振分表と集計します";
+    }
+    function setMode(mode) {
+      if ((mode !== "weekday" && mode !== "weekend") || mode === displayMode) { return; }
+      if (importBusy || shareWriteBusy || editing || pendingSupport || pendingRemoval || WorkloadBrowser.isChoosing()) {
+        toast("入力・保存・集計が完了してから切り替えてください。", true); return;
+      }
+      if (mode === "weekend" && typeof WorkloadWeekend === "undefined") { showImportError("workload-weekend.jsをHTMLと同じフォルダに配置してください。"); return; }
+      cancelDetailRender();
+      if (searchTimer) { window.clearTimeout(searchTimer); searchTimer = null; searchText = normalized(byId("searchInput").value); }
+      modeViews[displayMode] = { data: staffData, expanded: expanded, search: searchText, searchValue: byId("searchInput").value, sort: sortKey, team: selectedTeam,
+        time: capturedTime, valid: capturedTimeValid, rate: hourlyRate, input: byId("capturedTimeInput").value,
+        inputClass: byId("capturedTimeInput").className, footer: byId("dataFooter").textContent, scroll: byId("rankingScroll").scrollTop };
+      var view = modeViews[mode]; displayMode = mode;
+      staffData = view ? view.data : []; expanded = view ? view.expanded : {};
+      searchText = view ? view.search : ""; sortKey = view ? view.sort : "total"; selectedTeam = view ? view.team : "";
+      capturedTime = view ? view.time : ""; capturedTimeValid = view ? view.valid : false;
+      hourlyRate = view ? view.rate : mode === "weekend" ? 10 : WorkloadConfig.capacity.hourlyRate;
+      byId("searchInput").value = view ? view.searchValue : ""; byId("sortSelect").value = sortKey;
+      byId("capturedTimeInput").value = view ? view.input : ""; byId("capturedTimeInput").className = view ? view.inputClass : "time-input";
+      setText(byId("dataFooter"), view ? view.footer : "「ログ集計」でCSVと振分表を取り込みます。");
+      pinnedStaffRow = pinnedStaffDetail = null; pinnedStaffHTML = ""; tableDataVersion = -1; sharedVersion = "";
+      if (mode === "weekend") { WorkloadWeekend.applySelection(staffData); }
+      rebuildDataIndexes(); projectShared(staffData); updateModeLayout(); searchFocus(false);
+      renderSummary(); renderCapacity(); renderTable(true); shareStatus();
+      byId("rankingScroll").scrollTop = view ? view.scroll : 0; refreshStaffPin();
+    }
+    function setWeekendItem(index, checked) {
+      if (displayMode !== "weekend") { return; }
+      if (importBusy || shareWriteBusy || editing || pendingSupport || pendingRemoval || WorkloadBrowser.isChoosing()) {
+        WorkloadWeekend.render(staffData, excludedReason); toast("入力・保存・集計が完了してから項目を変更してください。", true); return;
+      }
+      if (!WorkloadWeekend.setItem(index, checked)) { return; }
+      var scroll = byId("rankingScroll").scrollTop;
+      WorkloadWeekend.applySelection(staffData); rebuildDataIndexes(); renderSummary(); renderCapacity(); renderTable(true);
+      byId("rankingScroll").scrollTop = scroll; refreshStaffPin();
     }
     function renderCapacity() {
       var eligible = capacityHeadcount(), all = globalTotals(), time, estimate, spare, state;
@@ -789,6 +872,7 @@
     function applyImportedData(result) {
       var i, teamExists, at;
       if (!commitSupport(true, function () { applyImportedData(result); })) { return; }
+      if (displayMode === "weekend" && result.weekend) { WorkloadWeekend.accept(result.weekend); WorkloadWeekend.applySelection(result.staffData); }
       staffData = result.staffData; rebuildDataIndexes(); projectShared(staffData);
       if (selectedTeam) {
         teamExists = false;
@@ -837,9 +921,10 @@
       /* 共有情報を更新してからCSV選択を開始する。 */
         var result;
         try {
-          result = await WorkloadBrowser.selectLogs(function (message) { importPhase = message; shareStatus(); toast(message); });
+          result = await (displayMode === "weekend" ? WorkloadBrowser.selectWeekendLogs : WorkloadBrowser.selectLogs)(function (message) { importPhase = message; shareStatus(); toast(message); });
           if (result.cancelled) { toast("選択をキャンセルしました。表示データは変更していません。"); return; }
-          result = await WorkloadBrowser.runWeekday(staffData, function (message) { importPhase = message; shareStatus(); toast(message); });
+          var report = function (message) { importPhase = message; shareStatus(); toast(message); };
+          result = displayMode === "weekend" ? await WorkloadBrowser.runWeekend(staffData, result, report) : await WorkloadBrowser.runWeekday(staffData, report);
           if (result.cancelled) { toast("選択をキャンセルしました。表示データは変更していません。"); return; }
           applyImportedData(result);
         } catch (e) {
@@ -918,7 +1003,8 @@
       html.push('</td>');
       html.push('<td class="ca-check-cell"><button type="button" id="ca-check-' + ca.id + '" class="ca-check-button' + (ca.checked ? ' checked' : '') + '"' + (ca.checked || ca.committedAt || !sharingReady() ? ' disabled="disabled"' : '') + ' aria-pressed="' + (ca.checked ? 'true' : 'false') + '" title="' + (ca.checked ? 'CAチェック済' : 'CAを確認後、サポート・コミットを有効にします') + '" onclick="WorkloadUI.requestCACheck(\'' + ca.id + '\')">' + (ca.checked ? 'CAチェック済' : 'CAチェック未') + '</button>');
       html.push('<span class="ca-commit-action"><button type="button" class="ca-commit-button" id="commit-' + ca.id + '"' + (!sharingReady() || !ca.committedAt && !ca.checked ? ' disabled="disabled"' : '') + ' title="' + (ca.committedAt ? 'コミットを取り消します（コミット時刻：' + esc(ca.committedAt) + '）' : 'このCAをコミット完了にします') + '" aria-label="' + esc(ca.name) + ' CAの' + (ca.committedAt ? 'コミット取消' : 'コミット') + '" onclick="WorkloadUI.requestCommit(\'' + ca.id + '\')">' + (ca.committedAt ? 'コミット取消' : 'コミット') + '</button></span></td>');
-      html.push('<td class="ca-unsorted">' + format(unsorted) + '</td><td class="ca-unread">' + format(unread) + '</td><td class="ca-flag">' + format(flag) + '</td>');
+      html.push('<td class="ca-unsorted">' + format(unsorted) + '</td>');
+      if (displayMode === "weekday") { html.push('<td class="ca-unread">' + format(unread) + '</td><td class="ca-flag">' + format(flag) + '</td>'); }
       html.push('<td class="ca-total">' + format(unread + flag) + '</td>');
       html.push('<td class="support-cell"><div class="support-layout"><span class="ca-support-request-control" id="ca-support-request-control-' + ca.id + '">' + supportRequestHTML(ca) + '</span><span class="support-names" id="supports-' + ca.id + '">' + supportHTML(ca) + '</span></div></td></tr>');
       return html.join("");
@@ -937,16 +1023,16 @@
     }
     function detailHTML(staff, deferred) {
       var html = [], i, cas;
-      html.push('<tr class="detail-row" id="detail-' + staff.id + '"><td class="detail-cell" colspan="8">');
+      html.push('<tr class="detail-row" id="detail-' + staff.id + '"><td class="detail-cell" colspan="' + (displayMode === "weekend" ? 6 : 8) + '">');
       html.push('<div class="detail-header"><strong>' + esc(staff.name) + ' さんの担当CA</strong><span class="detail-note">サポートはCAごとに最大3名</span></div>');
       html.push('<table class="ca-table" aria-label="' + esc(staff.name) + 'さんの担当CA別内訳">');
-      html.push('<colgroup><col style="width:24%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>');
+      html.push(displayMode === "weekend" ? '<colgroup><col style="width:32%" /><col style="width:10%" /><col style="width:9%" /><col style="width:14%" /><col style="width:35%" /></colgroup>' : '<colgroup><col style="width:24%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>');
       html.push('<tbody id="ca-body-' + staff.id + '">');
       if (!deferred) {
         cas = rankedCAs(staff);
         for (i = 0; i < cas.length; i++) { html.push(caRowHTML(cas[i])); }
       }
-      if (!staff.cas.length) { html.push('<tr><td class="ca-empty" colspan="7">担当CAはありません。</td></tr>'); }
+      if (!staff.cas.length) { html.push('<tr><td class="ca-empty" colspan="' + (displayMode === "weekend" ? 5 : 7) + '">担当CAはありません。</td></tr>'); }
       html.push('</tbody></table></td></tr>');
       return html.join("");
     }
@@ -1052,8 +1138,10 @@
         html.push('<td class="staff-cell"><button type="button" class="staff-name" id="staff-button-' + staff.id + '" aria-expanded="' + (opened ? 'true' : 'false') + '" aria-controls="detail-' + staff.id + '" title="担当CAごとの内訳を' + (opened ? '閉じる' : '開く') + '" onclick="WorkloadUI.toggleStaff(\'' + staff.id + '\')">' + esc(staff.name) + '<span class="staff-ca-meta"><span class="ca-count">' + staff.cas.length + ' CA</span>' + staffCheckHTML(staff) + '</span><span class="expand-indicator" aria-hidden="true">' + (opened ? '−' : '＋') + '</span></button></td>');
         html.push('<td class="team-cell"><button type="button" class="team-badge' + (selectedTeam === teamNameOf(staff) ? ' active' : '') + '" id="team-button-' + staff.id + '" aria-label="' + esc(teamNameOf(staff)) + 'のランキングを表示" aria-pressed="' + (selectedTeam === teamNameOf(staff) ? 'true' : 'false') + '" title="' + esc(teamNameOf(staff)) + 'のランキングを表示' + (excludedReason(staff) ? ' ／ 件数・対応余力の対象から除外：' + esc(excludedReason(staff)) : '') + '" onclick="WorkloadUI.filterByTeam(\'' + staff.id + '\')">' + esc(teamNameOf(staff)) + '</button></td>');
         html.push('<td class="staff-unsorted"><span class="metric-value unsorted">' + format(t.unsorted) + '</span></td>');
-        html.push('<td class="staff-unread"><span class="metric-value">' + format(t.unread) + '</span></td>');
-        html.push('<td class="staff-flag"><span class="metric-value flag">' + format(t.flag) + '</span></td>');
+        if (displayMode === "weekday") {
+          html.push('<td class="staff-unread"><span class="metric-value">' + format(t.unread) + '</span></td>');
+          html.push('<td class="staff-flag"><span class="metric-value flag">' + format(t.flag) + '</span></td>');
+        }
         html.push('<td class="staff-total"><span class="metric-value total-value">' + format(t.total) + '</span><div class="load-track" title="合計件数の比較（最多の担当者を100%として表示）"><span class="load-fill" style="width:' + barWidth + '%"></span></div></td>');
         html.push('<td class="staff-support"><span class="staff-support-top"><span class="support-count" id="supportCount-' + staff.id + '" title="担当CA全体のサポート人数（同じ氏名は1名として集計）">' + supportCountFor(staff) + '名</span></span>' + supportWantedHTML(staff) + '</td></tr>');
         if (opened) {
@@ -1065,6 +1153,7 @@
       }
       if (!visible) {
         html.push(staffData.length ? '<tr><td colspan="8" class="empty-state"><strong>該当する担当者・CAが見つかりませんでした</strong>名前を変えて検索するか、検索欄をクリアしてください。</td></tr>' : '<tr><td colspan="8" class="empty-state"><strong>データはまだ集計されていません</strong>「ログ集計」ボタンで取り込んでください。</td></tr>');
+        if (displayMode === "weekend") { html[html.length - 1] = html[html.length - 1].replace('colspan="8"', 'colspan="6"'); }
       }
       replaceRankingRows(html.join(""), reused);
       tableDataVersion = dataVersion; detailSearchText = searchText;
@@ -1484,6 +1573,9 @@
       rebuildDataIndexes();
       searchText = ""; sortKey = "total"; selectedTeam = ""; importBusy = false; importPhase = "";
       capturedTime = ""; capturedTimeValid = false; hourlyRate = 16;
+      displayMode = "weekday"; modeViews = {};
+      if (typeof WorkloadWeekend !== "undefined") { WorkloadWeekend.reset(); }
+      updateModeLayout();
       sharedSnapshot = null; sharedVersion = ""; sharedError = ""; shareWriteBusy = false;
       if (toastTimer) { window.clearTimeout(toastTimer); toastTimer = null; }
       if (commitTimer) { window.clearInterval(commitTimer); commitTimer = null; }
@@ -1518,6 +1610,7 @@
     }
     return {
       init: init,
+      setMode: setMode, setWeekendItem: setWeekendItem,
       refreshBrowserShare: function () { sharedVersion = ""; applyShared(true); renderTable(true); },
       canChooseBrowserFiles: function () { return !(importBusy || shareWriteBusy || editing || pendingSupport || pendingRemoval); },
       canRetryBrowserWrites: function () { return !(importBusy || shareWriteBusy); },
@@ -1579,8 +1672,9 @@
       <div id="browserSettingsRow" class="browser-extra" role="group" aria-labelledby="browserSettingsTitle">
         <strong id="browserSettingsTitle" class="browser-settings-title">設定</strong>
         <div class="browser-file"><button type="button" id="connectShared" class="connect-button" onclick="WorkloadBrowser.connectShared()">共有</button><span id="sharedRootName" class="browser-file-name">未設定</span></div>
-        <div class="browser-file"><button type="button" onclick="WorkloadBrowser.chooseRoot('unread')">未読</button><span id="unreadRootName" class="browser-file-name">未設定</span></div>
-        <div class="browser-file"><button type="button" onclick="WorkloadBrowser.chooseRoot('flag')">フラグ</button><span id="flagRootName" class="browser-file-name">未設定</span></div>
+        <div class="browser-file weekday-only"><button type="button" onclick="WorkloadBrowser.chooseRoot('unread')">未読</button><span id="unreadRootName" class="browser-file-name">未設定</span></div>
+        <div class="browser-file weekday-only"><button type="button" onclick="WorkloadBrowser.chooseRoot('flag')">フラグ</button><span id="flagRootName" class="browser-file-name">未設定</span></div>
+        <div class="browser-file weekend-only"><button type="button" onclick="WorkloadBrowser.chooseRoot('weekend')">土日ログ</button><span id="weekendRootName" class="browser-file-name">未設定</span></div>
         <div class="browser-file"><button type="button" id="chooseAssignment" onclick="WorkloadBrowser.choose('assignment')">振分表</button><span id="assignmentFileName" class="browser-file-name">未選択</span></div>
       </div>
       <p id="browserStatus" class="browser-note" role="status" aria-live="polite"></p>
@@ -1597,24 +1691,24 @@
       <div class="toolbar">
         <div class="toolbar-left">
           <div class="search-box"><span class="search-icon" aria-hidden="true"></span><input type="text" id="searchInput" title="担当者・CA名で検索" aria-label="担当者・CA名で検索" onfocus="WorkloadUI.searchFocus(true)" onblur="WorkloadUI.searchFocus(false)" onkeyup="WorkloadUI.applySearch()" oninput="WorkloadUI.applySearch()" onchange="WorkloadUI.applySearch()" /><label for="searchInput" id="searchPlaceholder" class="search-placeholder">担当者・CA名で検索</label><button type="button" class="search-clear" id="searchClear" title="検索をクリア" aria-label="検索をクリア" onclick="WorkloadUI.clearSearch()">×</button></div>
-          <select id="sortSelect" class="sort-select" aria-label="ランキングの並び順" onchange="WorkloadUI.applySort()"><option value="total">合計が多い順</option><option value="unread">純粋未読が多い順</option><option value="flag">フラグが多い順</option><option value="unsorted">未仕分が多い順</option></select>
+          <select id="sortSelect" class="sort-select" aria-label="ランキングの並び順" onchange="WorkloadUI.applySort()"><option value="total">合計が多い順</option><option value="unread" id="sortUnread">純粋未読が多い順</option><option value="flag" id="sortFlag">フラグが多い順</option><option value="unsorted">未仕分が多い順</option></select>
         </div>
       </div>
       <div id="teamFilterBar" class="team-filter-bar" style="display:none" aria-live="polite"><span class="team-filter-label">表示チーム</span><strong id="teamFilterName" class="team-filter-name"></strong><span class="team-filter-rank">チーム内順位</span><button type="button" id="clearTeamFilter" class="team-filter-clear" onclick="WorkloadUI.clearTeamFilter()">全チームに戻す</button></div>
       <div class="ranking-header-wrap" id="rankingHeader">
       <table class="ranking-table" aria-label="ランキングの項目">
-        <colgroup><col style="width:5%" /><col style="width:18%" /><col style="width:10%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>
+        <colgroup id="rankingHeaderCols"><col style="width:5%" /><col style="width:18%" /><col style="width:10%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>
         <thead><tr><th scope="col" class="rank-heading">順位</th><th scope="col" class="staff-heading">担当者</th><th scope="col" id="heading-team" class="team-heading">チーム</th><th scope="col" id="heading-unsorted">未仕分</th><th scope="col" id="heading-unread">純粋未読</th><th scope="col" id="heading-flag">フラグ</th><th scope="col" id="heading-total" class="active-sort">合計</th><th scope="col" class="support-heading">サポート投入状況<span class="support-heading-note">人数／担当CA別の氏名</span></th></tr></thead>
       </table></div>
       <div class="ranking-scroll-wrap">
       <div class="pinned-staff" id="pinnedStaff" role="group" aria-label="展開中の担当者">
       <table class="ranking-table" aria-label="展開中の担当者の業務量">
-        <colgroup><col style="width:5%" /><col style="width:18%" /><col style="width:10%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>
+        <colgroup id="rankingPinnedCols"><col style="width:5%" /><col style="width:18%" /><col style="width:10%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>
         <tbody id="pinnedStaffBody"></tbody>
       </table></div>
       <div class="ranking-scroll" id="rankingScroll" tabindex="0" aria-label="担当者ランキング一覧">
       <table class="ranking-table" aria-label="担当者別の業務量ランキング">
-        <colgroup><col style="width:5%" /><col style="width:18%" /><col style="width:10%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>
+        <colgroup id="rankingBodyCols"><col style="width:5%" /><col style="width:18%" /><col style="width:10%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>
         <tbody id="rankingBody"></tbody>
       </table></div>
       </div>
@@ -1622,10 +1716,21 @@
     </div>
     </div><div class="overview-pane" id="overviewPane"><div class="overview-content" id="overviewContent">
     <div class="summary" role="group" aria-label="全体の件数" title="担当なし・札幌担当・新潟担当・首都圏担当の区分を除いた件数です">
-      <div class="summary-item first"><div class="summary-card primary"><div class="summary-text"><p class="summary-label">全体の残件数</p><p class="summary-caption">純粋未読 ＋ フラグ</p></div><div class="summary-amount"><span class="summary-value" id="summaryTotal">0</span><span class="summary-unit">件</span></div></div></div>
-      <div class="summary-item second"><div class="summary-card"><div class="summary-text"><p class="summary-label">純粋未読</p><p class="summary-caption">対象担当CAの合計</p></div><div class="summary-amount"><span class="summary-value" id="summaryUnread">0</span><span class="summary-unit">件</span></div></div></div>
-      <div class="summary-item third"><div class="summary-card"><div class="summary-text"><p class="summary-label">フラグ</p><p class="summary-caption">対象担当CAの合計</p></div><div class="summary-amount"><span class="summary-value" id="summaryFlag">0</span><span class="summary-unit">件</span></div></div></div>
-      <div class="summary-item last"><div class="summary-card"><div class="summary-text"><p class="summary-label">未仕分</p><p class="summary-caption">残件数とは分けて表示</p></div><div class="summary-amount"><span class="summary-value" id="summaryUnsorted">0</span><span class="summary-unit">件</span></div></div></div>
+      <div class="summary-item first"><div class="summary-card primary"><div class="summary-text"><p class="summary-label">全体の残件数</p><p class="summary-caption" id="summaryFormula">純粋未読 ＋ フラグ</p></div><div class="summary-amount"><span class="summary-value" id="summaryTotal">0</span><span class="summary-unit">件</span></div></div></div>
+      <div class="summary-item second weekday-only"><div class="summary-card"><div class="summary-text"><p class="summary-label">純粋未読</p><p class="summary-caption">対象担当CAの合計</p></div><div class="summary-amount"><span class="summary-value" id="summaryUnread">0</span><span class="summary-unit">件</span></div></div></div>
+      <div class="summary-item third weekday-only"><div class="summary-card"><div class="summary-text"><p class="summary-label">フラグ</p><p class="summary-caption">対象担当CAの合計</p></div><div class="summary-amount"><span class="summary-value" id="summaryFlag">0</span><span class="summary-unit">件</span></div></div></div>
+      <div class="summary-item last weekday-only"><div class="summary-card"><div class="summary-text"><p class="summary-label">未仕分</p><p class="summary-caption">残件数とは分けて表示</p></div><div class="summary-amount"><span class="summary-value" id="summaryUnsorted">0</span><span class="summary-unit">件</span></div></div></div>
+    </div>
+    <div class="weekend-items weekend-only" role="group" aria-label="土日ログの集計項目">
+      <div class="weekend-item" id="weekendItem0"><label><input type="checkbox" id="weekendCheck0" checked disabled onclick="WorkloadUI.setWeekendItem(0,this.checked)" /><span class="weekend-item-name" id="weekendLabel0">F列</span></label><span class="weekend-item-value"><span id="weekendValue0">0</span> 件</span></div>
+      <div class="weekend-item" id="weekendItem1"><label><input type="checkbox" id="weekendCheck1" checked disabled onclick="WorkloadUI.setWeekendItem(1,this.checked)" /><span class="weekend-item-name" id="weekendLabel1">G列</span></label><span class="weekend-item-value"><span id="weekendValue1">0</span> 件</span></div>
+      <div class="weekend-item" id="weekendItem2"><label><input type="checkbox" id="weekendCheck2" checked disabled onclick="WorkloadUI.setWeekendItem(2,this.checked)" /><span class="weekend-item-name" id="weekendLabel2">H列</span></label><span class="weekend-item-value"><span id="weekendValue2">0</span> 件</span></div>
+      <div class="weekend-item" id="weekendItem3"><label><input type="checkbox" id="weekendCheck3" checked disabled onclick="WorkloadUI.setWeekendItem(3,this.checked)" /><span class="weekend-item-name" id="weekendLabel3">I列</span></label><span class="weekend-item-value"><span id="weekendValue3">0</span> 件</span></div>
+      <div class="weekend-item" id="weekendItem4"><label><input type="checkbox" id="weekendCheck4" checked disabled onclick="WorkloadUI.setWeekendItem(4,this.checked)" /><span class="weekend-item-name" id="weekendLabel4">J列</span></label><span class="weekend-item-value"><span id="weekendValue4">0</span> 件</span></div>
+      <div class="weekend-item" id="weekendItem5"><label><input type="checkbox" id="weekendCheck5" checked disabled onclick="WorkloadUI.setWeekendItem(5,this.checked)" /><span class="weekend-item-name" id="weekendLabel5">K列</span></label><span class="weekend-item-value"><span id="weekendValue5">0</span> 件</span></div>
+      <div class="weekend-item" id="weekendItem6"><label><input type="checkbox" id="weekendCheck6" checked disabled onclick="WorkloadUI.setWeekendItem(6,this.checked)" /><span class="weekend-item-name" id="weekendLabel6">L列</span></label><span class="weekend-item-value"><span id="weekendValue6">0</span> 件</span></div>
+      <div class="weekend-item" id="weekendItem7"><label><input type="checkbox" id="weekendCheck7" checked disabled onclick="WorkloadUI.setWeekendItem(7,this.checked)" /><span class="weekend-item-name" id="weekendLabel7">M列</span></label><span class="weekend-item-value"><span id="weekendValue7">0</span> 件</span></div>
+      <div class="weekend-item" id="weekendItem8"><label><input type="checkbox" id="weekendCheck8" checked disabled onclick="WorkloadUI.setWeekendItem(8,this.checked)" /><span class="weekend-item-name" id="weekendLabel8">未仕分</span></label><span class="weekend-item-value"><span id="weekendValue8">0</span> 件</span></div>
     </div>
     <div class="capacity-card" id="capacityCard" aria-label="対応余力">
       <div class="capacity-main"><p class="capacity-label">対応余力<span class="capacity-state" id="capacityState">—</span></p><span class="capacity-value" id="capacityValue">—</span><span class="capacity-unit">件</span></div>
@@ -1634,10 +1739,10 @@
         <p class="capacity-components">処理見込 <span id="capacityEstimate">—</span> 件 − 全体の残件数 <span id="capacityBacklog">0</span> 件</p>
         <p class="capacity-timing" id="capacityTiming">—</p>
       </div>
-      <div class="capacity-controls"><label for="capturedTimeInput">集計時刻</label><input type="text" id="capturedTimeInput" class="time-input" maxlength="5" value="" title="ログ集計時に自動入力。変更する場合はHH:mmで入力" aria-label="集計時刻" onkeydown="return WorkloadUI.capturedTimeKey(event)" /><button type="button" class="capacity-recalculate" id="recalculateCapacity" onclick="WorkloadUI.applyCapturedTime()">余力再計算</button><span class="capacity-log-action"><button type="button" class="capacity-log-button" id="aggregateLog" title="共有情報を更新してから未読CSV・フラグCSVを順に選択し、設定した振分表と集計します" onclick="WorkloadUI.requestLogAggregate()">ログ集計</button></span><p class="capacity-controls-note">14:00以降は休憩控除なし</p></div>
+      <div class="capacity-controls"><label for="capturedTimeInput">集計時刻</label><input type="text" id="capturedTimeInput" class="time-input" maxlength="5" value="" title="ログ集計時に自動入力。変更する場合はHH:mmで入力" aria-label="集計時刻" onkeydown="return WorkloadUI.capturedTimeKey(event)" /><button type="button" class="capacity-recalculate" id="recalculateCapacity" onclick="WorkloadUI.applyCapturedTime()">余力再計算</button><span class="capacity-mode-toggle" role="group" aria-label="平日・土日の切り替え"><button type="button" id="modeWeekday" aria-pressed="true" onclick="WorkloadUI.setMode('weekday')">平日</button><button type="button" id="modeWeekend" aria-pressed="false" onclick="WorkloadUI.setMode('weekend')">土日</button></span><span class="capacity-log-action"><button type="button" class="capacity-log-button" id="aggregateLog" title="共有情報を更新してから未読CSV・フラグCSVを順に選択し、設定した振分表と集計します" onclick="WorkloadUI.requestLogAggregate()">ログ集計</button></span><p class="capacity-controls-note">14:00以降は休憩控除なし</p></div>
     </div>
     </div></div></div>
-    <div class="page-footer" id="pageFooter"><div class="footer-left">合計 ＝ 純粋未読 ＋ フラグ　／　未仕分は合計に含めません。</div><div class="footer-right" id="dataFooter">「ログ集計」でCSVと振分表を取り込みます。</div></div>
+    <div class="page-footer" id="pageFooter"><div class="footer-left" id="totalFormula">合計 ＝ 純粋未読 ＋ フラグ　／　未仕分は合計に含めません。</div><div class="footer-right" id="dataFooter">「ログ集計」でCSVと振分表を取り込みます。</div></div>
   </div>
   <dialog id="logSelectionDialog" class="modal" aria-labelledby="logSelectionTitle" aria-describedby="logSelectionMessage">
     <h3 id="logSelectionTitle">ログ集計を続ける</h3>

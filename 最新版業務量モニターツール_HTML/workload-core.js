@@ -128,7 +128,7 @@ var WorkloadImport = (function () {
         var required = kind === "unread" ? [cols.organization, cols.caName, cols.unreadBase, cols.unsorted].concat(cols.unreadSubtract) : [cols.organization, cols.caName, cols.flag];
         var i, j, row, context, identity, current, unread, flag, unsorted;
         if (rows.length < c.startRow - 1) { throw new Error(label + "：見出し行がありません。"); }
-        requireColumns(rows[c.startRow - 2], required, label + " 見出し");
+        requireColumns(rows[0], required, label + " 見出し");
         for (i = c.startRow - 1; i < rows.length; i++) {
             row = rows[i]; if (blankRow(row)) { continue; }
             context = label + " " + (i + 1) + "行目";
@@ -176,7 +176,7 @@ var WorkloadImport = (function () {
             unmatchedCA: 0, noUnreadCA: 0, noFlagCA: 0, invalidLinks: 0, caCount: 0 };
         function remember(k) { if (!all[k]) { all[k] = true; order.push(k); } }
         if (assignmentRows.length < c.assignment.startRow - 1) { throw new Error("振分表：見出し行がありません。"); }
-        requireColumns(assignmentRows[c.assignment.startRow - 2], required, "振分表 見出し");
+        requireColumns(assignmentRows[0], required, "振分表 見出し");
         for (i = c.assignment.startRow - 1; i < assignmentRows.length; i++) {
             row = assignmentRows[i]; if (blankRow(row)) { continue; }
             requireColumns(row, required, "振分表 " + (i + 1) + "行目");
@@ -269,5 +269,5 @@ var WorkloadImport = (function () {
     return { parseCSV: parseCSV, buildData: buildData, buildFromLogs: buildFromLogs,
         readLogRows: readLogRows, validateConfig: validateConfig,
         keyOf: keyOf, columnIndex: columnIndex, columnLabel: columnLabel,
-        detectCharset: detectCharset, validURL: validURL, openLink: openLink };
+        detectCharset: detectCharset, validURL: validURL, openLink: openLink, countValue: countValue };
 }());
