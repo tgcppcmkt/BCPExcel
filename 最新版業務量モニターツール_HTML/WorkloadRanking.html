@@ -298,10 +298,9 @@
   <script src="workload-share.js"></script>
   <script type="text/javascript">
   /*
-   * 業務量モニター v0.5.1 / ログ集計
-   * Windows HTA の旧エンジンに合わせ、ES3 の構文と IE9 対応 CSS を使用。
+   * 業務量モニター HTML版 v0.8.3 / ログ集計
    * 件数は CA 単位で計算。取込は workload-browser.js で行う。
-   * 取込前は空欄。サポート・コミットだけを日付別の共有JSONONへ保存する。
+   * 取込前は空欄。チェック・サポート・コミットなどを日付別の共有JSONへ保存する。
    */
   var WorkloadUI = (function () {
     var staffData = [];
@@ -311,7 +310,6 @@
     var pendingSupport = null, supportBlurTimer = null;
     var toastTimer = null;
     var commitTimer = null;
-    var importPreparationTimer = null;
     var sharedSnapshot = null, sharedVersion = "", sharedError = "", shareWriteBusy = false;
     var searchText = "";
     var sortKey = "total";
@@ -729,14 +727,13 @@
       }
       /* CSV選択を取り消した場合に、入力中のサポート欄も保つ。 */
       syncDraft();
-      if (importPreparationTimer) { window.clearTimeout(importPreparationTimer); importPreparationTimer = null; }
       importBusy = true;
       importPhase = "CSV選択画面を準備しています。"; shareStatus();
       byId("aggregateLog").disabled = true;
       setText(byId("aggregateLog"), "集計中…");
       toast("ログ集計を開始します。");
       /* ボタン押下から直接選択を開始し、ブラウザの操作許可を保つ。 */
-        var result, i, teamExists, at;
+        var result;
         try {
           result = await WorkloadBrowser.selectLogs(function (message) { importPhase = message; shareStatus(); toast(message); });
           if (result.cancelled) { toast("選択をキャンセルしました。表示データは変更していません。"); return; }
@@ -850,10 +847,8 @@
       return html.join("");
     }
     function tableRows(html) {
-      var holder = document.createElement("div"), source;
-      holder.innerHTML = '<table><tbody>' + html + '</tbody></table>';
-      source = holder.getElementsByTagName("tbody")[0];
-      if (!source) { throw new Error("ランキングの表示行を作成できませんでした。"); }
+      var source = document.createElement("tbody");
+      source.innerHTML = html;
       return source;
     }
     function appendTableRows(target, html) {
@@ -923,10 +918,7 @@
       if (detailQueue.length) { detailTimer = window.setTimeout(paintDetailBatch, 8); }
     }
     function replaceRankingRows(html, reused) {
-      /* HTAのMSHTMLではtbody.innerHTMLへの代入が無効な場合がある。
-       * divで完全なtableとして解析してから、同じdocumentのtrを移動する。
-       * tbodyはDOM操作で空にし、作成済みの行を追加する。
-       */
+      /* 展開済みの担当CA行を再利用し、まとめて表示を更新する。 */
       var target = byId("rankingBody"), source = tableRows(html), fragment = document.createDocumentFragment(), row, next, saved;
       row = source.firstChild;
       while (row) {
@@ -1390,7 +1382,6 @@
       sharedSnapshot = null; sharedVersion = ""; sharedError = ""; shareWriteBusy = false;
       if (toastTimer) { window.clearTimeout(toastTimer); toastTimer = null; }
       if (commitTimer) { window.clearInterval(commitTimer); commitTimer = null; }
-      if (importPreparationTimer) { window.clearTimeout(importPreparationTimer); importPreparationTimer = null; }
       byId("toast").style.display = "none";
       byId("shareErrorNotice").style.display = "none";
       byId("removalOverlay").style.display = "none";

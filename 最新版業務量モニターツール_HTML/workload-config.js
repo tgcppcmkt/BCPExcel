@@ -1,17 +1,11 @@
 ﻿/*
- * 業務量モニター v0.5 / 平日ログ集計の設定
- * 変更後は保存し、HTAを開き直してください（UTF-8で保存）。
- * パスは / 区切りで記入できます。列はExcelの列記号で指定します。
+ * 業務量モニター HTML版 v0.8.3 / 平日ログ集計の設定
+ * 変更後は保存し、HTMLを開き直してください（UTF-8で保存）。
+ * ファイル・親フォルダ・共有先は画面で選択します。列はExcelの列記号で指定します。
  * カンマ、引用符、かっこの削除に注意してください。
  */
 var WorkloadConfig = {
-    paths: {
-        unreadRoot: "C:/Users/tagut/Downloads/新しいフォルダー/未読",
-        flagRoot: "C:/Users/tagut/Downloads/新しいフォルダー/フラグ",
-        assignmentFile: "C:/Users/tagut/Downloads/新しいフォルダー/振分表.xlsm"
-    },
     unread: {
-        folderFormat: "mmdd",          // 当日フォルダ（例：1003）
         startRow: 2,                    // 1行目の見出しを除外
         charset: "auto",               // auto / utf-8 / shift_jis / unicode
         columns: {
@@ -23,7 +17,6 @@ var WorkloadConfig = {
         }
     },
     flag: {
-        folderFormat: "yyyymm",        // 当月フォルダ（例：202610）
         startRow: 2,
         charset: "auto",
         columns: {

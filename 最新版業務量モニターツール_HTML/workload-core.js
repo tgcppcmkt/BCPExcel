@@ -35,9 +35,6 @@ var WorkloadImport = (function () {
     }
     function validateConfig(config) {
         var c = configOrDefault(config), names = ["unread", "flag", "assignment"], i, j, section, cols, items, seen;
-        if (!c.paths || !trim(c.paths.unreadRoot) || !trim(c.paths.flagRoot) || !trim(c.paths.assignmentFile)) {
-            throw new Error("workload-config.js の paths に3つのパスを設定してください。");
-        }
         for (i = 0; i < names.length; i++) {
             section = c[names[i]];
             if (!section || typeof section.startRow !== "number" || section.startRow < 2 || Math.floor(section.startRow) !== section.startRow) {
@@ -74,23 +71,6 @@ var WorkloadImport = (function () {
             throw new Error("merge の担当なし表示名・重複行の扱いを確認してください。");
         }
         return c;
-    }
-    function dateFolder(date, pattern) {
-        var mm = ("0" + (date.getMonth() + 1)).slice(-2), dd = ("0" + date.getDate()).slice(-2);
-        if (!/^(yyyymmdd|yyyymm|mmdd)$/.test(pattern)) {
-            throw new Error("folderFormat は mmdd / yyyymm / yyyymmdd から指定してください。");
-        }
-        return pattern.replace("yyyy", String(date.getFullYear())).replace("mm", mm).replace("dd", dd);
-    }
-    function windowsPath(path) { return trim(path).replace(/\//g, "\\"); }
-    function joinPath(root, child) { return windowsPath(root).replace(/\\+$/g, "") + "\\" + child; }
-    function planPaths(date, config) {
-        var c = validateConfig(config);
-        return {
-            unreadFolder: joinPath(joinPath(c.paths.unreadRoot, dateFolder(date, "yyyymm")), dateFolder(date, c.unread.folderFormat)),
-            flagFolder: joinPath(c.paths.flagRoot, dateFolder(date, c.flag.folderFormat)),
-            assignmentFile: windowsPath(c.paths.assignmentFile)
-        };
     }
     function parseCSV(text) {
         var source = String(text).replace(/^\uFEFF/, ""), rows = [], row = [], field = "", i = 0;
@@ -287,7 +267,7 @@ var WorkloadImport = (function () {
         window.open(target, "_blank", "noopener,noreferrer");
     }
     return { parseCSV: parseCSV, buildData: buildData, buildFromLogs: buildFromLogs,
-        readLogRows: readLogRows, planPaths: planPaths, validateConfig: validateConfig,
+        readLogRows: readLogRows, validateConfig: validateConfig,
         keyOf: keyOf, columnIndex: columnIndex, columnLabel: columnLabel,
         detectCharset: detectCharset, validURL: validURL, openLink: openLink };
 }());
