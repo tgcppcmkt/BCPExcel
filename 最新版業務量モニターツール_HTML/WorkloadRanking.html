@@ -404,6 +404,7 @@
     .weekend-item label { display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; cursor: pointer; }
     .weekend-item input { flex-shrink: 0; margin: 0; accent-color: #5848b8; }
     .weekend-item-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .weekend-item > .weekend-item-name { flex: 1; min-width: 0; padding-left: 22px; }
     .weekend-item-value { white-space: nowrap; font-size: 16px; font-weight: 700; }
     .weekend-item.is-excluded { color: #626e7c; background: #eef1f5; border-radius: 4px; }
     @media screen and (min-width:1280px) { .capacity-mode-toggle { width: 76px; height: 42px; } .capacity-mode-toggle button { font-size: 12px; } }
@@ -559,8 +560,9 @@
       }
       return false;
     }
+    function caCheckSatisfied(ca) { return displayMode === "weekend" || !!ca.checked; }
     function supportRequestEnabled(ca) {
-      return !!(sharingReady() && ca && ca.checked && !ca.committedAt && ca.supports.length < 3);
+      return !!(sharingReady() && ca && caCheckSatisfied(ca) && !ca.committedAt && ca.supports.length < 3);
     }
     function staffRowClass(staff, opened) {
       var committed = staff.cas.length > 0, i;
@@ -587,12 +589,16 @@
       return count;
     }
     function staffCheckHTML(staff) {
+      if (displayMode === "weekend") { return ""; }
       var checked = uncheckedCountFor(staff) === 0;
       return '<span id="staff-check-' + staff.id + '" class="staff-ca-check' + (checked ? ' checked' : '') + '">' + (checked ? 'CAチェック済' : 'CAチェック未') + '</span>';
     }
     function renderCheckOverview() {
       var i, staff, pending, label, checked, name, key, teams = [], counts = {}, html = [], next, changed;
       var summary = byId("teamCheckSummary");
+      if (displayMode === "weekend") {
+        changed = teamCheckHTML !== ""; if (changed) { summary.innerHTML = ""; teamCheckHTML = ""; } summary.style.display = "none"; return changed;
+      }
       for (i = 0; i < staffData.length; i++) {
         staff = staffData[i]; pending = uncheckedCountFor(staff); checked = pending === 0;
         label = byId("staff-check-" + staff.id);
@@ -665,13 +671,14 @@
       byId("modeWeekend").setAttribute("aria-pressed", weekend ? "true" : "false");
       for (i = 0; i < ids.length; i++) {
         columns = byId(ids[i]); if (!weekdayColumns[ids[i]]) { weekdayColumns[ids[i]] = columns.innerHTML; }
-        columns.innerHTML = weekend ? '<col style="width:5%" /><col style="width:27%" /><col style="width:10%" /><col style="width:9%" /><col style="width:14%" /><col style="width:35%" />' : weekdayColumns[ids[i]];
+        columns.innerHTML = weekend ? '<col style="width:5%" /><col style="width:37%" /><col style="width:9%" /><col style="width:14%" /><col style="width:35%" />' : weekdayColumns[ids[i]];
       }
+      byId("heading-team").style.display = weekend ? "none" : "";
       byId("heading-unread").style.display = byId("heading-flag").style.display = weekend ? "none" : "";
       byId("sortUnread").hidden = byId("sortFlag").hidden = weekend;
       byId("sortUnread").disabled = byId("sortFlag").disabled = weekend;
       setText(byId("summaryFormula"), weekend ? "チェックした対象ログの合計" : "純粋未読 ＋ フラグ");
-      setText(byId("totalFormula"), weekend ? "合計 ＝ チェックした対象ログ　／　未仕分は合計に含めません。" : "合計 ＝ 純粋未読 ＋ フラグ　／　未仕分は合計に含めません。");
+      setText(byId("totalFormula"), weekend ? "合計 ＝ チェックした対象ログ　／　未仕分・参考項目は合計に含めません。" : "合計 ＝ 純粋未読 ＋ フラグ　／　未仕分は合計に含めません。");
       byId("aggregateLog").title = weekend ? "共有情報を更新し、当日の土日ログCSVを3つ選択して振分表と集計します" : "共有情報を更新してから未読CSV・フラグCSVを順に選択し、設定した振分表と集計します";
     }
     function setMode(mode) {
@@ -687,7 +694,7 @@
         inputClass: byId("capturedTimeInput").className, footer: byId("dataFooter").textContent, scroll: byId("rankingScroll").scrollTop };
       var view = modeViews[mode]; displayMode = mode;
       staffData = view ? view.data : []; expanded = view ? view.expanded : {};
-      searchText = view ? view.search : ""; sortKey = view ? view.sort : "total"; selectedTeam = view ? view.team : "";
+      searchText = view ? view.search : ""; sortKey = view ? view.sort : "total"; selectedTeam = mode === "weekend" ? "" : view ? view.team : "";
       capturedTime = view ? view.time : ""; capturedTimeValid = view ? view.valid : false;
       hourlyRate = view ? view.rate : mode === "weekend" ? 10 : WorkloadConfig.capacity.hourlyRate;
       byId("searchInput").value = view ? view.searchValue : ""; byId("sortSelect").value = sortKey;
@@ -963,7 +970,7 @@
     }
     function sharingReady() { return typeof WorkloadShare !== "undefined" && WorkloadShare.isConnected(); }
     function supportHTML(ca) {
-      var html = [], slot, name, isEditing, lastClass, disabled = ca.committedAt || !ca.checked || !sharingReady() ? ' disabled="disabled"' : "";
+      var html = [], slot, name, isEditing, lastClass, disabled = ca.committedAt || !caCheckSatisfied(ca) || !sharingReady() ? ' disabled="disabled"' : "";
       for (slot = 0; slot < 3; slot++) {
         lastClass = slot === 2 ? " last" : "";
         isEditing = editing && editing.caId === ca.id && editing.slot === slot;
@@ -997,12 +1004,13 @@
       disabled = ca.committedAt ? ' disabled="disabled"' : "";
       unsorted = ca.committedAt ? 0 : ca.unsorted; unread = ca.committedAt ? 0 : ca.unread; flag = ca.committedAt ? 0 : ca.flag;
       nameClass = searchText && normalized(ca.name).indexOf(searchText) !== -1 ? " name-match" : "";
-      html.push('<tr id="ca-row-' + ca.id + '" class="' + (ca.committedAt ? 'committed' : ca.checked ? '' : 'ca-unchecked') + '"><td class="ca-name-cell' + nameClass + '"><span class="ca-name-label" title="' + esc(ca.name) + ' CA">' + esc(ca.name) + '<span class="ca-suffix">CA</span></span>');
+      html.push('<tr id="ca-row-' + ca.id + '" class="' + (ca.committedAt ? 'committed' : caCheckSatisfied(ca) ? '' : 'ca-unchecked') + '"><td class="ca-name-cell' + nameClass + '"><span class="ca-name-label" title="' + esc(ca.name) + ' CA">' + esc(ca.name) + '<span class="ca-suffix">CA</span></span>');
       html.push('<span class="ca-links"><button type="button" class="ca-link-button calib-button"' + disabled + ' title="' + esc(ca.calibUrl || 'CALIB（リンク未設定）') + '" aria-label="' + esc(ca.name) + ' CAのCALIB" onclick="WorkloadUI.showCALinkStatus(\'' + ca.id + '\',\'CALIB\')">CALIB</button><button type="button" class="ca-link-button canvas-button"' + disabled + ' title="' + esc(ca.canvasUrl || 'Canvas（リンク未設定）') + '" aria-label="' + esc(ca.name) + ' CAのCanvas" onclick="WorkloadUI.showCALinkStatus(\'' + ca.id + '\',\'Canvas\')">Canvas</button><span class="ca-link-message" id="ca-link-message-' + ca.id + '" role="status" aria-live="polite"></span></span>');
       if (ca.organization) { html.push('<span class="ca-organization" title="組織：' + esc(ca.organization) + '">' + esc(ca.organization) + '</span>'); }
       html.push('</td>');
-      html.push('<td class="ca-check-cell"><button type="button" id="ca-check-' + ca.id + '" class="ca-check-button' + (ca.checked ? ' checked' : '') + '"' + (ca.checked || ca.committedAt || !sharingReady() ? ' disabled="disabled"' : '') + ' aria-pressed="' + (ca.checked ? 'true' : 'false') + '" title="' + (ca.checked ? 'CAチェック済' : 'CAを確認後、サポート・コミットを有効にします') + '" onclick="WorkloadUI.requestCACheck(\'' + ca.id + '\')">' + (ca.checked ? 'CAチェック済' : 'CAチェック未') + '</button>');
-      html.push('<span class="ca-commit-action"><button type="button" class="ca-commit-button" id="commit-' + ca.id + '"' + (!sharingReady() || !ca.committedAt && !ca.checked ? ' disabled="disabled"' : '') + ' title="' + (ca.committedAt ? 'コミットを取り消します（コミット時刻：' + esc(ca.committedAt) + '）' : 'このCAをコミット完了にします') + '" aria-label="' + esc(ca.name) + ' CAの' + (ca.committedAt ? 'コミット取消' : 'コミット') + '" onclick="WorkloadUI.requestCommit(\'' + ca.id + '\')">' + (ca.committedAt ? 'コミット取消' : 'コミット') + '</button></span></td>');
+      html.push('<td class="ca-check-cell">');
+      if (displayMode === "weekday") { html.push('<button type="button" id="ca-check-' + ca.id + '" class="ca-check-button' + (ca.checked ? ' checked' : '') + '"' + (ca.checked || ca.committedAt || !sharingReady() ? ' disabled="disabled"' : '') + ' aria-pressed="' + (ca.checked ? 'true' : 'false') + '" title="' + (ca.checked ? 'CAチェック済' : 'CAを確認後、サポート・コミットを有効にします') + '" onclick="WorkloadUI.requestCACheck(\'' + ca.id + '\')">' + (ca.checked ? 'CAチェック済' : 'CAチェック未') + '</button>'); }
+      html.push('<span class="ca-commit-action"><button type="button" class="ca-commit-button" id="commit-' + ca.id + '"' + (!sharingReady() || !ca.committedAt && !caCheckSatisfied(ca) ? ' disabled="disabled"' : '') + ' title="' + (ca.committedAt ? 'コミットを取り消します（コミット時刻：' + esc(ca.committedAt) + '）' : 'このCAをコミット完了にします') + '" aria-label="' + esc(ca.name) + ' CAの' + (ca.committedAt ? 'コミット取消' : 'コミット') + '" onclick="WorkloadUI.requestCommit(\'' + ca.id + '\')">' + (ca.committedAt ? 'コミット取消' : 'コミット') + '</button></span></td>');
       html.push('<td class="ca-unsorted">' + format(unsorted) + '</td>');
       if (displayMode === "weekday") { html.push('<td class="ca-unread">' + format(unread) + '</td><td class="ca-flag">' + format(flag) + '</td>'); }
       html.push('<td class="ca-total">' + format(unread + flag) + '</td>');
@@ -1023,7 +1031,7 @@
     }
     function detailHTML(staff, deferred) {
       var html = [], i, cas;
-      html.push('<tr class="detail-row" id="detail-' + staff.id + '"><td class="detail-cell" colspan="' + (displayMode === "weekend" ? 6 : 8) + '">');
+      html.push('<tr class="detail-row" id="detail-' + staff.id + '"><td class="detail-cell" colspan="' + (displayMode === "weekend" ? 5 : 8) + '">');
       html.push('<div class="detail-header"><strong>' + esc(staff.name) + ' さんの担当CA</strong><span class="detail-note">サポートはCAごとに最大3名</span></div>');
       html.push('<table class="ca-table" aria-label="' + esc(staff.name) + 'さんの担当CA別内訳">');
       html.push(displayMode === "weekend" ? '<colgroup><col style="width:32%" /><col style="width:10%" /><col style="width:9%" /><col style="width:14%" /><col style="width:35%" /></colgroup>' : '<colgroup><col style="width:24%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>');
@@ -1136,7 +1144,7 @@
         html.push('<tr class="' + staffRowClass(staff, opened) + '" id="staff-row-' + staff.id + '">');
         html.push('<td class="rank-cell"><span class="rank-number' + (i < 3 ? ' leading' : '') + '">' + (i + 1) + '</span></td>');
         html.push('<td class="staff-cell"><button type="button" class="staff-name" id="staff-button-' + staff.id + '" aria-expanded="' + (opened ? 'true' : 'false') + '" aria-controls="detail-' + staff.id + '" title="担当CAごとの内訳を' + (opened ? '閉じる' : '開く') + '" onclick="WorkloadUI.toggleStaff(\'' + staff.id + '\')">' + esc(staff.name) + '<span class="staff-ca-meta"><span class="ca-count">' + staff.cas.length + ' CA</span>' + staffCheckHTML(staff) + '</span><span class="expand-indicator" aria-hidden="true">' + (opened ? '−' : '＋') + '</span></button></td>');
-        html.push('<td class="team-cell"><button type="button" class="team-badge' + (selectedTeam === teamNameOf(staff) ? ' active' : '') + '" id="team-button-' + staff.id + '" aria-label="' + esc(teamNameOf(staff)) + 'のランキングを表示" aria-pressed="' + (selectedTeam === teamNameOf(staff) ? 'true' : 'false') + '" title="' + esc(teamNameOf(staff)) + 'のランキングを表示' + (excludedReason(staff) ? ' ／ 件数・対応余力の対象から除外：' + esc(excludedReason(staff)) : '') + '" onclick="WorkloadUI.filterByTeam(\'' + staff.id + '\')">' + esc(teamNameOf(staff)) + '</button></td>');
+        if (displayMode === "weekday") { html.push('<td class="team-cell"><button type="button" class="team-badge' + (selectedTeam === teamNameOf(staff) ? ' active' : '') + '" id="team-button-' + staff.id + '" aria-label="' + esc(teamNameOf(staff)) + 'のランキングを表示" aria-pressed="' + (selectedTeam === teamNameOf(staff) ? 'true' : 'false') + '" title="' + esc(teamNameOf(staff)) + 'のランキングを表示' + (excludedReason(staff) ? ' ／ 件数・対応余力の対象から除外：' + esc(excludedReason(staff)) : '') + '" onclick="WorkloadUI.filterByTeam(\'' + staff.id + '\')">' + esc(teamNameOf(staff)) + '</button></td>'); }
         html.push('<td class="staff-unsorted"><span class="metric-value unsorted">' + format(t.unsorted) + '</span></td>');
         if (displayMode === "weekday") {
           html.push('<td class="staff-unread"><span class="metric-value">' + format(t.unread) + '</span></td>');
@@ -1153,7 +1161,7 @@
       }
       if (!visible) {
         html.push(staffData.length ? '<tr><td colspan="8" class="empty-state"><strong>該当する担当者・CAが見つかりませんでした</strong>名前を変えて検索するか、検索欄をクリアしてください。</td></tr>' : '<tr><td colspan="8" class="empty-state"><strong>データはまだ集計されていません</strong>「ログ集計」ボタンで取り込んでください。</td></tr>');
-        if (displayMode === "weekend") { html[html.length - 1] = html[html.length - 1].replace('colspan="8"', 'colspan="6"'); }
+        if (displayMode === "weekend") { html[html.length - 1] = html[html.length - 1].replace('colspan="8"', 'colspan="5"'); }
       }
       replaceRankingRows(html.join(""), reused);
       tableDataVersion = dataVersion; detailSearchText = searchText;
@@ -1259,7 +1267,7 @@
     }
     function startSupport(caId, slot) {
       var ca = findCA(caId), input;
-      if (shareWriteBusy || !ca || ca.committedAt || !ca.checked || slot < 0 || slot > 2 || slot < ca.supports.length || ca.supports.length >= 3) { return; }
+      if (shareWriteBusy || !ca || ca.committedAt || !caCheckSatisfied(ca) || slot < 0 || slot > 2 || slot < ca.supports.length || ca.supports.length >= 3) { return; }
       if (!commitSupport(true, function () { startSupport(caId, slot); })) { return; }
       ca = findCA(caId);
       if (slot < ca.supports.length) { slot = ca.supports.length; }
@@ -1355,6 +1363,7 @@
       renderTable();
     }
     function filterByTeam(staffId) {
+      if (displayMode === "weekend") { return; }
       var i;
       for (i = 0; i < staffData.length; i++) {
         if (staffData[i].id === staffId) {
@@ -1383,7 +1392,7 @@
       var ca;
       if (!commitSupport(true, function () { requestRemoval(caId, slot); })) { return; }
       ca = findCA(caId);
-      if (!ca || ca.committedAt || !ca.checked || slot < 0 || slot >= ca.supports.length) { return; }
+      if (!ca || ca.committedAt || !caCheckSatisfied(ca) || slot < 0 || slot >= ca.supports.length) { return; }
       pendingRemoval = { caId: caId, slot: slot, name: ca.supports[slot], entryId: ca.supportEntries[slot] };
       setText(byId("removalName"), ca.supports[slot]);
       setText(byId("removalCA"), ca.name);
@@ -1417,7 +1426,7 @@
     function requestCommit(caId) {
       var ca = findCA(caId), button;
       if (shareWriteBusy || importBusy || pendingRemoval || !ca || (!ca.committedAt && new Date().getHours() < 17)) { return; }
-      if (!ca.committedAt && !ca.checked) { return; }
+      if (!ca.committedAt && !caCheckSatisfied(ca)) { return; }
       if (!commitSupport(true, function () { requestCommit(caId); })) { return; }
       if (ca.committedAt) { cancelCommit(caId); return; }
       if (!window.confirm(ca.name + " CAはコミット完了でよいでしょうか？\n組織：" + ca.organization)) { return; }
@@ -1444,7 +1453,7 @@
     }
     function requestCACheck(caId) {
       var ca = findCA(caId), button;
-      if (shareWriteBusy || importBusy || pendingRemoval || !ca || ca.checked || ca.committedAt) { return; }
+      if (displayMode === "weekend" || shareWriteBusy || importBusy || pendingRemoval || !ca || ca.checked || ca.committedAt) { return; }
       if (!commitSupport(true, function () { requestCACheck(caId); })) { return; }
       button = byId("ca-check-" + caId); if (button) { button.disabled = true; }
       setShareBusy(true);
@@ -1730,7 +1739,8 @@
       <div class="weekend-item" id="weekendItem5"><label><input type="checkbox" id="weekendCheck5" checked disabled onclick="WorkloadUI.setWeekendItem(5,this.checked)" /><span class="weekend-item-name" id="weekendLabel5">K列</span></label><span class="weekend-item-value"><span id="weekendValue5">0</span> 件</span></div>
       <div class="weekend-item" id="weekendItem6"><label><input type="checkbox" id="weekendCheck6" checked disabled onclick="WorkloadUI.setWeekendItem(6,this.checked)" /><span class="weekend-item-name" id="weekendLabel6">L列</span></label><span class="weekend-item-value"><span id="weekendValue6">0</span> 件</span></div>
       <div class="weekend-item" id="weekendItem7"><label><input type="checkbox" id="weekendCheck7" checked disabled onclick="WorkloadUI.setWeekendItem(7,this.checked)" /><span class="weekend-item-name" id="weekendLabel7">M列</span></label><span class="weekend-item-value"><span id="weekendValue7">0</span> 件</span></div>
-      <div class="weekend-item" id="weekendItem8"><label><input type="checkbox" id="weekendCheck8" checked disabled onclick="WorkloadUI.setWeekendItem(8,this.checked)" /><span class="weekend-item-name" id="weekendLabel8">未仕分</span></label><span class="weekend-item-value"><span id="weekendValue8">0</span> 件</span></div>
+      <div class="weekend-item" id="weekendItem9"><span class="weekend-item-name" id="weekendLabel9">Q列</span><span class="weekend-item-value"><span id="weekendValue9">0</span> 件</span></div>
+      <div class="weekend-item" id="weekendItem8"><span class="weekend-item-name" id="weekendLabel8">未仕分</span><span class="weekend-item-value"><span id="weekendValue8">0</span> 件</span></div>
     </div>
     <div class="capacity-card" id="capacityCard" aria-label="対応余力">
       <div class="capacity-main"><p class="capacity-label">対応余力<span class="capacity-state" id="capacityState">—</span></p><span class="capacity-value" id="capacityValue">—</span><span class="capacity-unit">件</span></div>
