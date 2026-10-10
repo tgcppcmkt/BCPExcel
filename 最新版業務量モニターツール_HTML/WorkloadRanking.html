@@ -142,6 +142,10 @@
     .total-value { color: #5140af; font-size: 21px; font-weight: 700; }
     .load-track { width: 69px; height: 4px; margin: 6px 0 0 auto; border-radius: 3px; background: #efedf9; text-align: left; overflow: hidden; }
     .load-fill { display: block; height: 4px; border-radius: 3px; background: #7862c8; }
+    .staff-row.committed td { background: #eceff3; color: #77808d; }
+    .staff-row.committed .staff-name, .staff-row.committed .metric-value, .staff-row.committed .support-count, .staff-row.committed .ca-count, .staff-row.committed .staff-ca-check { color: #77808d; }
+    .staff-row.committed .rank-number, .staff-row.committed .team-badge, .staff-row.committed .expand-indicator { color: #77808d; background: #e5e8ed; border-color: #d1d7df; }
+    .staff-row.committed .load-track { background: #dce1e8; }
     .detail-row td.detail-cell { background: #fbfbfe; padding: 0 0 12px; border-bottom: 1px solid #e9edf4; }
     .detail-header { padding: 12px 17px 9px; color: #615078; font-size: 11px; }
     .detail-header strong { color: #4b3c74; }
@@ -179,6 +183,7 @@
     .support-request-toggle.requested { background: #fff0f1; }
     .support-request-toggle input { width: 15px; height: 15px; margin: 0; vertical-align: middle; cursor: pointer; }
     .support-request-toggle input:disabled { cursor: default; }
+    .ca-support-request-control { display: table-cell; width: 26px; vertical-align: middle; }
     .support-names { display: table-cell; vertical-align: middle; }
     .ca-commit-action { display: none; vertical-align: middle; }
     .commit-visible .ca-commit-action, .ca-table tr.committed .ca-commit-action { display: block; }
@@ -217,6 +222,8 @@
     .modal-button.confirm { margin-left: 9px; border-color: #604bb1; background: #604bb1; color: #fff; }
     .modal-button:hover { background: #f1f2f8; }
     .modal-button.confirm:hover { background: #523c9f; }
+    #logSelectionDialog:not([open]) { display: none; }
+    #logSelectionDialog::backdrop { background: rgba(35, 39, 61, .35); }
     .toast { position: fixed; bottom: 26px; right: 26px; display: none; z-index: 1100; max-width: 540px; padding: 11px 18px; border: 1px solid #dcd8ed; border-radius: 9px; color: #574674; background: #fdfcff; box-shadow: 0 5px 22px rgba(51, 44, 78, .12); font-size: 12px; }
     .toast.error { background: #fff9fa; border-color: #ead2d8; color: #973a51; }
     .share-error-notice { display: none; position: fixed; right: 26px; bottom: 86px; z-index: 1101; max-width: 540px; max-height: 220px; overflow: auto; padding: 11px 18px; border: 1px solid #e4b8c0; border-radius: 9px; color: #973a51; background: #fff2f4; font-size: 12px; white-space: pre-line; word-wrap: break-word; }
@@ -279,18 +286,107 @@
 
     /* HTML-only file selection and connection controls. */
     .browser-controls { margin: 0 0 14px; padding: 12px 15px; border: 1px solid #dce4ee; border-radius: 10px; background: #fff; }
-    .browser-inputs { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; }
+    .browser-inputs { display: none; }
     .browser-file { display: flex; align-items: center; gap: 7px; min-width: 215px; }
     .browser-controls button { padding: 7px 10px; border: 1px solid #ccd6e3; border-radius: 6px; background: #f7f9fc; color: #293b55; cursor: pointer; font: inherit; font-size: 12px; }
     .browser-controls button:disabled { opacity: .55; cursor: default; }
-    .browser-controls .connect-button { color: #fff; background: #2458b9; border-color: #2458b9; }
     .browser-file-name { max-width: 145px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: #54657d; }
     .browser-note { margin: 9px 0 0; font-size: 12px; color: #52637a; line-height: 1.65; }
+    .browser-note:empty { display: none; }
     .browser-note.error { color: #ba2639; }
-    .browser-controls details { margin-top: 8px; font-size: 12px; color: #52637a; }
-    .browser-controls summary { cursor: pointer; }
-    .browser-extra { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; align-items: center; }
+    .browser-settings-title { color: #52637a; font-size: 12px; white-space: nowrap; }
+    .browser-extra { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+    .browser-extra .browser-file { min-width: 0; }
+    .browser-extra button { white-space: nowrap; }
     .browser-conflict { color: #a9253b; white-space: pre-wrap; }
+
+    /* Keep the existing light palette; follow the browser's dark page preference. */
+    @media (prefers-color-scheme: dark) {
+      :root { color-scheme: dark; --wm-bg: #0e1210; --wm-card: #1b211d; --wm-raised: #27312b; --wm-text: #eef4ef; --wm-muted: #bdc9c0; --wm-border: #667b6d; --wm-accent: #9bd4af; --wm-accent-bg: #20382a; --wm-red: #f2abb2; --wm-red-bg: #3e282c; --wm-green: #a1dbb8; --wm-green-bg: #22392b; --wm-grey: #2c302d; --wm-grey-text: #b6bfb8; }
+      html { background: var(--wm-bg); }
+      body, .staff-name, .metric-value, .ca-table td, .ca-table td.ca-name-cell,
+      .empty-state strong, .modal h3, .modal p strong { color: var(--wm-text); }
+      button:focus, input:focus, select:focus { outline-color: var(--wm-accent); }
+      .summary-card, .capacity-card, .ranking-card, .browser-controls, .modal { background: var(--wm-card); border-color: var(--wm-border); }
+      .brand-icon { background: #2d6e4b; }
+      .summary-card.primary { background: #214633; border-color: #80b697; color: #f3f8f4; }
+      .tagline, .prototype-note, .summary-label, .summary-unit, .summary-caption,
+      .capacity-label, .capacity-components, .capacity-timing, .capacity-controls label,
+      .capacity-controls-note, .ca-organization, .ranking-description, .heading-count,
+      .heading-count strong, .team-ca-check-name, .support-heading-note, .search-placeholder,
+      .rank-number, .ca-count, .team-filter-note, .detail-header,
+      .detail-header .detail-note, .ca-table td.ca-empty, .ca-suffix, .empty-state,
+      .ranking-footer, .page-footer, .modal p, .browser-file-name, .browser-note,
+      .browser-settings-title { color: var(--wm-muted); }
+      .primary .summary-label { color: #e0f1e5; }
+      .primary .summary-unit { color: #c9e7d2; }
+      .primary .summary-caption { color: #c9e7d2; }
+      .prototype-badge, .team-badge, .expand-indicator { background: var(--wm-raised); color: var(--wm-muted); border-color: var(--wm-border); }
+      .capacity-state { background: var(--wm-green-bg); color: var(--wm-green); }
+      .capacity-value, .capacity-unit, .capacity-equation strong, .support-count,
+      .staff-ca-check.checked { color: var(--wm-green); }
+      .capacity-equation { color: var(--wm-text); }
+      .capacity-card.negative .capacity-value, .capacity-card.negative .capacity-state { color: var(--wm-red); }
+      .capacity-card.negative .capacity-state { background: var(--wm-red-bg); }
+      .capacity-card.neutral .capacity-value, .capacity-card.neutral .capacity-state { color: var(--wm-muted); }
+      .capacity-card.neutral .capacity-state { background: var(--wm-raised); }
+      .capacity-details, .capacity-controls, .capacity-log-action { border-color: var(--wm-border); }
+      .time-input, .search-box input, .support-input { color: var(--wm-text); background: #111713; border-color: #708877; }
+      .time-input.invalid, .support-input.invalid { border-color: var(--wm-red); background: var(--wm-red-bg); }
+      .capacity-recalculate, .quiet-button, .sort-select, .modal-button,
+      .browser-controls button { background: var(--wm-raised); color: var(--wm-text); border-color: #708877; }
+      .capacity-recalculate:hover, .quiet-button:hover, .modal-button:hover { background: #344a3a; border-color: #a0bdaa; }
+      .capacity-log-button, .ca-link-button, .team-filter-clear, .support-save,
+      .ca-commit-button:not(:disabled) { color: var(--wm-accent); background: var(--wm-accent-bg); border-color: #7aac8b; }
+      .capacity-log-button:hover, .ca-link-button:hover, .team-filter-clear:hover,
+      .support-save:hover, .ca-commit-button:not(:disabled):hover { color: #e5f5eb; background: #31543c; border-color: #9bd4af; }
+      .capacity-log-button { color: #f3f8f4; background: #2b6648; border-color: #8ac59e; }
+      .capacity-log-button:hover { color: #f3f8f4; background: #347951; border-color: #9bd4af; }
+      .capacity-log-button:disabled, .ca-commit-button { color: var(--wm-grey-text); background: var(--wm-grey); border-color: var(--wm-border); }
+      .search-clear { color: var(--wm-muted); }
+      .search-clear:hover { background: var(--wm-raised); }
+      .search-icon { border-color: var(--wm-muted); }
+      .search-icon:after { background: var(--wm-muted); }
+      .ranking-header-wrap, .ranking-table th, .ranking-footer { background: #141a16; border-color: var(--wm-border); }
+      .ranking-table th { color: var(--wm-muted); }
+      .ranking-table th.active-sort, .staff-name:hover,
+      .detail-header strong, .ca-table td.ca-name-cell.name-match { color: var(--wm-accent); }
+      .staff-row td, .ca-table { background: var(--wm-card); }
+      .staff-row td, .ca-table td { border-color: #415348; }
+      .staff-row:hover td { background: #293b2e; }
+      .staff-row.expanded td, .pinned-staff { background: #243f2e; border-color: #82b493; }
+      .rank-number.leading { color: #10251a; background: #9dd9b5; }
+      .team-badge:hover, .team-badge.active, .expanded .expand-indicator,
+      .team-filter-bar, .modal-icon { color: var(--wm-accent); background: var(--wm-accent-bg); border-color: #7aac8b; }
+      .total-value, .ca-table .ca-total, .metric-value.flag, .metric-value.unsorted { color: var(--wm-text); }
+      .load-track { background: #35503e; }
+      .load-fill { background: #9bd4af; }
+      .detail-row td.detail-cell { background: #151b17; border-color: var(--wm-border); }
+      .ca-table tr.ca-unchecked td { background: #1a231d; }
+      .ca-check-button, .support-request-toggle.requested { color: var(--wm-red); background: var(--wm-red-bg); border-color: #aa737c; }
+      .ca-check-button.checked, .ca-table tr.committed .ca-check-button.checked { color: var(--wm-green); background: var(--wm-green-bg); border-color: #759a83; }
+      .support-wanted, .team-ca-check-count, .staff-ca-check, .prototype-note.share-error,
+      .browser-note.error, .browser-conflict, .ca-link-message { color: var(--wm-red); }
+      .support-request-toggle input { accent-color: #ef97a4; }
+      .support-filled { color: var(--wm-text); background: var(--wm-raised); border-color: #708877; }
+      .support-empty { color: var(--wm-muted); background: var(--wm-card); border-color: #708877; }
+      .support-filled:hover, .support-empty:hover { color: var(--wm-accent); background: var(--wm-accent-bg); border-color: #9bd4af; }
+      .empty-state { background: var(--wm-card); }
+      .modal-overlay { background: rgba(0, 0, 0, .65); }
+      #logSelectionDialog::backdrop { background: rgba(0, 0, 0, .65); }
+      .modal-button.confirm { color: #f3f8f4; background: #2b6648; border-color: #8ac59e; }
+      .modal-button.confirm:hover { background: #347951; }
+      .toast { color: var(--wm-accent); background: var(--wm-accent-bg); border-color: #7aac8b; }
+      .toast.error, .share-error-notice { color: var(--wm-red); background: var(--wm-red-bg); border-color: #aa737c; }
+      .staff-row.committed td, .ca-table tr.committed td { background: var(--wm-grey); color: var(--wm-grey-text); }
+      .staff-row.committed .staff-name, .staff-row.committed .metric-value,
+      .staff-row.committed .support-count, .staff-row.committed .ca-count,
+      .staff-row.committed .staff-ca-check, .ca-table tr.committed .ca-name-label,
+      .ca-table tr.committed .ca-organization, .ca-table tr.committed .ca-total { color: var(--wm-grey-text); }
+      .staff-row.committed .rank-number, .staff-row.committed .team-badge,
+      .staff-row.committed .expand-indicator, .ca-table tr.committed button:disabled { color: var(--wm-grey-text); background: #242925; border-color: #617068; }
+      .staff-row.committed .load-track { background: #414a43; }
+    }
   </style>
   <script type="text/javascript" src="workload-config.js"></script>
   <script src="workload-core.js"></script>
@@ -427,25 +523,30 @@
     }
     function hasSupportRequest(staff) {
       var i;
-      if (!staff.supportRequested) { return false; }
-      for (i = 0; i < staff.cas.length; i++) { if (!staff.cas[i].committedAt) { return true; } }
+      for (i = 0; i < staff.cas.length; i++) {
+        if (staff.cas[i].supportRequested && !staff.cas[i].committedAt && staff.cas[i].supports.length < 3) { return true; }
+      }
       return false;
     }
-    function supportRequestEnabled(staff) {
-      if (!sharingReady()) { return false; }
-      var i;
-      if (!staff || !staff.cas.length || uncheckedCountFor(staff)) { return false; }
-      for (i = 0; i < staff.cas.length; i++) { if (!staff.cas[i].committedAt) { return true; } }
-      return false;
+    function supportRequestEnabled(ca) {
+      return !!(sharingReady() && ca && ca.checked && !ca.committedAt && ca.supports.length < 3);
+    }
+    function staffRowClass(staff, opened) {
+      var committed = staff.cas.length > 0, i;
+      for (i = 0; committed && i < staff.cas.length; i++) { if (!staff.cas[i].committedAt) { committed = false; } }
+      return "staff-row" + (opened ? " expanded" : "") + (committed ? " committed" : "");
     }
     function supportWantedHTML(staff) {
       var wanted = hasSupportRequest(staff);
       return '<span class="support-wanted" id="support-wanted-' + staff.id + '" style="display:' + (wanted ? 'block' : 'none') + '">' + (wanted ? 'サポ希望' : '') + '</span>';
     }
+    function refreshSupportRequest(ca) {
+      var control = byId("ca-support-request-control-" + ca.id);
+      if (control) { control.innerHTML = supportRequestHTML(ca); }
+    }
     function refreshStaffSupport(staff) {
-      var count = byId("supportCount-" + staff.id), label = byId("support-wanted-" + staff.id), control = byId("staff-support-request-control-" + staff.id), wanted = hasSupportRequest(staff);
+      var count = byId("supportCount-" + staff.id), label = byId("support-wanted-" + staff.id), wanted = hasSupportRequest(staff);
       if (count) { setText(count, supportCountFor(staff) + "名"); }
-      if (control) { control.innerHTML = supportRequestHTML(staff); }
       if (label) { setText(label, wanted ? "サポ希望" : ""); label.style.display = wanted ? "block" : "none"; }
     }
     function teamNameOf(staff) { return trim(staff.team || "") || "未設定"; }
@@ -576,7 +677,7 @@
       notice.style.display = sharedError ? "block" : "none";
     }
     function projectShared(data) {
-      var i, j, ca, key, list, mark, n, row, same, staff, wanted, staffMark, staffWanted;
+      var i, j, ca, key, list, mark, n, row, same, staff, wanted, staffWanted;
       var active = {}, commits = {}, checks = {}, requests = {}, changes = { cas: [], counts: false, staffs: {}, rebuild: {} };
       /* 履歴は一度だけ組織＋CA名で索引化する。CAごとの全履歴走査を避ける。 */
       if (sharedSnapshot) {
@@ -597,7 +698,7 @@
         }
       }
       for (i = 0; i < data.length; i++) {
-        staff = data[i]; staffMark = requests[WorkloadShare.staffSupportKey(staff)]; staffWanted = !!staffMark;
+        staff = data[i]; staffWanted = false;
         for (j = 0; j < data[i].cas.length; j++) {
           ca = data[i].cas[j];
           ca.supportEntries = ca.supportEntries || []; ca.committedAt = ca.committedAt || "";
@@ -622,8 +723,8 @@
           ca.checked = !!checks[key];
           if (wanted || typeof ca.supportRequested !== "undefined") { ca.supportRequested = !!wanted; ca.supportRequestId = wanted ? wanted.id : ""; }
         }
-        if (!!staff.supportRequested !== staffWanted || (staff.supportRequestId || "") !== (staffMark ? staffMark.id : "")) {
-          staff.supportRequested = staffWanted; staff.supportRequestId = staffMark ? staffMark.id : "";
+        if (!!staff.supportRequested !== staffWanted || staff.supportRequestId) {
+          staff.supportRequested = staffWanted; staff.supportRequestId = "";
           changes.staffs["@" + staff.id] = staff;
         }
       }
@@ -727,12 +828,13 @@
       }
       /* CSV選択を取り消した場合に、入力中のサポート欄も保つ。 */
       syncDraft();
+      if (supportBlurTimer) { window.clearTimeout(supportBlurTimer); supportBlurTimer = null; }
       importBusy = true;
       importPhase = "CSV選択画面を準備しています。"; shareStatus();
       byId("aggregateLog").disabled = true;
       setText(byId("aggregateLog"), "集計中…");
       toast("ログ集計を開始します。");
-      /* ボタン押下から直接選択を開始し、ブラウザの操作許可を保つ。 */
+      /* 共有情報を更新してからCSV選択を開始する。 */
         var result;
         try {
           result = await WorkloadBrowser.selectLogs(function (message) { importPhase = message; shareStatus(); toast(message); });
@@ -793,12 +895,14 @@
       }
       return html.join("");
     }
-    function supportRequestHTML(staff) {
-      return '<label class="support-request-toggle' + (staff.supportRequested ? ' requested' : '') + '" title="優先的にサポートを希望（チェックでオン／オフ）"><input type="checkbox" id="support-request-' + staff.id + '"' + (staff.supportRequested ? ' checked="checked"' : '') + (!supportRequestEnabled(staff) ? ' disabled="disabled"' : '') + ' aria-label="' + esc(staff.name) + 'さんのサポ希望" onclick="WorkloadUI.requestSupportWanted(\'' + staff.id + '\')" /></label>';
+    function supportRequestHTML(ca) {
+      var wanted = ca.supportRequested && ca.supports.length < 3;
+      return '<label class="support-request-toggle' + (wanted ? ' requested' : '') + '" title="このCAのサポートを優先的に希望（3名投入で自動解除）"><input type="checkbox" id="support-request-' + ca.id + '"' + (wanted ? ' checked="checked"' : '') + (!supportRequestEnabled(ca) ? ' disabled="disabled"' : '') + ' aria-label="' + esc(ca.name) + ' CAのサポ希望" onclick="WorkloadUI.requestSupportWanted(\'' + ca.id + '\')" /></label>';
     }
     function refreshSupports(ca, onlyCA) {
       var cell = byId("supports-" + ca.id), staff;
       if (cell) { cell.innerHTML = supportHTML(ca); }
+      refreshSupportRequest(ca);
       if (!onlyCA) {
         staff = caStaffIndex["@" + ca.id]; if (staff) { refreshStaffSupport(staff); }
       }
@@ -816,7 +920,7 @@
       html.push('<span class="ca-commit-action"><button type="button" class="ca-commit-button" id="commit-' + ca.id + '"' + (!sharingReady() || !ca.committedAt && !ca.checked ? ' disabled="disabled"' : '') + ' title="' + (ca.committedAt ? 'コミットを取り消します（コミット時刻：' + esc(ca.committedAt) + '）' : 'このCAをコミット完了にします') + '" aria-label="' + esc(ca.name) + ' CAの' + (ca.committedAt ? 'コミット取消' : 'コミット') + '" onclick="WorkloadUI.requestCommit(\'' + ca.id + '\')">' + (ca.committedAt ? 'コミット取消' : 'コミット') + '</button></span></td>');
       html.push('<td class="ca-unsorted">' + format(unsorted) + '</td><td class="ca-unread">' + format(unread) + '</td><td class="ca-flag">' + format(flag) + '</td>');
       html.push('<td class="ca-total">' + format(unread + flag) + '</td>');
-      html.push('<td class="support-cell"><div class="support-layout"><span class="support-names" id="supports-' + ca.id + '">' + supportHTML(ca) + '</span></div></td></tr>');
+      html.push('<td class="support-cell"><div class="support-layout"><span class="ca-support-request-control" id="ca-support-request-control-' + ca.id + '">' + supportRequestHTML(ca) + '</span><span class="support-names" id="supports-' + ca.id + '">' + supportHTML(ca) + '</span></div></td></tr>');
       return html.join("");
     }
     function rankedCAs(staff) {
@@ -943,7 +1047,7 @@
         visible++;
         opened = !!expanded[staff.id];
         barWidth = maxTotal ? Math.round(t.total / maxTotal * 100) : 0;
-        html.push('<tr class="staff-row' + (opened ? ' expanded' : '') + '" id="staff-row-' + staff.id + '">');
+        html.push('<tr class="' + staffRowClass(staff, opened) + '" id="staff-row-' + staff.id + '">');
         html.push('<td class="rank-cell"><span class="rank-number' + (i < 3 ? ' leading' : '') + '">' + (i + 1) + '</span></td>');
         html.push('<td class="staff-cell"><button type="button" class="staff-name" id="staff-button-' + staff.id + '" aria-expanded="' + (opened ? 'true' : 'false') + '" aria-controls="detail-' + staff.id + '" title="担当CAごとの内訳を' + (opened ? '閉じる' : '開く') + '" onclick="WorkloadUI.toggleStaff(\'' + staff.id + '\')">' + esc(staff.name) + '<span class="staff-ca-meta"><span class="ca-count">' + staff.cas.length + ' CA</span>' + staffCheckHTML(staff) + '</span><span class="expand-indicator" aria-hidden="true">' + (opened ? '−' : '＋') + '</span></button></td>');
         html.push('<td class="team-cell"><button type="button" class="team-badge' + (selectedTeam === teamNameOf(staff) ? ' active' : '') + '" id="team-button-' + staff.id + '" aria-label="' + esc(teamNameOf(staff)) + 'のランキングを表示" aria-pressed="' + (selectedTeam === teamNameOf(staff) ? 'true' : 'false') + '" title="' + esc(teamNameOf(staff)) + 'のランキングを表示' + (excludedReason(staff) ? ' ／ 件数・対応余力の対象から除外：' + esc(excludedReason(staff)) : '') + '" onclick="WorkloadUI.filterByTeam(\'' + staff.id + '\')">' + esc(teamNameOf(staff)) + '</button></td>');
@@ -951,7 +1055,7 @@
         html.push('<td class="staff-unread"><span class="metric-value">' + format(t.unread) + '</span></td>');
         html.push('<td class="staff-flag"><span class="metric-value flag">' + format(t.flag) + '</span></td>');
         html.push('<td class="staff-total"><span class="metric-value total-value">' + format(t.total) + '</span><div class="load-track" title="合計件数の比較（最多の担当者を100%として表示）"><span class="load-fill" style="width:' + barWidth + '%"></span></div></td>');
-        html.push('<td class="staff-support"><span class="staff-support-top"><span id="staff-support-request-control-' + staff.id + '">' + supportRequestHTML(staff) + '</span><span class="support-count" id="supportCount-' + staff.id + '" title="担当CA全体のサポート人数（同じ氏名は1名として集計）">' + supportCountFor(staff) + '名</span></span>' + supportWantedHTML(staff) + '</td></tr>');
+        html.push('<td class="staff-support"><span class="staff-support-top"><span class="support-count" id="supportCount-' + staff.id + '" title="担当CA全体のサポート人数（同じ氏名は1名として集計）">' + supportCountFor(staff) + '名</span></span>' + supportWantedHTML(staff) + '</td></tr>');
         if (opened) {
           oldDetail = canReuse && byId("detail-" + staff.id);
           if (oldDetail) {
@@ -1001,11 +1105,11 @@
     function supportBlur() {
       var currentEditing = editing;
       syncDraft();
-      if (!editing || pendingSupport || shareWriteBusy || supportBlurTimer) { return; }
+      if (!editing || importBusy || pendingSupport || shareWriteBusy || supportBlurTimer) { return; }
       /* クリック先の処理を先に通し、Enter後のblurと確認を重複させない。 */
       supportBlurTimer = window.setTimeout(function () {
         supportBlurTimer = null;
-        if (editing === currentEditing && !pendingSupport && !shareWriteBusy) { commitSupport(true); }
+        if (editing === currentEditing && !importBusy && !pendingSupport && !shareWriteBusy) { commitSupport(true); }
       }, 0);
     }
     function closeSupportPrompt() {
@@ -1090,7 +1194,7 @@
         if (!Object.prototype.hasOwnProperty.call(expanded, key) || key === id || !expanded[key]) { continue; }
         expanded[key] = false; closed = true;
         detail = byId("detail-" + key); if (detail) { detail.parentNode.removeChild(detail); }
-        row = byId("staff-row-" + key); if (row) { row.className = "staff-row"; }
+        row = byId("staff-row-" + key); if (row) { row.className = staffRowClass(staffIndex["@" + key], false); }
         target = byId("staff-button-" + key);
         if (target) {
           target.setAttribute("aria-expanded", "false"); target.title = "担当CAごとの内訳を開く";
@@ -1113,7 +1217,7 @@
           row.parentNode.insertBefore(detail, row.nextSibling); queueDetail(staff);
         }
       } else if (detail) { detail.parentNode.removeChild(detail); cancelDetailRender(); }
-      row.className = "staff-row" + (expanded[id] ? " expanded" : "");
+      row.className = staffRowClass(staff, expanded[id]);
       target.setAttribute("aria-expanded", expanded[id] ? "true" : "false");
       target.title = "担当CAごとの内訳を" + (expanded[id] ? "閉じる" : "開く");
       spans = target.getElementsByTagName("span");
@@ -1262,20 +1366,21 @@
         applyShared(true); shareStatus(); toast(ca.name + " CAをチェック済みにしました。");
       });
     }
-    function requestSupportWanted(staffId) {
-      var staff = staffIndex["@" + staffId], control = byId("support-request-" + staffId), pin = byId("pinned-support-request-" + staffId), wanted;
+    function requestSupportWanted(caId) {
+      var ca = findCA(caId), control = byId("support-request-" + caId), wanted;
       /* 保存成功までは表示を元の状態に戻し、失敗時に希望だけが残らないようにする。 */
-      if (control && staff) { control.checked = !!staff.supportRequested; }
-      if (pin && staff) { pin.checked = !!staff.supportRequested; }
-      if (shareWriteBusy || importBusy || pendingRemoval || !supportRequestEnabled(staff)) { return; }
-      if (!commitSupport(true, function () { requestSupportWanted(staffId); })) { return; }
-      wanted = !staff.supportRequested;
-      if (control) { control.disabled = true; } if (pin) { pin.disabled = true; } setShareBusy(true);
-      WorkloadShare.setStaffSupportRequest(staff, wanted, function (error, snapshot) {
+      if (control && ca) { control.checked = !!ca.supportRequested && ca.supports.length < 3; }
+      if (shareWriteBusy || importBusy || pendingRemoval || !supportRequestEnabled(ca)) { return; }
+      if (!commitSupport(true, function () { requestSupportWanted(caId); })) { return; }
+      /* 確認中のサポート保存で3名になった場合は、希望を再設定しない。 */
+      ca = findCA(caId); if (!supportRequestEnabled(ca)) { return; }
+      wanted = !ca.supportRequested;
+      if (control) { control.disabled = true; } setShareBusy(true);
+      WorkloadShare.setSupportRequest(ca, wanted, function (error, snapshot) {
         setShareBusy(false);
-        if (error) { refreshStaffSupport(staff); sharedSaveError(error, snapshot); refreshStaffPin(); return; }
+        if (error) { refreshSupportRequest(ca); sharedSaveError(error, snapshot); refreshStaffPin(); return; }
         if (snapshot) { sharedSnapshot = snapshot; } sharedError = "";
-        applyShared(true); shareStatus(); toast(staff.name + "さんのサポ希望を" + (wanted ? "設定" : "解除") + "しました。");
+        applyShared(true); shareStatus(); toast(ca.name + " CAのサポ希望を" + (wanted ? "設定" : "解除") + "しました。");
       });
     }
     function globalKey(e) {
@@ -1315,7 +1420,7 @@
         row = null; detail = null;
       }
       pinnedStaffRow = row; pinnedStaffDetail = detail;
-      html = row ? row.id + "|" + row.innerHTML : "";
+      html = row ? row.id + "|" + row.className + "|" + row.innerHTML : "";
       /* 担当者の見出し1行だけを複製する。CA一覧や入力欄には触れない。 */
       if (html !== pinnedStaffHTML) {
         focus = document.activeElement && document.activeElement.id;
@@ -1466,22 +1571,20 @@
       <div class="prototype-status"><span class="prototype-badge"><span class="status-dot"></span>HTML版&nbsp; v0.8.3</span><p class="prototype-note" id="dataStatus">未集計 ／ 起動時にデータをクリア</p></div>
     </div>
 
-    <section class="browser-controls" aria-label="取込ファイルと共有設定">
+    <section class="browser-controls" aria-label="設定">
       <div class="browser-inputs">
-        <div class="browser-file"><button type="button" id="chooseUnread" onclick="WorkloadBrowser.choose('unread')">未読CSVを選択</button><span id="unreadFileName" class="browser-file-name">未選択</span></div>
-        <div class="browser-file"><button type="button" id="chooseFlag" onclick="WorkloadBrowser.choose('flag')">フラグCSVを選択</button><span id="flagFileName" class="browser-file-name">未選択</span></div>
-        <div class="browser-file"><button type="button" id="chooseAssignment" onclick="WorkloadBrowser.choose('assignment')">振分表を選択</button><span id="assignmentFileName" class="browser-file-name">未選択</span></div>
-        <button type="button" id="connectShared" class="connect-button" onclick="WorkloadBrowser.connectShared()">共有フォルダを接続</button>
-        <button type="button" id="retryShared" onclick="WorkloadBrowser.retryShared()">保存を再試行</button>
+        <div class="browser-file"><span>未読CSV：</span><span id="unreadFileName" class="browser-file-name">未選択</span></div>
+        <div class="browser-file"><span>フラグCSV：</span><span id="flagFileName" class="browser-file-name">未選択</span></div>
       </div>
-      <p id="browserStatus" class="browser-note" role="status" aria-live="polite">ファイルを選択し、全員が使う共有フォルダを接続してください。</p>
-      <details><summary>読込フォルダ設定・共有履歴</summary><div class="browser-extra">
-        <button type="button" onclick="WorkloadBrowser.chooseRoot('unread')">未読の親フォルダ</button><span id="unreadRootName">未設定</span>
-        <button type="button" onclick="WorkloadBrowser.chooseRoot('flag')">フラグの親フォルダ</button><span id="flagRootName">未設定</span>
-        <button type="button" onclick="WorkloadBrowser.exportHistory()">共有履歴を出力</button>
-        <button type="button" onclick="WorkloadBrowser.exportPending()">保存待ちの控えを出力</button>
-      </div><p class="browser-note">未読は親フォルダ／yyyymm／mmdd、フラグは親フォルダ／yyyymmを選択画面の初期位置に使います。共有先は全員同じフォルダを指定してください。</p>
-      <div id="browserConflict" class="browser-note browser-conflict"></div></details>
+      <div id="browserSettingsRow" class="browser-extra" role="group" aria-labelledby="browserSettingsTitle">
+        <strong id="browserSettingsTitle" class="browser-settings-title">設定</strong>
+        <div class="browser-file"><button type="button" id="connectShared" class="connect-button" onclick="WorkloadBrowser.connectShared()">共有</button><span id="sharedRootName" class="browser-file-name">未設定</span></div>
+        <div class="browser-file"><button type="button" onclick="WorkloadBrowser.chooseRoot('unread')">未読</button><span id="unreadRootName" class="browser-file-name">未設定</span></div>
+        <div class="browser-file"><button type="button" onclick="WorkloadBrowser.chooseRoot('flag')">フラグ</button><span id="flagRootName" class="browser-file-name">未設定</span></div>
+        <div class="browser-file"><button type="button" id="chooseAssignment" onclick="WorkloadBrowser.choose('assignment')">振分表</button><span id="assignmentFileName" class="browser-file-name">未選択</span></div>
+      </div>
+      <p id="browserStatus" class="browser-note" role="status" aria-live="polite"></p>
+      <div id="browserConflict" class="browser-note browser-conflict"></div>
       <input type="file" id="browserFileInput" style="display:none" />
     </section>
     <div class="dashboard" id="dashboard"><div class="ranking-pane" id="rankingPane">
@@ -1531,11 +1634,17 @@
         <p class="capacity-components">処理見込 <span id="capacityEstimate">—</span> 件 − 全体の残件数 <span id="capacityBacklog">0</span> 件</p>
         <p class="capacity-timing" id="capacityTiming">—</p>
       </div>
-      <div class="capacity-controls"><label for="capturedTimeInput">集計時刻</label><input type="text" id="capturedTimeInput" class="time-input" maxlength="5" value="" title="ログ集計時に自動入力。変更する場合はHH:mmで入力" aria-label="集計時刻" onkeydown="return WorkloadUI.capturedTimeKey(event)" /><button type="button" class="capacity-recalculate" id="recalculateCapacity" onclick="WorkloadUI.applyCapturedTime()">余力再計算</button><span class="capacity-log-action"><button type="button" class="capacity-log-button" id="aggregateLog" title="上部で選択した未読CSV・フラグCSV・振分表を読み込みます" onclick="WorkloadUI.requestLogAggregate()">ログ集計</button></span><p class="capacity-controls-note">14:00以降は休憩控除なし</p></div>
+      <div class="capacity-controls"><label for="capturedTimeInput">集計時刻</label><input type="text" id="capturedTimeInput" class="time-input" maxlength="5" value="" title="ログ集計時に自動入力。変更する場合はHH:mmで入力" aria-label="集計時刻" onkeydown="return WorkloadUI.capturedTimeKey(event)" /><button type="button" class="capacity-recalculate" id="recalculateCapacity" onclick="WorkloadUI.applyCapturedTime()">余力再計算</button><span class="capacity-log-action"><button type="button" class="capacity-log-button" id="aggregateLog" title="共有情報を更新してから未読CSV・フラグCSVを順に選択し、設定した振分表と集計します" onclick="WorkloadUI.requestLogAggregate()">ログ集計</button></span><p class="capacity-controls-note">14:00以降は休憩控除なし</p></div>
     </div>
     </div></div></div>
     <div class="page-footer" id="pageFooter"><div class="footer-left">合計 ＝ 純粋未読 ＋ フラグ　／　未仕分は合計に含めません。</div><div class="footer-right" id="dataFooter">「ログ集計」でCSVと振分表を取り込みます。</div></div>
   </div>
+  <dialog id="logSelectionDialog" class="modal" aria-labelledby="logSelectionTitle" aria-describedby="logSelectionMessage">
+    <h3 id="logSelectionTitle">ログ集計を続ける</h3>
+    <p id="logSelectionMessage"></p>
+    <div class="modal-buttons"><button type="button" id="logSelectionCancel" class="modal-button">キャンセル</button><button type="button" id="logSelectionContinue" class="modal-button confirm">CSVを選択</button></div>
+  </dialog>
+
   <div id="supportConfirmOverlay" class="modal-overlay">
     <div class="modal-layout"><div class="modal-cell">
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="supportConfirmTitle" aria-describedby="supportConfirmDescription">

@@ -196,6 +196,7 @@ var WorkloadShare = (function () {
             row = supportRequested(state, key);
             if (action.requested) {
                 if (committed(state, key)) { throw new Error("このCAはコミット済みです。先にコミットを取り消してください。"); }
+                if (action.kind === "supportRequest" && list.length >= 3) { throw new Error("サポートが3名投入されているため、サポ希望は設定できません。"); }
                 if (row) { return record; }
                 record.supportRequests = [{ id: id, organization: trim(action.organization), caName: trim(action.caName), requestedAt: stamp }];
             } else {
@@ -230,6 +231,11 @@ var WorkloadShare = (function () {
             if (list.length >= 3) { throw new Error("サポートはCAごとに最大3名です。共有状況を確認してください。"); }
             for (i = 0; i < list.length; i++) { if (normalized(list[i].supportName) === normalized(name)) { throw new Error("このCAには、同じ氏名のサポートが登録されています。"); } }
             record.supports.push({ id: id, organization: trim(action.organization), caName: trim(action.caName), supportName: name, startedAt: stamp, completedAt: "" });
+            /* 3人目の投入と同じ操作で希望を解除し、別保存による取りこぼしを避ける。 */
+            row = supportRequested(state, key);
+            if (list.length === 2 && row) {
+                record.cancelSupportRequests = [{ id: row.id, organization: row.organization, caName: row.caName }];
+            }
         } else if (action.kind === "finish") {
             for (i = 0; i < list.length; i++) {
                 row = list[i];
@@ -304,6 +310,10 @@ var WorkloadShare = (function () {
                 base = parseLegacy(await file.text(), day);
             }
         }
+        /* 旧形式の基準履歴で既に3名いるCAも、希望を解除した状態から引き継ぐ。 */
+        base.supportRequests = base.supportRequests.filter(function (row) {
+            return row.organization === "@WorkloadStaffSupport" || active(base, keyOf(row.organization, row.caName)).length < 3;
+        });
         var ctx = { day: day, base: base, baseHandle: fileHandle,
             baseMark: file ? file.size + ":" + file.lastModified : "", events: new Map(),
             order: [], state: clone(base), rejected: [], maximum: 0, snapshot: clone(base), signature: "", integrityCursor: 0, invalidError: null };

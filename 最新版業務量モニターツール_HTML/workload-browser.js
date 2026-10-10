@@ -239,31 +239,84 @@ var WorkloadBrowser = (function () {
         }
         await rememberChoice(kind, handle);
     }
+    function needsLogGesture() {
+        return !!(window.navigator && window.navigator.userActivation && !window.navigator.userActivation.isActive);
+    }
+    function waitForLogGesture(message, caption, report) {
+        report(message);
+        var dialog = node("logSelectionDialog"), yes = node("logSelectionContinue"), no = node("logSelectionCancel");
+        node("logSelectionMessage").textContent = message; yes.textContent = caption;
+        return new Promise(function (resolve, reject) {
+            function finish(accepted) {
+                yes.onclick = no.onclick = dialog.oncancel = null; dialog.close();
+                if (accepted) { resolve(); }
+                else { reject(new DOMException("ログ集計をキャンセルしました。", "AbortError")); }
+            }
+            yes.onclick = function () { finish(true); }; no.onclick = function () { finish(false); };
+            dialog.oncancel = function (event) { event.preventDefault(); finish(false); };
+            dialog.showModal();
+        });
+    }
+    async function logGestureAction(action, message, caption, report) {
+        if (needsLogGesture()) { await waitForLogGesture(message, caption, report); }
+        try { return await action(); }
+        catch (error) {
+            if (error.name !== "SecurityError") { throw error; }
+            /* 操作許可が直前に切れた場合も、利用者のクリックから1度だけ再開する。 */
+            await waitForLogGesture(message, caption, report);
+            return await action();
+        }
+    }
+    async function logPermission(handle, mode, label, report) {
+        if (await handle.queryPermission({ mode: mode }) === "granted") { return; }
+        var access = await logGestureAction(function () { return handle.requestPermission({ mode: mode }); },
+            "「" + label + "」のアクセス許可を確認します。「許可を確認」を押してください。", "許可を確認", report);
+        if (access !== "granted") { throw new Error("「" + label + "」への" + (mode === "readwrite" ? "読み書き" : "読込") + "を許可してください。"); }
+    }
+    async function reloadForLogs(report) {
+        report("共有情報を更新しています。");
+        await logPermission(remembered.handle, "readwrite", "共有", report);
+        while (WorkloadShare.isBusy()) { await new Promise(function (resolve) { window.setTimeout(resolve, 50); }); }
+        if (!WorkloadShare.isConnected()) { await WorkloadShare.connect(remembered.handle, remembered.key); }
+        else { await WorkloadShare.refresh(); }
+        /* refreshの読込・保存失敗は状態通知で返るため、CSV選択前に確認する。 */
+        if (shared && shared.error) { throw new Error("共有情報を更新できません。\n" + shared.error); }
+    }
+    async function pickLogFile(kind, report) {
+        var options = pickerOptions(kind);
+        var handles = await logGestureAction(function () { return window.showOpenFilePicker(options); },
+            "CSV選択画面を開きます。「CSVを選択」を押してください。", "CSVを選択", report);
+        return handles[0];
+    }
     async function selectLogs(progress) {
         if (choosing) { throw new Error("ファイル選択が完了してから集計してください。"); }
         /* File System Accessがない環境では、従来どおり選択済みファイルを集計する。 */
         if (typeof window.showOpenFilePicker !== "function") { return { cancelled: false }; }
-        if (!selected.assignment) { throw new Error("最初に上部の「振分表を選択」から振分表を指定してください。"); }
+        var missing = [];
+        if (!remembered) { missing.push("共有"); }
+        if (!roots.unread) { missing.push("未読"); }
+        if (!roots.flag) { missing.push("フラグ"); }
+        if (!selected.assignment) { missing.push("振分表"); }
+        if (missing.length) { throw new Error("初期設定が完了していません。画面上部の「設定」で「" + missing.join("」「") + "」を設定してください。"); }
         var report = progress || function () {};
         choosing = true;
         try {
+            await reloadForLogs(report);
             for (var kind of ["unread", "flag"]) {
                 if (!roots[kind]) { continue; }
                 report((kind === "unread" ? "未読" : "フラグ") + "の読込フォルダを確認しています。");
-                if (await roots[kind].queryPermission({ mode: "read" }) !== "granted" &&
-                    await roots[kind].requestPermission({ mode: "read" }) !== "granted") { throw new Error("記憶した親フォルダへの読込を許可してください。"); }
+                await logPermission(roots[kind], "read", kind === "unread" ? "未読" : "フラグ", report);
                 var start = starts[kind];
                 if (!start || !start.exact || start.day !== new Date().toDateString()) { await dateStart(kind); }
                 if (!starts[kind].exact) { throw new Error((kind === "unread" ? "未読の当日" : "フラグの当月") + "フォルダが見つかりません。親フォルダ内の日付フォルダを確認してください。"); }
             }
             report("1/2 未読CSVを選択してください。");
-            var unread = (await window.showOpenFilePicker(pickerOptions("unread")))[0];
+            var unread = await pickLogFile("unread", report);
             /* 次の選択画面は、未読の読込・設定保存で待たせずに開く。 */
             report("2/2 フラグCSVを選択してください。");
-            var flag = (await window.showOpenFilePicker(pickerOptions("flag")))[0];
+            var flag = await pickLogFile("flag", report);
             var assignment = selected.assignment;
-            if (assignment.handle && await assignment.handle.queryPermission({ mode: "read" }) !== "granted" &&
-                await assignment.handle.requestPermission({ mode: "read" }) !== "granted") { throw new Error("振分表への読込を許可してください。"); }
+            if (assignment.handle) { await logPermission(assignment.handle, "read", "振分表", report); }
             await acceptChoice("unread", unread);
             await acceptChoice("flag", flag);
             return { cancelled: false };
@@ -281,7 +334,7 @@ var WorkloadBrowser = (function () {
         choosing = true;
         try {
             var handles = await window.showOpenFilePicker(pickerOptions(kind));
-            await acceptChoice(kind, handles[0]); info("ファイルを選択しました。3つのファイルを確認して「ログ集計」を押してください。");
+            await acceptChoice(kind, handles[0]); info("ファイルを選択しました。「ログ集計」で未読CSV・フラグCSVを選択してください。");
         } catch (error) { fail(error); } finally { choosing = false; }
     }
     async function chooseRoot(kind) {
@@ -291,8 +344,8 @@ var WorkloadBrowser = (function () {
         try {
             var handle = await window.showDirectoryPicker({ id: "workload-root-" + kind, mode: "read" });
             roots[kind] = handle; await WorkloadBrowserStore.set("root-" + kind, handle);
-            node(kind + "RootName").textContent = handle.name; await dateStart(kind);
-            info("読込フォルダを設定しました。CSVを選択してください。");
+            node(kind + "RootName").textContent = handle.name; node(kind + "RootName").title = handle.name; await dateStart(kind);
+            info("読込フォルダを設定しました。「ログ集計」でCSVを選択してください。");
         } catch (error) { fail(error); } finally { choosing = false; }
     }
     async function connectShared() {
@@ -305,12 +358,12 @@ var WorkloadBrowser = (function () {
             key = remembered && await handle.isSameEntry(remembered.handle) ? remembered.key : "shared-root-" + window.crypto.randomUUID();
             await WorkloadShare.connect(handle, key);
             remembered = { handle: handle, key: key }; await WorkloadBrowserStore.set("shared-current", remembered);
-            node("connectShared").textContent = "共有先を変更";
+            node("connectShared").textContent = "共有";
         } catch (error) { fail(error); }
         finally { choosing = false; node("connectShared").disabled = false; }
     }
     async function retryShared() {
-        if (choosing || window.WorkloadUI && !WorkloadUI.canRetryBrowserWrites()) { info("保存・集計が完了してから再試行してください。", true); return; }
+        if (choosing || window.WorkloadUI && !WorkloadUI.canRetryBrowserWrites()) { info("保存・集計が完了してから再読み込みしてください。", true); return; }
         try {
             if (!remembered) { await connectShared(); return; }
             if (await remembered.handle.requestPermission({ mode: "readwrite" }) !== "granted") { throw new Error("共有フォルダへの読み書きを許可してください。"); }
@@ -320,9 +373,9 @@ var WorkloadBrowser = (function () {
     }
     async function fileOf(kind) {
         var choice = selected[kind];
-        if (!choice) { throw new Error("上部の「" + ({ unread: "未読CSV", flag: "フラグCSV", assignment: "振分表" })[kind] + "を選択」から取込ファイルを指定してください。"); }
+        if (!choice) { throw new Error(kind === "assignment" ? "「設定」の「振分表」から振分表を指定してください。" : "「ログ集計」で" + (kind === "unread" ? "未読CSV" : "フラグCSV") + "を選択してください。"); }
         if (choice.handle) {
-            if (await choice.handle.queryPermission({ mode: "read" }) !== "granted") { throw new Error(choice.name + " の読込許可が必要です。上部からもう一度選択してください。"); }
+            if (await choice.handle.queryPermission({ mode: "read" }) !== "granted") { throw new Error(choice.name + " の読込許可が必要です。" + (kind === "assignment" ? "「設定」の「振分表」" : "「ログ集計」") + "からもう一度選択してください。"); }
             if (roots[kind]) {
                 await dateStart(kind);
                 var start = starts[kind], relative = await roots[kind].resolve(choice.handle);
@@ -354,9 +407,10 @@ var WorkloadBrowser = (function () {
     }
     function sharedStatus(value) {
         shared = value;
-        info(value.error || (value.connected ? "共有先：" + value.folder + " ／ 接続済み" : "共有フォルダを接続してください。") +
+        if (value.connected) { node("sharedRootName").textContent = value.folder; node("sharedRootName").title = value.folder; }
+        info((value.error || (value.connected ? "" : "「設定」の「共有」で接続してください。") +
             (value.pending ? " ／ 保存待ち " + value.pending + "件（完了まで画面を開いてください）" : "") +
-            (value.rejected.length ? " ／ 同時操作による未反映 " + value.rejected.length + "件" : ""), !!value.error || !!value.rejected.length);
+            (value.rejected.length ? " ／ 同時操作による未反映 " + value.rejected.length + "件" : "")).replace(/^ ／ /, ""), !!value.error || !!value.rejected.length);
         var box = node("browserConflict");
         if (box) { box.textContent = value.rejected.map(function (x) { return x.stamp + "　" + x.organization + "／" + x.caName + "：" + x.message; }).join("\n"); }
     }
@@ -372,12 +426,13 @@ var WorkloadBrowser = (function () {
             }
             for (kind of ["unread", "flag"]) {
                 handle = await WorkloadBrowserStore.get("root-" + kind);
-                if (handle) { roots[kind] = handle; node(kind + "RootName").textContent = handle.name; await dateStart(kind).catch(function () {}); }
+                if (handle) { roots[kind] = handle; node(kind + "RootName").textContent = handle.name; node(kind + "RootName").title = handle.name; await dateStart(kind).catch(function () {}); }
             }
             remembered = await WorkloadBrowserStore.get("shared-current");
+            if (remembered) { node("sharedRootName").textContent = remembered.handle.name; node("sharedRootName").title = remembered.handle.name; }
             if (remembered && await remembered.handle.queryPermission({ mode: "readwrite" }) === "granted") {
-                await WorkloadShare.connect(remembered.handle, remembered.key); node("connectShared").textContent = "共有先を変更";
-            } else if (remembered) { info("前回の共有先を記憶しています。「共有フォルダを接続」で読み書きを許可してください。"); }
+                await WorkloadShare.connect(remembered.handle, remembered.key); node("connectShared").textContent = "共有";
+            } else if (remembered) { info("前回の共有先を記憶しています。「ログ集計」で読み書きを許可してください。共有先を変更する場合は「設定」の「共有」を選択してください。"); }
             if (!window.showDirectoryPicker || !window.isSecureContext) { info("この開き方では共有フォルダを利用できません。通常のEdgeでHTMLファイルを開いてください。", true); }
         } catch (error) { info("設定を復元できません：" + (error.message || String(error)) + "　ファイルと共有先を選択してください。", true); }
     }
