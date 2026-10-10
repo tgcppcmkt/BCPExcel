@@ -1,0 +1,1571 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>業務量モニター3.0tag HTML版</title>
+<style type="text/css">
+    * { box-sizing: border-box; }
+    html { background: #f3f5f9; }
+    body { margin: 0; color: #1e2b41; font-family: Meiryo, "Yu Gothic", "Segoe UI", sans-serif; font-size: 13px; font-weight: 500; line-height: 1.6; }
+    button, input, select { font-family: inherit; font-size: inherit; font-weight: 600; }
+    button { cursor: pointer; }
+    button:focus, input:focus, select:focus { outline: 2px solid #7360c8; outline-offset: 2px; }
+    .page { min-width: 900px; max-width: 1760px; margin: 0 auto; padding: 20px 28px 16px; }
+    .page-header { display: table; width: 100%; margin-bottom: 23px; }
+    .brand, .prototype-status { display: table-cell; vertical-align: middle; }
+    .brand-icon { position: relative; display: inline-block; width: 44px; height: 44px; vertical-align: middle; background: #5848b8; border-radius: 12px; margin-right: 13px; }
+    .brand-icon span { position: absolute; bottom: 12px; width: 5px; background: #fff; border-radius: 2px; }
+    .brand-icon .bar1 { left: 11px; height: 11px; }
+    .brand-icon .bar2 { left: 20px; height: 21px; }
+    .brand-icon .bar3 { left: 29px; height: 16px; }
+    .brand-text { display: inline-block; vertical-align: middle; }
+    h1 { margin: 0 0 2px; font-size: 24px; font-weight: 700; letter-spacing: .02em; line-height: 1.5; }
+    .tagline { margin: 0; color: #4c5b70; font-size: 12px; }
+    .prototype-status { width: 285px; text-align: right; }
+    .prototype-badge { display: inline-block; background: #e7edf6; color: #40516b; border: 1px solid #d8e1ed; border-radius: 20px; padding: 5px 12px; font-size: 11px; font-weight: 700; }
+    .status-dot { display: inline-block; width: 6px; height: 6px; margin-right: 6px; vertical-align: 1px; background: #7287a9; border-radius: 50%; }
+    .prototype-note { margin: 6px 0 0; color: #4c5b70; font-size: 11px; }
+    .dashboard { display: block; width: 100%; }
+    .ranking-pane, .overview-pane { display: block; width: 100%; vertical-align: top; }
+    .overview-content { overflow: hidden; }
+    .summary { width: 100%; margin: 0 0 22px; overflow: hidden; }
+    .summary-item { float: left; width: 25%; padding: 0 7px; }
+    .summary-item.first { padding-left: 0; }
+    .summary-item.last { padding-right: 0; }
+    .summary-card { min-height: 123px; padding: 15px 20px 13px; background: #fff; border: 1px solid #e0e5ee; border-radius: 12px; box-shadow: 0 2px 5px rgba(35, 48, 71, .025); }
+    .summary-card.primary { background: #5848b8; border-color: #5848b8; color: #fff; }
+    .summary-label { margin: 0; font-size: 12px; color: #46566d; font-weight: 700; }
+    .primary .summary-label { color: #eeeafd; }
+    .summary-value { display: inline-block; margin: 2px 0 1px; font-family: "Segoe UI", Meiryo, sans-serif; font-size: 34px; line-height: 1.3; font-weight: 700; letter-spacing: -.02em; }
+    .summary-unit { margin-left: 5px; font-size: 12px; color: #536178; }
+    .primary .summary-unit { color: #dcd5fa; }
+    .summary-caption { margin: 0; color: #536178; font-size: 11px; }
+    .primary .summary-caption { color: #dfd8fb; }
+    .capacity-card { display: table; width: 100%; margin: 0 0 22px; padding: 17px 22px; background: #fff; border: 1px solid #dfe6ee; border-radius: 12px; box-shadow: 0 2px 5px rgba(35, 48, 71, .025); }
+    .capacity-main, .capacity-details, .capacity-controls { display: table-cell; vertical-align: middle; }
+    .capacity-main { width: 211px; }
+    .capacity-label { margin: 0 0 1px; color: #46566d; font-size: 12px; font-weight: 700; }
+    .capacity-state { display: inline-block; margin-left: 9px; border-radius: 4px; padding: 1px 6px; background: #eaf5f0; color: #216a54; font-size: 10px; font-weight: 600; vertical-align: 1px; }
+    .capacity-value { color: #1d735b; font-size: 34px; font-weight: 700; line-height: 1.3; font-family: "Segoe UI", Meiryo, sans-serif; letter-spacing: -.02em; }
+    .capacity-unit { margin-left: 5px; color: #42695d; font-size: 12px; }
+    .capacity-card.negative .capacity-value { color: #a83e53; }
+    .capacity-card.negative .capacity-state { color: #963d52; background: #faeef1; }
+    .capacity-card.neutral .capacity-value { color: #52627a; }
+    .capacity-card.neutral .capacity-state { color: #546378; background: #eef1f6; }
+    .capacity-details { padding: 0 18px; border-left: 1px solid #edf0f5; }
+    .capacity-equation { margin: 0 0 3px; color: #405267; font-size: 12px; font-weight: 700; }
+    .capacity-equation strong { color: #216a54; font-weight: 700; }
+    .capacity-components { margin: 0 0 3px; color: #536178; font-size: 11px; }
+    .capacity-timing { margin: 0; color: #59667c; font-size: 10px; }
+    .capacity-controls { width: 344px; padding-left: 19px; border-left: 1px solid #edf0f5; white-space: nowrap; }
+    .capacity-controls label { display: block; margin-bottom: 5px; color: #536178; font-size: 10px; }
+    .time-input { width: 70px; height: 31px; padding: 5px 7px; color: #3e526b; background: #f9fafc; border: 1px solid #dce2ec; border-radius: 5px; font-family: "Segoe UI", Meiryo, sans-serif; font-size: 13px; }
+    .time-input, .capacity-recalculate { display: inline-block; vertical-align: middle; }
+    .time-input.invalid { border-color: #c57681; background: #fff9fa; }
+    .capacity-recalculate { height: 31px; margin-left: 7px; border: 1px solid #dce3ed; border-radius: 5px; background: #fff; color: #43566f; padding: 4px 9px; font-size: 11px; }
+    .capacity-recalculate:hover { background: #f4f6fb; }
+    .capacity-log-action { display: inline-block; margin-left: 14px; padding-left: 14px; border-left: 1px solid #dce3ed; }
+    .capacity-log-button { height: 31px; margin-left: 0; border: 1px solid #d9d0ee; border-radius: 5px; background: #f8f5ff; color: #60469a; padding: 4px 10px; font-size: 11px; }
+    .capacity-log-button:hover { background: #eee8fb; color: #513985; }
+    .capacity-controls-note { margin: 5px 0 0; color: #59667c; font-size: 9px; }
+    .capacity-log-button:disabled { cursor: wait; color: #627087; background: #eef0f5; border-color: #d6dce6; }
+    .ca-organization { display: block; max-width: 100%; margin-top: 4px; color: #536178; font-size: 10px; font-weight: 600; word-wrap: break-word; }
+    .ranking-card { background: #fff; border: 1px solid #dfe5ee; border-radius: 13px; box-shadow: 0 4px 14px rgba(35, 48, 71, .035); overflow: hidden; }
+    .ranking-heading { display: table; width: 100%; padding: 19px 22px 13px; }
+    .heading-title, .heading-count { display: table-cell; vertical-align: middle; }
+    h2 { margin: 0 0 2px; font-size: 17px; font-weight: 700; }
+    .ranking-description { margin: 0; color: #4e5d72; font-size: 11px; }
+    .heading-count { width: 190px; text-align: right; color: #526178; font-size: 11px; }
+    .heading-count strong { color: #4b5c74; font-weight: 700; }
+    .team-ca-check-summary { padding: 0 22px 12px; }
+    .team-ca-check-item { display: inline-block; width: 50%; padding: 3px 12px 3px 0; font-size: 11px; line-height: 20px; vertical-align: top; }
+    .team-ca-check-name { display: inline-block; width: 55%; color: #465873; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+    .team-ca-check-count { display: inline-block; width: 45%; color: #a83e53; white-space: nowrap; vertical-align: middle; }
+    .toolbar { display: table; width: 100%; padding: 0 22px 16px; }
+    .toolbar-left, .toolbar-right { display: table-cell; vertical-align: middle; }
+    .toolbar-right { text-align: right; white-space: nowrap; }
+    .search-box { position: relative; display: inline-block; width: 258px; vertical-align: middle; }
+    .search-box input { width: 100%; height: 34px; border: 1px solid #dce2ec; border-radius: 7px; padding: 7px 34px 7px 33px; background: #f9fafc; color: #33435a; }
+    .search-placeholder { position: absolute; left: 33px; top: 8px; color: #627087; font-size: 12px; cursor: text; }
+    .search-icon { position: absolute; left: 12px; top: 11px; width: 10px; height: 10px; border: 1.5px solid #95a0b3; border-radius: 50%; }
+    .search-icon:after { content: ""; position: absolute; width: 5px; height: 1.5px; background: #95a0b3; left: 6px; top: 7px; -ms-transform: rotate(45deg); transform: rotate(45deg); }
+    .search-clear { display: none; position: absolute; top: 5px; right: 5px; height: 24px; width: 24px; border: 0; border-radius: 4px; color: #71819a; background: transparent; font-size: 17px; line-height: 20px; }
+    .search-clear:hover { background: #e9edf5; }
+    .sort-select { margin-left: 9px; height: 34px; min-width: 176px; border: 1px solid #dce2ec; border-radius: 7px; padding: 4px 7px; color: #3f5069; background: #fff; vertical-align: middle; font-size: 12px; }
+    .quiet-button { height: 32px; background: #fff; color: #455873; border: 1px solid #dce3ed; border-radius: 6px; padding: 4px 11px; margin-left: 6px; font-size: 11px; }
+    .quiet-button:hover { background: #f1f3f9; border-color: #cbd3e3; }
+    .ranking-header-wrap { background: #f7f8fb; }
+    .ranking-scroll-wrap { position: relative; overflow: hidden; }
+    .pinned-staff { display: none; position: absolute; top: 0; left: 0; right: 0; z-index: 5; background: #f6f5fd; box-shadow: 0 3px 6px rgba(48, 42, 76, .12); }
+    .ranking-scroll { height: 300px; overflow-y: auto; overflow-x: hidden; }
+    .ranking-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .ranking-table th { height: 42px; padding: 9px 17px; text-align: right; background: #f7f8fb; color: #465873; font-size: 11px; font-weight: 700; border-top: 1px solid #e9edf4; border-bottom: 1px solid #e9edf4; }
+    .ranking-table th.rank-heading { text-align: center; }
+    .ranking-table th.staff-heading { text-align: left; }
+    .ranking-table th.team-heading { text-align: left; }
+    .ranking-table th.active-sort { color: #5848b8; }
+    .ranking-table th.support-heading { text-align: center; }
+    .support-heading-note { display: block; color: #627087; font-size: 9px; font-weight: 500; }
+    .staff-row td.staff-support { text-align: center; }
+    .support-count { color: #42695d; font-size: 14px; font-weight: 700; }
+    .support-wanted { display: block; margin-top: 2px; color: #c5303f; font-size: 11px; font-weight: 700; line-height: 1.4; }
+    .team-filter-bar { margin: 0 22px 16px; padding: 10px 14px; border: 1px solid #c9c0e8; border-radius: 7px; background: #f4f1fc; color: #4d3f87; }
+    .team-filter-label { font-size: 11px; }
+    .team-filter-name { margin-left: 8px; font-size: 14px; font-weight: 700; }
+    .team-filter-rank { margin-left: 12px; font-size: 11px; }
+    .team-filter-clear { margin-left: 16px; height: 28px; border: 1px solid #b6a9df; border-radius: 5px; padding: 3px 10px; background: #fff; color: #51419a; font-size: 11px; font-weight: 700; }
+    .team-filter-clear:hover { background: #e9e2fa; }
+    .team-filter-note { margin: 4px 0 0; color: #536178; font-size: 10px; }
+    .staff-row td { height: 61px; padding: 9px 17px; border-bottom: 1px solid #eef1f6; text-align: right; background: #fff; }
+    .staff-row:last-child td { border-bottom: 0; }
+    .staff-row:hover td { background: #fafaff; }
+    .staff-row.expanded td { background: #f6f5fd; border-bottom-color: #e9e5f8; }
+    .staff-row td.rank-cell { text-align: center; }
+    .rank-number { display: inline-block; width: 27px; height: 27px; color: #637088; font-family: "Segoe UI", Meiryo, sans-serif; font-size: 13px; font-weight: 600; line-height: 27px; border-radius: 8px; }
+    .rank-number.leading { color: #5a48ae; background: #eeeafa; }
+    .staff-row td.staff-cell { text-align: left; }
+    .staff-row td.team-cell { text-align: left; }
+    .team-badge { display: inline-block; max-width: 100%; border: 1px solid #c4cede; border-radius: 5px; padding: 3px 8px; background: #f0f3f9; color: #3f526f; font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+    .team-badge:hover { border-color: #9f90d3; background: #eae4f9; color: #51419a; }
+    .team-badge.active { border-color: #a798d5; background: #e8e1f8; color: #4c3b90; }
+    .staff-name { position: relative; padding: 4px 28px 4px 0; display: block; width: 100%; text-align: left; color: #33445d; background: transparent; border: 0; border-radius: 4px; font-size: 15px; font-weight: 700; line-height: 26px; }
+    .staff-name:hover { color: #5848b8; }
+    .ca-count { margin-left: 9px; color: #586780; font-size: 10px; font-weight: 600; }
+    .staff-ca-meta { display: inline-block; white-space: nowrap; vertical-align: middle; }
+    .staff-ca-check { display: inline-block; margin-left: 8px; color: #a83e53; font-size: 10px; font-weight: 700; line-height: 1.5; }
+    .staff-ca-check.checked { color: #2f7351; }
+    .expand-indicator { position: absolute; right: 1px; top: 6px; width: 21px; height: 21px; border-radius: 5px; background: #f0f2f8; color: #617087; text-align: center; line-height: 20px; font-size: 15px; font-weight: 600; }
+    .expanded .expand-indicator { background: #e8e3f8; color: #5945ac; }
+    .metric-value { font-family: "Segoe UI", Meiryo, sans-serif; font-size: 18px; line-height: 1.3; font-weight: 700; color: #3d4f69; }
+    .metric-value.unsorted { color: #627086; }
+    .metric-value.flag { color: #6b477d; }
+    .total-value { color: #5140af; font-size: 21px; font-weight: 700; }
+    .load-track { width: 69px; height: 4px; margin: 6px 0 0 auto; border-radius: 3px; background: #efedf9; text-align: left; overflow: hidden; }
+    .load-fill { display: block; height: 4px; border-radius: 3px; background: #7862c8; }
+    .detail-row td.detail-cell { background: #fbfbfe; padding: 0 0 12px; border-bottom: 1px solid #e9edf4; }
+    .detail-header { padding: 12px 17px 9px; color: #615078; font-size: 11px; }
+    .detail-header strong { color: #4b3c74; }
+    .detail-header .detail-note { margin-left: 10px; color: #675e75; }
+    .ca-table { width: 100%; border-collapse: collapse; table-layout: fixed; border: 0; background: #fff; }
+    .ca-table td { padding: 9px 17px; border-bottom: 1px solid #eef0f6; height: 51px; text-align: right; color: #40516d; font-size: 13px; }
+    .ca-table tr:last-child td { border-bottom: 0; }
+    .ca-table td.ca-name-cell { text-align: left; padding-left: 17px; font-weight: 700; color: #3c4e69; }
+    .ca-name-label { display: inline-block; min-width: 80px; max-width: 112px; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; white-space: nowrap; }
+    .ca-links { display: inline-block; margin-left: 18px; vertical-align: middle; white-space: nowrap; }
+    .ca-link-button { height: 28px; margin-right: 10px; border: 1px solid #ddd8ef; background: #fcfbff; border-radius: 5px; color: #5f4a93; padding: 3px 10px; font-family: "Segoe UI", Meiryo, sans-serif; font-size: 11px; line-height: 20px; }
+    .ca-link-button.canvas-button { margin-right: 0; }
+    .ca-link-message { display: none; max-width: 104px; margin-left: 8px; vertical-align: middle; color: #7b5367; font-size: 10px; line-height: 1.4; white-space: normal; word-wrap: break-word; }
+    .ca-link-button:hover { color: #524095; background: #f0ebfc; border-color: #c8bde9; }
+    .ca-table tr.committed td { background: #eceff3; color: #77808d; }
+    .ca-table tr.committed .ca-name-label, .ca-table tr.committed .ca-organization, .ca-table tr.committed .ca-total { color: #77808d; }
+    .ca-table tr.committed button:disabled { cursor: default; color: #838b96; background: #e5e8ed; border-color: #d1d7df; }
+    .ca-table tr.ca-unchecked td { background: #f4f6f9; }
+    .ca-table td.ca-check-cell { text-align: left; padding: 6px 4px; }
+    .ca-check-button { width: 100%; padding: 5px 2px; border: 1px solid #e5cbd0; border-radius: 5px; color: #a83e53; background: #fff7f8; font-size: 10px; line-height: 1.5; white-space: nowrap; }
+    .ca-check-button.checked, .ca-table tr.committed .ca-check-button.checked { color: #2f7351; border-color: #c9e0d2; background: #eff7f2; }
+    .ca-check-button:disabled { cursor: default; }
+    .ca-commit-button:not(:disabled) { cursor: pointer; color: #60469a; background: #f8f5ff; }
+    .ca-commit-button:not(:disabled):hover { background: #eee8fb; }
+    .prototype-note.share-error { color: #a83e53; }
+    .ca-table td.ca-empty { text-align: left; color: #5a687e; padding: 15px 16px; }
+    .ca-suffix { color: #626d81; margin-left: 5px; font-size: 10px; font-weight: 600; }
+    .ca-table .ca-total { color: #5340a0; font-weight: 700; }
+    .ca-table td.support-cell { text-align: left; padding-left: 12px; white-space: nowrap; }
+    .support-layout { display: table; width: 100%; table-layout: fixed; }
+    .staff-support-top { white-space: nowrap; }
+    .staff-support-top .support-request-toggle { height: 22px; line-height: 22px; }
+    .staff-support-top .support-count { margin-left: 6px; vertical-align: middle; }
+    .support-request-toggle { display: inline-block; width: 22px; height: 30px; border-radius: 4px; line-height: 30px; text-align: center; cursor: pointer; }
+    .support-request-toggle.requested { background: #fff0f1; }
+    .support-request-toggle input { width: 15px; height: 15px; margin: 0; vertical-align: middle; cursor: pointer; }
+    .support-request-toggle input:disabled { cursor: default; }
+    .support-names { display: table-cell; vertical-align: middle; }
+    .ca-commit-action { display: none; vertical-align: middle; }
+    .commit-visible .ca-commit-action, .ca-table tr.committed .ca-commit-action { display: block; }
+    .commit-visible .ca-check-button.checked, .ca-table tr.committed .ca-check-button { display: none; }
+    .ca-table tr.ca-unchecked .ca-commit-action { display: none; }
+    .ca-commit-button { width: 100%; height: 31px; padding: 4px 5px; border: 1px solid #d7d0e8; border-radius: 5px; background: #f5f2fc; color: #77698f; font-size: 11px; white-space: nowrap; cursor: default; }
+    .support-slot { position: relative; display: inline-block; width: 32%; height: 30px; margin-right: 2%; vertical-align: middle; }
+    .support-slot.last { margin-right: 0; }
+    .support-button { width: 100%; height: 30px; display: block; border-radius: 5px; padding: 4px 7px; line-height: 20px; font-size: 11px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .support-filled { color: #415774; background: #edf2fa; border: 1px solid #dbe3f0; }
+    .support-filled:hover { color: #593e93; background: #eee9fa; border-color: #d6cceb; }
+    .support-empty { color: #677287; background: #fff; border: 1px dashed #d7deea; }
+    .support-empty:hover { color: #57499b; border-color: #aca0d7; background: #f8f6fe; }
+    .support-input { width: 100%; height: 30px; border: 1px solid #a79adf; border-radius: 5px; background: #fff; color: #4a5370; padding: 4px 23px 4px 5px; font-size: 11px; }
+    .support-input.invalid { border-color: #c57681; }
+    .support-save { position: absolute; top: 4px; right: 3px; width: 19px; height: 22px; border: 0; padding: 0; border-radius: 3px; background: #f0ebfc; color: #56439d; line-height: 22px; font-size: 12px; }
+    .support-save:hover { background: #ded5f5; }
+    .ca-table td.ca-name-cell.name-match { color: #5843a4; }
+    .empty-state { text-align: center; padding: 48px 20px; color: #5b6b83; background: #fff; }
+    .empty-state strong { display: block; margin-bottom: 6px; color: #43536d; font-size: 15px; }
+    .ranking-footer { padding: 13px 22px; color: #5a687e; font-size: 10px; background: #fcfcfe; border-top: 1px solid #e9edf4; }
+    .footer-dot { color: #b0a6d8; margin-right: 5px; }
+    .page-footer { display: table; width: 100%; padding: 13px 2px 0; color: #5a687e; font-size: 10px; }
+    .footer-left, .footer-right { display: table-cell; vertical-align: top; }
+    .footer-right { text-align: right; }
+    .modal-overlay { display: none; position: fixed; z-index: 1000; top: 0; right: 0; bottom: 0; left: 0; background: #d9dce7; background: rgba(35, 39, 61, .35); }
+    .modal-layout { display: table; width: 100%; height: 100%; }
+    .modal-cell { display: table-cell; vertical-align: middle; text-align: center; padding: 25px; }
+    .modal { display: inline-block; width: 408px; max-width: 100%; padding: 29px 29px 23px; border-radius: 15px; border: 1px solid #e8e8f0; box-shadow: 0 18px 55px rgba(28, 28, 55, .18); background: #fff; text-align: center; }
+    .modal-icon { width: 45px; height: 45px; margin: 0 auto 13px; border-radius: 50%; background: #efebfb; color: #6954b2; font-size: 24px; font-weight: 700; line-height: 45px; }
+    .modal h3 { margin: 0 0 11px; color: #39435c; font-size: 18px; }
+    .modal p { margin: 0 0 22px; line-height: 1.9; color: #56627a; font-size: 12px; }
+    .modal p strong { color: #50465f; font-weight: 700; }
+    .modal-buttons { margin-top: 18px; }
+    .modal-button { height: 37px; width: 143px; border-radius: 7px; border: 1px solid #dedfeb; padding: 6px 10px; font-size: 12px; font-weight: 700; background: #fff; color: #53617a; }
+    .modal-button.confirm { margin-left: 9px; border-color: #604bb1; background: #604bb1; color: #fff; }
+    .modal-button:hover { background: #f1f2f8; }
+    .modal-button.confirm:hover { background: #523c9f; }
+    .toast { position: fixed; bottom: 26px; right: 26px; display: none; z-index: 1100; max-width: 540px; padding: 11px 18px; border: 1px solid #dcd8ed; border-radius: 9px; color: #574674; background: #fdfcff; box-shadow: 0 5px 22px rgba(51, 44, 78, .12); font-size: 12px; }
+    .toast.error { background: #fff9fa; border-color: #ead2d8; color: #973a51; }
+    .share-error-notice { display: none; position: fixed; right: 26px; bottom: 86px; z-index: 1101; max-width: 540px; max-height: 220px; overflow: auto; padding: 11px 18px; border: 1px solid #e4b8c0; border-radius: 9px; color: #973a51; background: #fff2f4; font-size: 12px; white-space: pre-line; word-wrap: break-word; }
+    @media screen and (min-width: 1280px) {
+      .dashboard { display: table; table-layout: fixed; }
+      .ranking-pane, .overview-pane { display: table-cell; }
+      .overview-pane { width: 344px; padding-left: 20px; }
+      .overview-content { overflow-y: auto; overflow-x: hidden; }
+      .summary { margin-bottom: 14px; }
+      .summary-item, .summary-item.first, .summary-item.second, .summary-item.third, .summary-item.last { float: none; width: 100%; padding: 0; margin-bottom: 10px; }
+      .summary-item.last { margin-bottom: 0; }
+      .summary-card { display: table; width: 100%; min-height: 0; height: 82px; padding: 12px 18px; }
+      .summary-text, .summary-amount { display: table-cell; vertical-align: middle; }
+      .summary-amount { text-align: right; white-space: nowrap; }
+      .summary-label { font-size: 14px; margin-bottom: 4px; }
+      .summary-value { font-size: 40px; margin: 0; }
+      .summary-unit { font-size: 13px; }
+      .capacity-label { font-size: 14px; }
+      .capacity-value { font-size: 42px; }
+      .capacity-unit { font-size: 14px; }
+      .capacity-state { font-size: 11px; }
+      .capacity-equation { font-size: 13px; }
+      .capacity-components { font-size: 12px; }
+      .capacity-timing { font-size: 11px; }
+      .capacity-controls label { font-size: 12px; white-space: normal; }
+      .capacity-controls-note { font-size: 10px; white-space: normal; }
+      .time-input { width: 84px; height: 42px; font-size: 16px; padding: 7px 9px; }
+      .capacity-recalculate { height: 42px; font-size: 13px; padding: 7px 12px; }
+      .capacity-log-action { display: block; margin: 12px 0 0; padding: 12px 0 0; border-left: 0; border-top: 1px solid #dce3ed; }
+      .capacity-log-button { width: 100%; height: 42px; font-size: 14px; padding: 7px 12px; }
+      .capacity-card { display: block; margin-bottom: 0; padding: 18px; }
+      .capacity-main, .capacity-details, .capacity-controls { display: block; width: auto; }
+      .capacity-details { margin-top: 12px; padding: 12px 0 0; border-left: 0; border-top: 1px solid #edf0f5; }
+      .capacity-controls { margin-top: 12px; padding: 12px 0 0; border-left: 0; border-top: 1px solid #edf0f5; }
+      .ranking-table th, .staff-row td, .ca-table td { padding-left: 12px; padding-right: 12px; }
+      .ca-table td.ca-name-cell, .ca-table td.support-cell { padding-left: 12px; }
+      .ranking-table th.rank-heading { white-space: nowrap; }
+    }
+    @media screen and (max-width: 1000px) {
+      .page { padding: 21px 20px 17px; }
+      .summary-card { padding-left: 16px; padding-right: 16px; }
+      .ranking-table th, .staff-row td, .ca-table td { padding-left: 12px; padding-right: 12px; }
+      .ca-table td.ca-name-cell, .ca-table td.support-cell { padding-left: 12px; }
+      .quiet-button { padding-left: 8px; padding-right: 8px; }
+      .search-box { width: 230px; }
+      .capacity-main { width: 171px; }
+      .capacity-details { padding-left: 14px; padding-right: 14px; }
+      .capacity-controls { width: 315px; padding-left: 14px; }
+      .capacity-log-action { margin-left: 10px; padding-left: 10px; }
+      .capacity-equation { font-size: 11px; }
+      .capacity-components { font-size: 10px; }
+      .ca-name-label { min-width: 64px; max-width: 78px; }
+      .ca-links { margin-left: 12px; }
+      .ca-link-button { padding-left: 8px; padding-right: 8px; margin-right: 8px; }
+    }
+    /* 説明表示を省き、既存の高さ計算でランキングへ空き領域を渡す。 */
+    .tagline, .prototype-badge, .prototype-status, .support-heading-note, .summary-caption,
+    .capacity-components, .capacity-timing, .capacity-controls-note, .detail-header,
+    #rankingFooter, #pageFooter { display: none; }
+
+    /* HTML-only file selection and connection controls. */
+    .browser-controls { margin: 0 0 14px; padding: 12px 15px; border: 1px solid #dce4ee; border-radius: 10px; background: #fff; }
+    .browser-inputs { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; }
+    .browser-file { display: flex; align-items: center; gap: 7px; min-width: 215px; }
+    .browser-controls button { padding: 7px 10px; border: 1px solid #ccd6e3; border-radius: 6px; background: #f7f9fc; color: #293b55; cursor: pointer; font: inherit; font-size: 12px; }
+    .browser-controls button:disabled { opacity: .55; cursor: default; }
+    .browser-controls .connect-button { color: #fff; background: #2458b9; border-color: #2458b9; }
+    .browser-file-name { max-width: 145px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: #54657d; }
+    .browser-note { margin: 9px 0 0; font-size: 12px; color: #52637a; line-height: 1.65; }
+    .browser-note.error { color: #ba2639; }
+    .browser-controls details { margin-top: 8px; font-size: 12px; color: #52637a; }
+    .browser-controls summary { cursor: pointer; }
+    .browser-extra { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; align-items: center; }
+    .browser-conflict { color: #a9253b; white-space: pre-wrap; }
+  </style>
+  <script type="text/javascript" src="workload-config.js"></script>
+  <script src="workload-core.js"></script>
+  <script src="workload-browser.js"></script>
+  <script src="workload-share.js"></script>
+  <script type="text/javascript">
+  /*
+   * 業務量モニター v0.5.1 / ログ集計
+   * Windows HTA の旧エンジンに合わせ、ES3 の構文と IE9 対応 CSS を使用。
+   * 件数は CA 単位で計算。取込は workload-browser.js で行う。
+   * 取込前は空欄。サポート・コミットだけを日付別の共有JSONONへ保存する。
+   */
+  var WorkloadUI = (function () {
+    var staffData = [];
+    var expanded = {};
+    var editing = null;
+    var pendingRemoval = null;
+    var pendingSupport = null, supportBlurTimer = null;
+    var toastTimer = null;
+    var commitTimer = null;
+    var importPreparationTimer = null;
+    var sharedSnapshot = null, sharedVersion = "", sharedError = "", shareWriteBusy = false;
+    var searchText = "";
+    var sortKey = "total";
+    var selectedTeam = "";
+    var importBusy = false;
+    var importPhase = "";
+    var capturedTime = "";
+    var capturedTimeValid = false;
+    var hourlyRate = 16;
+    var caIndex = {}, staffIndex = {}, caStaffIndex = {}, cachedTotals = {}, cachedSupports = {}, cachedGlobal = null;
+    var dataVersion = 0, tableDataVersion = -1, detailSearchText = "";
+    var searchTimer = null, detailTimer = null, detailQueue = [], detailNeedsSize = false;
+    var pinnedStaffRow = null, pinnedStaffDetail = null, pinnedStaffHTML = "";
+    var teamCheckHTML = "";
+    var excludedAssignmentTypes = ["担当なし", "札幌担当", "新潟担当", "首都圏担当"];
+
+    function byId(id) { return document.getElementById(id); }
+    function trim(value) { return String(value).replace(/^\s+|\s+$/g, ""); }
+    function esc(value) {
+      return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
+    function normalized(value) { return String(value).toLowerCase().replace(/\s/g, ""); }
+    function setText(element, value) {
+      if (typeof element.textContent !== "undefined") { element.textContent = String(value); }
+      else { element.innerText = String(value); }
+    }
+    function format(value) { return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+    function formatEstimate(value) { return format(Math.round(value * 10) / 10); }
+    function parseClock(value) {
+      var match = /^(\d{1,2}):(\d{2})$/.exec(trim(value)), hour, minute;
+      if (!match) { return null; }
+      hour = Number(match[1]); minute = Number(match[2]);
+      if (hour > 23 || minute > 59) { return null; }
+      return hour * 60 + minute;
+    }
+    function clockText(minutes) {
+      var hour = Math.floor(minutes / 60), minute = minutes % 60;
+      return (hour < 10 ? "0" : "") + hour + ":" + (minute < 10 ? "0" : "") + minute;
+    }
+    function durationText(minutes) {
+      var hour = Math.floor(minutes / 60), minute = minutes % 60;
+      return hour + "時間" + (minute ? minute + "分" : "");
+    }
+    function remainingWorkTime(capturedMinutes) {
+      var start = Math.max(9 * 60, capturedMinutes);
+      var remaining = Math.max(0, 18 * 60 - start);
+      var lunch = capturedMinutes < 14 * 60 ? 60 : 0;
+      return { minutes: Math.max(0, remaining - lunch), lunchMinutes: lunch };
+    }
+    function excludedReason(staff) {
+      var i, kind = normalized(staff.assignmentType || "");
+      if (!staff.cas.length) { return "担当なし"; }
+      for (i = 0; i < excludedAssignmentTypes.length; i++) {
+        if (kind === normalized(excludedAssignmentTypes[i])) { return excludedAssignmentTypes[i]; }
+      }
+      return "";
+    }
+    function capacityHeadcount() {
+      var count = 0, i;
+      for (i = 0; i < staffData.length; i++) {
+        if (!excludedReason(staffData[i])) { count++; }
+      }
+      return count;
+    }
+    function stopEvent(e) {
+      e = e || window.event;
+      if (e.preventDefault) { e.preventDefault(); }
+      e.returnValue = false;
+      return false;
+    }
+    function rebuildDataIndexes() {
+      var i, j, staff, ca;
+      caIndex = {}; staffIndex = {}; caStaffIndex = {};
+      cachedTotals = {}; cachedSupports = {}; cachedGlobal = null; dataVersion++;
+      for (i = 0; i < staffData.length; i++) {
+        staff = staffData[i]; staffIndex["@" + staff.id] = staff;
+        for (j = 0; j < staff.cas.length; j++) {
+          ca = staff.cas[j]; caIndex["@" + ca.id] = ca; caStaffIndex["@" + ca.id] = staff;
+        }
+      }
+    }
+    function findCA(id) { return caIndex["@" + id] || null; }
+    function totalsFor(staff) {
+      var totals = { unsorted: 0, unread: 0, flag: 0, total: 0 }, i, ca, allCommitted = true;
+      if (cachedTotals["@" + staff.id]) { return cachedTotals["@" + staff.id]; }
+      for (i = 0; i < staff.cas.length; i++) {
+        ca = staff.cas[i];
+        if (!ca.committedAt) { allCommitted = false; }
+        totals.unsorted += ca.unsorted;
+        totals.unread += ca.unread;
+        totals.flag += ca.flag;
+      }
+      if (allCommitted) { totals.unsorted = 0; totals.unread = 0; totals.flag = 0; }
+      totals.total = totals.unread + totals.flag;
+      cachedTotals["@" + staff.id] = totals; return totals;
+    }
+    function supportCountFor(staff) {
+      var seen = {}, count = 0, i, j, key;
+      if (typeof cachedSupports["@" + staff.id] === "number") { return cachedSupports["@" + staff.id]; }
+      for (i = 0; i < staff.cas.length; i++) {
+        if (staff.cas[i].committedAt) { continue; }
+        for (j = 0; j < staff.cas[i].supports.length; j++) {
+          key = "@" + normalized(staff.cas[i].supports[j]);
+          if (!Object.prototype.hasOwnProperty.call(seen, key)) { seen[key] = true; count++; }
+        }
+      }
+      cachedSupports["@" + staff.id] = count; return count;
+    }
+    function refreshSupportCounts() {
+      var i;
+      for (i = 0; i < staffData.length; i++) {
+        refreshStaffSupport(staffData[i]);
+      }
+    }
+    function hasSupportRequest(staff) {
+      var i;
+      if (!staff.supportRequested) { return false; }
+      for (i = 0; i < staff.cas.length; i++) { if (!staff.cas[i].committedAt) { return true; } }
+      return false;
+    }
+    function supportRequestEnabled(staff) {
+      if (!sharingReady()) { return false; }
+      var i;
+      if (!staff || !staff.cas.length || uncheckedCountFor(staff)) { return false; }
+      for (i = 0; i < staff.cas.length; i++) { if (!staff.cas[i].committedAt) { return true; } }
+      return false;
+    }
+    function supportWantedHTML(staff) {
+      var wanted = hasSupportRequest(staff);
+      return '<span class="support-wanted" id="support-wanted-' + staff.id + '" style="display:' + (wanted ? 'block' : 'none') + '">' + (wanted ? 'サポ希望' : '') + '</span>';
+    }
+    function refreshStaffSupport(staff) {
+      var count = byId("supportCount-" + staff.id), label = byId("support-wanted-" + staff.id), control = byId("staff-support-request-control-" + staff.id), wanted = hasSupportRequest(staff);
+      if (count) { setText(count, supportCountFor(staff) + "名"); }
+      if (control) { control.innerHTML = supportRequestHTML(staff); }
+      if (label) { setText(label, wanted ? "サポ希望" : ""); label.style.display = wanted ? "block" : "none"; }
+    }
+    function teamNameOf(staff) { return trim(staff.team || "") || "未設定"; }
+    function uncheckedCountFor(staff) {
+      var count = 0, i;
+      for (i = 0; i < staff.cas.length; i++) { if (!staff.cas[i].checked) { count++; } }
+      return count;
+    }
+    function staffCheckHTML(staff) {
+      var checked = uncheckedCountFor(staff) === 0;
+      return '<span id="staff-check-' + staff.id + '" class="staff-ca-check' + (checked ? ' checked' : '') + '">' + (checked ? 'CAチェック済' : 'CAチェック未') + '</span>';
+    }
+    function renderCheckOverview() {
+      var i, staff, pending, label, checked, name, key, teams = [], counts = {}, html = [], next, changed;
+      var summary = byId("teamCheckSummary");
+      for (i = 0; i < staffData.length; i++) {
+        staff = staffData[i]; pending = uncheckedCountFor(staff); checked = pending === 0;
+        label = byId("staff-check-" + staff.id);
+        if (label && label.className !== "staff-ca-check" + (checked ? " checked" : "")) {
+          label.className = "staff-ca-check" + (checked ? " checked" : "");
+          setText(label, checked ? "CAチェック済" : "CAチェック未");
+        }
+        if (!pending) { continue; }
+        name = teamNameOf(staff); key = "@" + name;
+        if (!Object.prototype.hasOwnProperty.call(counts, key)) { teams.push(name); counts[key] = 0; }
+        counts[key] += pending;
+      }
+      for (i = 0; i < teams.length; i++) {
+        name = teams[i];
+        html.push('<span class="team-ca-check-item"><span class="team-ca-check-name" title="' + esc(name) + '">' + esc(name) + '</span><span class="team-ca-check-count">CAチェック未 <strong>' + format(counts["@" + name]) + '</strong> CA</span></span>');
+      }
+      next = html.join(""); changed = next !== teamCheckHTML;
+      if (changed) { summary.innerHTML = next; teamCheckHTML = next; }
+      summary.style.display = next ? "block" : "none";
+      return changed;
+    }
+    function rankedStaff() {
+      var result = [], i;
+      for (i = 0; i < staffData.length; i++) {
+        if (selectedTeam && teamNameOf(staffData[i]) !== selectedTeam) { continue; }
+        result.push({ staff: staffData[i], totals: totalsFor(staffData[i]), originalOrder: i });
+      }
+      result.sort(function (a, b) {
+        return (b.totals[sortKey] - a.totals[sortKey]) || (a.originalOrder - b.originalOrder);
+      });
+      return result;
+    }
+    function matches(staff) {
+      var i;
+      if (!searchText || normalized(staff.name).indexOf(searchText) !== -1) { return true; }
+      for (i = 0; i < staff.cas.length; i++) {
+        if (normalized(staff.cas[i].name).indexOf(searchText) !== -1) { return true; }
+      }
+      return false;
+    }
+    function globalTotals() {
+      var all = { unsorted: 0, unread: 0, flag: 0, total: 0 }, caCount = 0, i, totals;
+      if (cachedGlobal) { return cachedGlobal; }
+      for (i = 0; i < staffData.length; i++) {
+        caCount += staffData[i].cas.length;
+        if (excludedReason(staffData[i])) { continue; }
+        totals = totalsFor(staffData[i]);
+        all.unsorted += totals.unsorted;
+        all.unread += totals.unread;
+        all.flag += totals.flag;
+      }
+      all.total = all.unread + all.flag;
+      all.caCount = caCount;
+      cachedGlobal = all; return all;
+    }
+    function renderSummary() {
+      var all = globalTotals();
+      setText(byId("summaryTotal"), format(all.total));
+      setText(byId("summaryUnread"), format(all.unread));
+      setText(byId("summaryFlag"), format(all.flag));
+      setText(byId("summaryUnsorted"), format(all.unsorted));
+      setText(byId("staffTotal"), staffData.length);
+      setText(byId("caTotal"), all.caCount);
+    }
+    function renderCapacity() {
+      var eligible = capacityHeadcount(), all = globalTotals(), time, estimate, spare, state;
+      setText(byId("capacityPeople"), eligible);
+      setText(byId("capacityRate"), hourlyRate);
+      setText(byId("capacityBacklog"), format(all.total));
+      if (!capturedTimeValid) {
+        byId("capacityCard").className = "capacity-card neutral";
+        setText(byId("capacityValue"), "—");
+        setText(byId("capacityState"), !staffData.length && !capturedTime ? "未集計" : "時刻を確認");
+        setText(byId("capacityRemaining"), "—");
+        setText(byId("capacityEstimate"), "—");
+        setText(byId("capacityTiming"), !staffData.length && !capturedTime ? "「ログ集計」で集計時刻を自動入力します。" : "集計時刻を HH:mm で入力してください。");
+        return;
+      }
+      time = remainingWorkTime(parseClock(capturedTime));
+      estimate = eligible * hourlyRate * time.minutes / 60;
+      spare = estimate - all.total;
+      state = spare > 0 ? "positive" : (spare < 0 ? "negative" : "neutral");
+      byId("capacityCard").className = "capacity-card " + state;
+      setText(byId("capacityValue"), (spare > 0 ? "+" : "") + formatEstimate(spare));
+      setText(byId("capacityState"), spare > 0 ? "余力あり" : (spare < 0 ? "余力なし" : "過不足なし"));
+      setText(byId("capacityRemaining"), durationText(time.minutes));
+      setText(byId("capacityEstimate"), formatEstimate(estimate));
+      setText(byId("capacityTiming"), capturedTime + " 時点 ／ " + (time.lunchMinutes ? "昼休憩1時間を控除" : "昼休憩の控除なし"));
+    }
+    function applyCapturedTime() {
+      var value = parseClock(byId("capturedTimeInput").value);
+      capturedTimeValid = value !== null;
+      byId("capturedTimeInput").className = capturedTimeValid ? "time-input" : "time-input invalid";
+      if (capturedTimeValid) {
+        capturedTime = clockText(value);
+        byId("capturedTimeInput").value = capturedTime;
+      }
+      renderCapacity();
+      if (!capturedTimeValid) { toast("集計時刻は HH:mm で入力してください。", true); }
+    }
+    function capturedTimeKey(e) {
+      e = e || window.event;
+      if ((e.keyCode || e.which) === 13) { applyCapturedTime(); return stopEvent(e); }
+      return true;
+    }
+    function shareStatus() {
+      var status = byId("dataStatus");
+      status.className = "prototype-note" + (!importBusy && sharedError ? " share-error" : "");
+      setText(status, importBusy && importPhase ? importPhase : sharedError ? "共有状態を更新できません：" + sharedError :
+        (shareWriteBusy ? "共有ファイルへ保存中…" : (staffData.length ? "" : "未集計 ／ サポート・コミットを共有")));
+      var notice = byId("shareErrorNotice");
+      setText(notice, sharedError ? "共有状態を更新できません。表示が最新でない可能性があります。\n" + sharedError : "");
+      notice.style.display = sharedError ? "block" : "none";
+    }
+    function projectShared(data) {
+      var i, j, ca, key, list, mark, n, row, same, staff, wanted, staffMark, staffWanted;
+      var active = {}, commits = {}, checks = {}, requests = {}, changes = { cas: [], counts: false, staffs: {}, rebuild: {} };
+      /* 履歴は一度だけ組織＋CA名で索引化する。CAごとの全履歴走査を避ける。 */
+      if (sharedSnapshot) {
+        for (i = 0; i < sharedSnapshot.supports.length; i++) {
+          row = sharedSnapshot.supports[i]; if (row.completedAt) { continue; }
+          key = WorkloadShare.keyOf(row.organization, row.caName);
+          if (!active[key]) { active[key] = []; } active[key].push(row);
+        }
+        for (i = 0; i < sharedSnapshot.commits.length; i++) {
+          row = sharedSnapshot.commits[i]; key = WorkloadShare.keyOf(row.organization, row.caName);
+          if (!commits[key]) { commits[key] = row; }
+        }
+        for (i = 0; i < (sharedSnapshot.caChecks || []).length; i++) {
+          row = sharedSnapshot.caChecks[i]; checks[WorkloadShare.keyOf(row.organization, row.caName)] = true;
+        }
+        for (i = 0; i < (sharedSnapshot.supportRequests || []).length; i++) {
+          row = sharedSnapshot.supportRequests[i]; requests[WorkloadShare.keyOf(row.organization, row.caName)] = row;
+        }
+      }
+      for (i = 0; i < data.length; i++) {
+        staff = data[i]; staffMark = requests[WorkloadShare.staffSupportKey(staff)]; staffWanted = !!staffMark;
+        for (j = 0; j < data[i].cas.length; j++) {
+          ca = data[i].cas[j];
+          ca.supportEntries = ca.supportEntries || []; ca.committedAt = ca.committedAt || "";
+          ca.checked = !!ca.checked;
+          key = sharedSnapshot ? WorkloadShare.keyOf(ca.organization, ca.name) : "";
+          list = active[key] || []; mark = commits[key]; wanted = requests[key];
+          if (wanted) { staffWanted = true; }
+          same = (ca.committedAt || "") === (mark ? mark.committedAt : "") && ca.supports.length === list.length && ca.checked === !!checks[key] && (ca.supportRequestId || "") === (wanted ? wanted.id : "");
+          for (n = 0; same && n < list.length; n++) {
+            if (ca.supports[n] !== list[n].supportName || !ca.supportEntries || ca.supportEntries[n] !== list[n].id) { same = false; }
+          }
+          if (same) { continue; }
+          if (ca.checked !== !!checks[key]) { changes.rebuild["@" + ca.id] = true; }
+          if ((ca.committedAt || "") !== (mark ? mark.committedAt : "")) {
+            changes.counts = true; delete cachedTotals["@" + staff.id]; cachedGlobal = null;
+          }
+          changes.cas.push(ca); changes.staffs["@" + staff.id] = staff;
+          delete cachedSupports["@" + staff.id];
+          ca.supports = []; ca.supportEntries = []; ca.committedAt = "";
+          for (n = 0; n < list.length; n++) { ca.supports.push(list[n].supportName); ca.supportEntries.push(list[n].id); }
+          if (mark) { ca.committedAt = mark.committedAt; }
+          ca.checked = !!checks[key];
+          if (wanted || typeof ca.supportRequested !== "undefined") { ca.supportRequested = !!wanted; ca.supportRequestId = wanted ? wanted.id : ""; }
+        }
+        if (!!staff.supportRequested !== staffWanted || (staff.supportRequestId || "") !== (staffMark ? staffMark.id : "")) {
+          staff.supportRequested = staffWanted; staff.supportRequestId = staffMark ? staffMark.id : "";
+          changes.staffs["@" + staff.id] = staff;
+        }
+      }
+      return changes;
+    }
+    function applyShared(force) {
+      var version, list, scroll, focus, target, changes, i, key, staff, label;
+      if (!sharedSnapshot || importBusy || shareWriteBusy || editing || pendingRemoval) { return; }
+      version = sharedSnapshot.date + "|" + sharedSnapshot.revision;
+      if (!force && sharedVersion === version) { return; }
+      sharedVersion = version; list = byId("rankingScroll"); scroll = list.scrollTop;
+      focus = document.activeElement && document.activeElement.id;
+      changes = projectShared(staffData);
+      if (changes.counts) {
+        for (i = 0; i < changes.cas.length; i++) { refreshCARow(changes.cas[i]); }
+        renderSummary(); renderCapacity(); renderTable();
+        for (key in changes.staffs) {
+          if (Object.prototype.hasOwnProperty.call(changes.staffs, key)) { orderDetailRows(changes.staffs[key]); }
+        }
+      } else {
+        for (i = 0; i < changes.cas.length; i++) {
+          if (changes.rebuild["@" + changes.cas[i].id]) { refreshCARow(changes.cas[i]); }
+          else { refreshSupports(changes.cas[i], true); }
+        }
+        for (key in changes.staffs) {
+          if (!Object.prototype.hasOwnProperty.call(changes.staffs, key)) { continue; }
+          staff = changes.staffs[key]; refreshStaffSupport(staff);
+        }
+        if (force && !editing && byId("supportInput")) { renderTable(true); }
+      }
+      if (renderCheckOverview()) { resizeRanking(); }
+      list.scrollTop = scroll;
+      target = focus && byId(focus); if (target && !target.disabled) { try { target.focus(); } catch (ignore) {} }
+      refreshStaffPin();
+    }
+    function sharedChanged(error, snapshot) {
+      if (snapshot) { sharedSnapshot = snapshot; }
+      sharedError = error ? (error.message || error.description || String(error)) : "";
+      shareStatus();
+      applyShared(false);
+    }
+    function setShareBusy(value) {
+      var input = byId("supportInput"), save = byId("supportSave");
+      shareWriteBusy = value;
+      if (input) { input.disabled = value; }
+      if (save) { save.disabled = value; }
+      if (pendingRemoval) { byId("removalConfirm").disabled = value; byId("removalCancel").disabled = value; }
+      shareStatus();
+    }
+    function sharedSaveError(error, snapshot) {
+      var ca, mark;
+      if (snapshot) { sharedSnapshot = snapshot; }
+      sharedError = error.message || error.description || String(error);
+      if (editing && snapshot) {
+        ca = findCA(editing.caId);
+        mark = ca && WorkloadShare.committedForCA(snapshot, WorkloadShare.keyOf(ca.organization, ca.name));
+        if (mark) { editing = null; }
+      }
+      shareStatus(); applyShared(true);
+      window.alert("共有ファイルへ保存できませんでした。\n\n" + sharedError);
+    }
+    function applyImportedData(result) {
+      var i, teamExists, at;
+      if (!commitSupport(true, function () { applyImportedData(result); })) { return; }
+      staffData = result.staffData; rebuildDataIndexes(); projectShared(staffData);
+      if (selectedTeam) {
+        teamExists = false;
+        for (i = 0; i < staffData.length; i++) { if (teamNameOf(staffData[i]) === selectedTeam) { teamExists = true; break; } }
+        if (!teamExists) { selectedTeam = ""; }
+      }
+      hourlyRate = result.hourlyRate; renderSummary(); at = result.importedAt;
+      byId("capturedTimeInput").value = clockText(at.getHours() * 60 + at.getMinutes());
+      setText(byId("dataFooter"), "CSVと振分表を反映しています。サポート・コミットは当日の共有フォルダに保存します。");
+      applyCapturedTime(); renderTable(); shareStatus();
+      toast("ログ集計が完了しました。");
+      if (result.warnings && result.warnings.length) {
+        window.alert("件数の集計は完了しましたが、一部のリンク先を取得できませんでした（" + result.warnings.length + "件）。\n\n" +
+          result.warnings.slice(0, 10).join("\n") + (result.warnings.length > 10 ? "\nほか " + (result.warnings.length - 10) + "件" : ""));
+      }
+    }
+    function closeImportSession() {
+      cancelDetailRender();
+      if (searchTimer) { window.clearTimeout(searchTimer); searchTimer = null; }
+      if (supportBlurTimer) { window.clearTimeout(supportBlurTimer); supportBlurTimer = null; }
+      if (typeof WorkloadShare !== "undefined") { WorkloadShare.stop(); }
+    }
+    function beforeClose(e) {
+      syncDraft();
+      if ((editing && String(editing.draft || "").trim()) || pendingSupport ||
+          (typeof WorkloadShare !== "undefined" && WorkloadShare.hasPendingWrites())) {
+        e = e || window.event;
+        if (e) { if (e.preventDefault) { e.preventDefault(); } e.returnValue = ""; }
+        return "入力または保存が完了していません。";
+      }
+    }
+    async function requestLogAggregate() {
+      if (importBusy || pendingRemoval || pendingSupport || shareWriteBusy) { return; }
+      if (typeof WorkloadImport === "undefined") {
+        showImportError("取込ファイルが不足しています。ZIPをすべて展開し、workload-config.js・workload-core.js・workload-browser.js をHTMLと同じフォルダに配置してください。");
+        return;
+      }
+      /* CSV選択を取り消した場合に、入力中のサポート欄も保つ。 */
+      syncDraft();
+      if (importPreparationTimer) { window.clearTimeout(importPreparationTimer); importPreparationTimer = null; }
+      importBusy = true;
+      importPhase = "CSV選択画面を準備しています。"; shareStatus();
+      byId("aggregateLog").disabled = true;
+      setText(byId("aggregateLog"), "集計中…");
+      toast("ログ集計を開始します。");
+      /* ボタン押下から直接選択を開始し、ブラウザの操作許可を保つ。 */
+        var result, i, teamExists, at;
+        try {
+          result = await WorkloadBrowser.selectLogs(function (message) { importPhase = message; shareStatus(); toast(message); });
+          if (result.cancelled) { toast("選択をキャンセルしました。表示データは変更していません。"); return; }
+          result = await WorkloadBrowser.runWeekday(staffData, function (message) { importPhase = message; shareStatus(); toast(message); });
+          if (result.cancelled) { toast("選択をキャンセルしました。表示データは変更していません。"); return; }
+          applyImportedData(result);
+        } catch (e) {
+          showImportError("ログ集計に失敗しました。取込前のデータを表示しています。\n停止箇所：" + importPhase + "\n\n" + (e.message || e.description || String(e)));
+        } finally {
+          importBusy = false;
+          importPhase = ""; shareStatus();
+          byId("aggregateLog").disabled = false;
+          setText(byId("aggregateLog"), "ログ集計");
+          applyShared(false);
+          resizeRanking();
+        }
+    }
+    function showCALinkStatus(caId, systemName) {
+      var ca = findCA(caId), url, message, today;
+      if (!ca || ca.committedAt) { return; }
+      message = byId("ca-link-message-" + caId);
+      url = systemName === "CALIB" ? ca.calibUrl : ca.canvasUrl;
+      if (!url) {
+        if (message) { setText(message, systemName + "のリンクは未設定です。"); message.style.display = "inline-block"; }
+        resizeRanking();
+        return;
+      }
+      if (message) { setText(message, ""); message.style.display = "none"; }
+      if (systemName === "Canvas") {
+        today = new Date();
+        url += (url.charAt(url.length - 1) === "/" ? "" : "/") + today.getFullYear() + "/" +
+          ("0" + (today.getMonth() + 1)).slice(-2) + "/" + ("0" + today.getDate()).slice(-2);
+      }
+      try { WorkloadImport.openLink(url); }
+      catch (e) { toast(systemName + "を開けません：" + (e.message || e.description || String(e)), true); }
+    }
+
+    function showImportError(message) {
+      window.alert(message);
+    }
+    function sharingReady() { return typeof WorkloadShare !== "undefined" && WorkloadShare.isConnected(); }
+    function supportHTML(ca) {
+      var html = [], slot, name, isEditing, lastClass, disabled = ca.committedAt || !ca.checked || !sharingReady() ? ' disabled="disabled"' : "";
+      for (slot = 0; slot < 3; slot++) {
+        lastClass = slot === 2 ? " last" : "";
+        isEditing = editing && editing.caId === ca.id && editing.slot === slot;
+        html.push('<span class="support-slot' + lastClass + '">');
+        if (isEditing) {
+          html.push('<input type="text" id="supportInput" class="support-input" maxlength="30" aria-label="' + esc(ca.name) + ' CAのサポート氏名" title="Enterまたは入力欄から移動すると投入を確認、Escで取消" value="' + esc(editing.draft) + '" onkeyup="WorkloadUI.syncDraft()" oninput="WorkloadUI.syncDraft()" onkeydown="return WorkloadUI.supportKey(event)" onblur="WorkloadUI.supportBlur()" />');
+        } else if (slot < ca.supports.length) {
+          name = ca.supports[slot];
+          html.push('<button type="button" id="support-' + ca.id + '-' + slot + '" class="support-button support-filled"' + disabled + ' title="' + esc(name) + '" aria-label="' + esc(name) + 'さんのサポート解除" onclick="WorkloadUI.requestRemoval(\'' + ca.id + '\',' + slot + ')">' + esc(name) + '</button>');
+        } else {
+          html.push('<button type="button" id="support-' + ca.id + '-' + slot + '" class="support-button support-empty"' + disabled + ' aria-label="' + esc(ca.name) + ' CAの空欄' + (slot + 1) + 'にサポート氏名を入力" title="空欄をクリックして氏名を入力" onclick="WorkloadUI.startSupport(\'' + ca.id + '\',' + slot + ')">＋ 追加</button>');
+        }
+        html.push('</span>');
+      }
+      return html.join("");
+    }
+    function supportRequestHTML(staff) {
+      return '<label class="support-request-toggle' + (staff.supportRequested ? ' requested' : '') + '" title="優先的にサポートを希望（チェックでオン／オフ）"><input type="checkbox" id="support-request-' + staff.id + '"' + (staff.supportRequested ? ' checked="checked"' : '') + (!supportRequestEnabled(staff) ? ' disabled="disabled"' : '') + ' aria-label="' + esc(staff.name) + 'さんのサポ希望" onclick="WorkloadUI.requestSupportWanted(\'' + staff.id + '\')" /></label>';
+    }
+    function refreshSupports(ca, onlyCA) {
+      var cell = byId("supports-" + ca.id), staff;
+      if (cell) { cell.innerHTML = supportHTML(ca); }
+      if (!onlyCA) {
+        staff = caStaffIndex["@" + ca.id]; if (staff) { refreshStaffSupport(staff); }
+      }
+    }
+    function caRowHTML(ca) {
+      var html = [], nameClass, disabled, unsorted, unread, flag;
+      disabled = ca.committedAt ? ' disabled="disabled"' : "";
+      unsorted = ca.committedAt ? 0 : ca.unsorted; unread = ca.committedAt ? 0 : ca.unread; flag = ca.committedAt ? 0 : ca.flag;
+      nameClass = searchText && normalized(ca.name).indexOf(searchText) !== -1 ? " name-match" : "";
+      html.push('<tr id="ca-row-' + ca.id + '" class="' + (ca.committedAt ? 'committed' : ca.checked ? '' : 'ca-unchecked') + '"><td class="ca-name-cell' + nameClass + '"><span class="ca-name-label" title="' + esc(ca.name) + ' CA">' + esc(ca.name) + '<span class="ca-suffix">CA</span></span>');
+      html.push('<span class="ca-links"><button type="button" class="ca-link-button calib-button"' + disabled + ' title="' + esc(ca.calibUrl || 'CALIB（リンク未設定）') + '" aria-label="' + esc(ca.name) + ' CAのCALIB" onclick="WorkloadUI.showCALinkStatus(\'' + ca.id + '\',\'CALIB\')">CALIB</button><button type="button" class="ca-link-button canvas-button"' + disabled + ' title="' + esc(ca.canvasUrl || 'Canvas（リンク未設定）') + '" aria-label="' + esc(ca.name) + ' CAのCanvas" onclick="WorkloadUI.showCALinkStatus(\'' + ca.id + '\',\'Canvas\')">Canvas</button><span class="ca-link-message" id="ca-link-message-' + ca.id + '" role="status" aria-live="polite"></span></span>');
+      if (ca.organization) { html.push('<span class="ca-organization" title="組織：' + esc(ca.organization) + '">' + esc(ca.organization) + '</span>'); }
+      html.push('</td>');
+      html.push('<td class="ca-check-cell"><button type="button" id="ca-check-' + ca.id + '" class="ca-check-button' + (ca.checked ? ' checked' : '') + '"' + (ca.checked || ca.committedAt || !sharingReady() ? ' disabled="disabled"' : '') + ' aria-pressed="' + (ca.checked ? 'true' : 'false') + '" title="' + (ca.checked ? 'CAチェック済' : 'CAを確認後、サポート・コミットを有効にします') + '" onclick="WorkloadUI.requestCACheck(\'' + ca.id + '\')">' + (ca.checked ? 'CAチェック済' : 'CAチェック未') + '</button>');
+      html.push('<span class="ca-commit-action"><button type="button" class="ca-commit-button" id="commit-' + ca.id + '"' + (!sharingReady() || !ca.committedAt && !ca.checked ? ' disabled="disabled"' : '') + ' title="' + (ca.committedAt ? 'コミットを取り消します（コミット時刻：' + esc(ca.committedAt) + '）' : 'このCAをコミット完了にします') + '" aria-label="' + esc(ca.name) + ' CAの' + (ca.committedAt ? 'コミット取消' : 'コミット') + '" onclick="WorkloadUI.requestCommit(\'' + ca.id + '\')">' + (ca.committedAt ? 'コミット取消' : 'コミット') + '</button></span></td>');
+      html.push('<td class="ca-unsorted">' + format(unsorted) + '</td><td class="ca-unread">' + format(unread) + '</td><td class="ca-flag">' + format(flag) + '</td>');
+      html.push('<td class="ca-total">' + format(unread + flag) + '</td>');
+      html.push('<td class="support-cell"><div class="support-layout"><span class="support-names" id="supports-' + ca.id + '">' + supportHTML(ca) + '</span></div></td></tr>');
+      return html.join("");
+    }
+    function rankedCAs(staff) {
+      var result = [], i, ca;
+      for (i = 0; i < staff.cas.length; i++) {
+        ca = staff.cas[i];
+        result.push({ ca: ca, total: ca.committedAt ? 0 : ca.unread + ca.flag, originalOrder: i });
+      }
+      result.sort(function (a, b) {
+        return (b.total - a.total) || (a.originalOrder - b.originalOrder);
+      });
+      for (i = 0; i < result.length; i++) { result[i] = result[i].ca; }
+      return result;
+    }
+    function detailHTML(staff, deferred) {
+      var html = [], i, cas;
+      html.push('<tr class="detail-row" id="detail-' + staff.id + '"><td class="detail-cell" colspan="8">');
+      html.push('<div class="detail-header"><strong>' + esc(staff.name) + ' さんの担当CA</strong><span class="detail-note">サポートはCAごとに最大3名</span></div>');
+      html.push('<table class="ca-table" aria-label="' + esc(staff.name) + 'さんの担当CA別内訳">');
+      html.push('<colgroup><col style="width:24%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>');
+      html.push('<tbody id="ca-body-' + staff.id + '">');
+      if (!deferred) {
+        cas = rankedCAs(staff);
+        for (i = 0; i < cas.length; i++) { html.push(caRowHTML(cas[i])); }
+      }
+      if (!staff.cas.length) { html.push('<tr><td class="ca-empty" colspan="7">担当CAはありません。</td></tr>'); }
+      html.push('</tbody></table></td></tr>');
+      return html.join("");
+    }
+    function tableRows(html) {
+      var holder = document.createElement("div"), source;
+      holder.innerHTML = '<table><tbody>' + html + '</tbody></table>';
+      source = holder.getElementsByTagName("tbody")[0];
+      if (!source) { throw new Error("ランキングの表示行を作成できませんでした。"); }
+      return source;
+    }
+    function appendTableRows(target, html) {
+      var source = tableRows(html), fragment = document.createDocumentFragment();
+      while (source.firstChild) { fragment.appendChild(source.firstChild); }
+      target.appendChild(fragment);
+    }
+    function refreshCARow(ca) {
+      var target = byId("ca-row-" + ca.id), source;
+      if (!target) { return; }
+      source = tableRows(caRowHTML(ca));
+      target.parentNode.replaceChild(source.firstChild, target);
+    }
+    function orderDetailRows(staff) {
+      var body = byId("ca-body-" + staff.id), cas, i, row, next, fixed, moved;
+      if (!body) { return; }
+      for (i = 0; i < detailQueue.length; i++) {
+        if (detailQueue[i].body === body) { detailQueue[i].reorder = true; return; }
+      }
+      cas = rankedCAs(staff); next = body.firstChild; fixed = document.activeElement;
+      while (fixed && fixed.parentNode !== body) { fixed = fixed.parentNode; }
+      for (i = 0; i < cas.length; i++) {
+        row = byId("ca-row-" + cas[i].id);
+        if (!row || row.parentNode !== body) { continue; }
+        if (row === next) { next = next.nextSibling; }
+        else if (row === fixed) {
+          /* 入力・操作中の行は動かさず、他の行を移してフォーカスを保つ。 */
+          while (next !== row) { moved = next; next = next.nextSibling; body.appendChild(moved); }
+          next = row.nextSibling;
+        } else { body.insertBefore(row, next); }
+      }
+    }
+    function cancelDetailRender() {
+      if (detailTimer) { window.clearTimeout(detailTimer); detailTimer = null; }
+      detailQueue = []; detailNeedsSize = false;
+    }
+    function queueDetail(staff) {
+      var body = byId("ca-body-" + staff.id);
+      if (!body || !staff.cas.length) { return; }
+      detailQueue.push({ staff: staff, body: body, cas: rankedCAs(staff), next: 0 });
+      detailNeedsSize = true;
+      if (!detailTimer) { detailTimer = window.setTimeout(paintDetailBatch, 0); }
+    }
+    function paintDetailBatch() {
+      var task, html = [], end, i, header, list;
+      detailTimer = null;
+      while (detailQueue.length) {
+        task = detailQueue[0];
+        if (byId("ca-body-" + task.staff.id) !== task.body) { detailQueue.shift(); continue; }
+        end = Math.min(task.next + 32, task.cas.length);
+        for (i = task.next; i < end; i++) { html.push(caRowHTML(task.cas[i])); }
+        appendTableRows(task.body, html.join("")); task.next = end;
+        if (task.next === task.cas.length) {
+          detailQueue.shift();
+          if (task.reorder) { orderDetailRows(task.staff); }
+        }
+        /* 1回32CAまでに分割し、間に入力・クリック・描画を処理できるようにする。 */
+        /* 列幅の読み取りによる強制レイアウトは、最初と最後の描画だけにする。 */
+        if (detailNeedsSize || !detailQueue.length) {
+          list = byId("rankingScroll"); header = byId("rankingHeader");
+          header.style.paddingRight = Math.max(0, list.offsetWidth - list.clientWidth) + "px";
+          positionStaffPin();
+          detailNeedsSize = false;
+        }
+        break;
+      }
+      if (detailQueue.length) { detailTimer = window.setTimeout(paintDetailBatch, 8); }
+    }
+    function replaceRankingRows(html, reused) {
+      /* HTAのMSHTMLではtbody.innerHTMLへの代入が無効な場合がある。
+       * divで完全なtableとして解析してから、同じdocumentのtrを移動する。
+       * tbodyはDOM操作で空にし、作成済みの行を追加する。
+       */
+      var target = byId("rankingBody"), source = tableRows(html), fragment = document.createDocumentFragment(), row, next, saved;
+      row = source.firstChild;
+      while (row) {
+        next = row.nextSibling; saved = reused && reused["@" + row.id];
+        if (saved) { source.replaceChild(saved, row); }
+        row = next;
+      }
+      while (source.firstChild) { fragment.appendChild(source.firstChild); }
+      while (target.firstChild) { target.removeChild(target.firstChild); }
+      target.appendChild(fragment);
+    }
+    function renderTable(forceDetails) {
+      var ranked = rankedStaff(), html = [], visible = 0, i, item, staff, t, opened, barWidth;
+      var maxTotal = 0, headings = ["unsorted", "unread", "flag", "total"];
+      var reused = {}, pending = [], oldDetail;
+      var canReuse = !forceDetails && tableDataVersion === dataVersion && detailSearchText === searchText;
+      if (!canReuse) { cancelDetailRender(); }
+      for (i = 0; i < ranked.length; i++) { maxTotal = Math.max(maxTotal, ranked[i].totals.total); }
+      for (i = 0; i < ranked.length; i++) {
+        item = ranked[i]; staff = item.staff; t = item.totals;
+        if (!matches(staff)) { continue; }
+        visible++;
+        opened = !!expanded[staff.id];
+        barWidth = maxTotal ? Math.round(t.total / maxTotal * 100) : 0;
+        html.push('<tr class="staff-row' + (opened ? ' expanded' : '') + '" id="staff-row-' + staff.id + '">');
+        html.push('<td class="rank-cell"><span class="rank-number' + (i < 3 ? ' leading' : '') + '">' + (i + 1) + '</span></td>');
+        html.push('<td class="staff-cell"><button type="button" class="staff-name" id="staff-button-' + staff.id + '" aria-expanded="' + (opened ? 'true' : 'false') + '" aria-controls="detail-' + staff.id + '" title="担当CAごとの内訳を' + (opened ? '閉じる' : '開く') + '" onclick="WorkloadUI.toggleStaff(\'' + staff.id + '\')">' + esc(staff.name) + '<span class="staff-ca-meta"><span class="ca-count">' + staff.cas.length + ' CA</span>' + staffCheckHTML(staff) + '</span><span class="expand-indicator" aria-hidden="true">' + (opened ? '−' : '＋') + '</span></button></td>');
+        html.push('<td class="team-cell"><button type="button" class="team-badge' + (selectedTeam === teamNameOf(staff) ? ' active' : '') + '" id="team-button-' + staff.id + '" aria-label="' + esc(teamNameOf(staff)) + 'のランキングを表示" aria-pressed="' + (selectedTeam === teamNameOf(staff) ? 'true' : 'false') + '" title="' + esc(teamNameOf(staff)) + 'のランキングを表示' + (excludedReason(staff) ? ' ／ 件数・対応余力の対象から除外：' + esc(excludedReason(staff)) : '') + '" onclick="WorkloadUI.filterByTeam(\'' + staff.id + '\')">' + esc(teamNameOf(staff)) + '</button></td>');
+        html.push('<td class="staff-unsorted"><span class="metric-value unsorted">' + format(t.unsorted) + '</span></td>');
+        html.push('<td class="staff-unread"><span class="metric-value">' + format(t.unread) + '</span></td>');
+        html.push('<td class="staff-flag"><span class="metric-value flag">' + format(t.flag) + '</span></td>');
+        html.push('<td class="staff-total"><span class="metric-value total-value">' + format(t.total) + '</span><div class="load-track" title="合計件数の比較（最多の担当者を100%として表示）"><span class="load-fill" style="width:' + barWidth + '%"></span></div></td>');
+        html.push('<td class="staff-support"><span class="staff-support-top"><span id="staff-support-request-control-' + staff.id + '">' + supportRequestHTML(staff) + '</span><span class="support-count" id="supportCount-' + staff.id + '" title="担当CA全体のサポート人数（同じ氏名は1名として集計）">' + supportCountFor(staff) + '名</span></span>' + supportWantedHTML(staff) + '</td></tr>');
+        if (opened) {
+          oldDetail = canReuse && byId("detail-" + staff.id);
+          if (oldDetail) {
+            reused["@" + oldDetail.id] = oldDetail; html.push('<tr id="' + oldDetail.id + '"></tr>');
+          } else { html.push(detailHTML(staff, true)); pending.push(staff); }
+        }
+      }
+      if (!visible) {
+        html.push(staffData.length ? '<tr><td colspan="8" class="empty-state"><strong>該当する担当者・CAが見つかりませんでした</strong>名前を変えて検索するか、検索欄をクリアしてください。</td></tr>' : '<tr><td colspan="8" class="empty-state"><strong>データはまだ集計されていません</strong>「ログ集計」ボタンで取り込んでください。</td></tr>');
+      }
+      replaceRankingRows(html.join(""), reused);
+      tableDataVersion = dataVersion; detailSearchText = searchText;
+      for (i = 0; i < pending.length; i++) { queueDetail(pending[i]); }
+      setText(byId("visibleStaff"), visible);
+      byId("searchClear").style.display = searchText ? "block" : "none";
+      for (i = 0; i < headings.length; i++) {
+        byId("heading-" + headings[i]).className = sortKey === headings[i] ? "active-sort" : "";
+      }
+      byId("teamFilterBar").style.display = selectedTeam ? "block" : "none";
+      setText(byId("teamFilterName"), selectedTeam);
+      renderCheckOverview();
+      updateCommitVisibility();
+      resizeRanking();
+    }
+    function toast(message, isError) {
+      if (toastTimer) { window.clearTimeout(toastTimer); }
+      byId("toast").className = isError ? "toast error" : "toast";
+      setText(byId("toast"), message);
+      byId("toast").style.display = "block";
+      toastTimer = window.setTimeout(function () { byId("toast").style.display = "none"; }, 4000);
+    }
+    function syncDraft() {
+      if (editing && byId("supportInput")) { editing.draft = byId("supportInput").value; }
+    }
+    function cancelSupport() {
+      var ca, slot, target;
+      if (!editing || shareWriteBusy) { return; }
+      ca = findCA(editing.caId); slot = editing.slot;
+      editing = null;
+      if (ca) {
+        refreshSupports(ca);
+        target = byId("support-" + ca.id + "-" + slot);
+        if (target) { target.focus(); }
+      }
+      applyShared(false);
+    }
+    function supportBlur() {
+      var currentEditing = editing;
+      syncDraft();
+      if (!editing || pendingSupport || shareWriteBusy || supportBlurTimer) { return; }
+      /* クリック先の処理を先に通し、Enter後のblurと確認を重複させない。 */
+      supportBlurTimer = window.setTimeout(function () {
+        supportBlurTimer = null;
+        if (editing === currentEditing && !pendingSupport && !shareWriteBusy) { commitSupport(true); }
+      }, 0);
+    }
+    function closeSupportPrompt() {
+      pendingSupport = null;
+      byId("supportConfirmOverlay").style.display = "none";
+      document.body.style.overflow = "";
+    }
+    function rejectSupport() {
+      var request = pendingSupport, input;
+      if (!request || shareWriteBusy) { return; }
+      closeSupportPrompt();
+      if (editing === request.editing) {
+        editing.draft = ""; input = byId("supportInput");
+        if (input) { input.value = ""; input.className = "support-input"; input.focus(); }
+      }
+      if (request.afterSave) { request.afterSave(); }
+    }
+    function confirmSupport() {
+      var request = pendingSupport;
+      if (!request || shareWriteBusy) { return; }
+      closeSupportPrompt();
+      if (commitSupport(request.preserveFocus, request.afterSave, true) && request.afterSave) { request.afterSave(); }
+    }
+    function commitSupport(preserveFocus, afterSave, confirmed) {
+      var ca, name, slot, input, completed = false, saved = false, inCall = true;
+      if (shareWriteBusy) { return false; }
+      if (supportBlurTimer) { window.clearTimeout(supportBlurTimer); supportBlurTimer = null; }
+      if (pendingSupport) {
+        if (afterSave) { pendingSupport.afterSave = afterSave; pendingSupport.preserveFocus = preserveFocus; }
+        return false;
+      }
+      if (!editing) { return true; }
+      syncDraft(); ca = findCA(editing.caId); name = trim(editing.draft); slot = editing.slot;
+      if (!ca) { editing = null; return true; }
+      if (!name) { editing = null; refreshSupports(ca); applyShared(false); return true; }
+      if (!confirmed) {
+        pendingSupport = { editing: editing, preserveFocus: preserveFocus, afterSave: afterSave };
+        setText(byId("supportConfirmName"), name);
+        byId("supportConfirmOverlay").style.display = "block";
+        document.body.style.overflow = "hidden";
+        byId("supportConfirmNo").focus();
+        return false;
+      }
+      setShareBusy(true);
+      WorkloadShare.addSupport(ca, name, function (error, snapshot) {
+        completed = true; setShareBusy(false);
+        if (error) {
+          input = byId("supportInput"); if (input) { input.className = "support-input invalid"; input.focus(); }
+          sharedSaveError(error, snapshot); return;
+        }
+        saved = true; editing = null; if (snapshot) { sharedSnapshot = snapshot; } sharedError = "";
+        applyShared(true); shareStatus(); toast(name + "さんをサポートに追加しました。");
+        ca = findCA(ca.id); slot = ca ? ca.supports.length - 1 : slot;
+        input = byId("support-" + ca.id + "-" + slot); if (input && !preserveFocus) { input.focus(); }
+        if (!inCall && afterSave) { afterSave(); }
+      });
+      inCall = false; return completed && saved;
+    }
+    function startSupport(caId, slot) {
+      var ca = findCA(caId), input;
+      if (shareWriteBusy || !ca || ca.committedAt || !ca.checked || slot < 0 || slot > 2 || slot < ca.supports.length || ca.supports.length >= 3) { return; }
+      if (!commitSupport(true, function () { startSupport(caId, slot); })) { return; }
+      ca = findCA(caId);
+      if (slot < ca.supports.length) { slot = ca.supports.length; }
+      if (slot > 2) { return; }
+      editing = { caId: caId, slot: slot, draft: "" };
+      refreshSupports(ca);
+      input = byId("supportInput");
+      if (input) { input.focus(); }
+    }
+    function supportKey(e) {
+      e = e || window.event;
+      var key = e.keyCode || e.which;
+      if (e.isComposing || key === 229) { return true; }
+      if (key === 13) { commitSupport(); return stopEvent(e); }
+      if (key === 27) { cancelSupport(); return stopEvent(e); }
+      return true;
+    }
+    function closeOtherStaff(id) {
+      var key, row, target, detail, spans, closed = false;
+      for (key in expanded) {
+        if (!Object.prototype.hasOwnProperty.call(expanded, key) || key === id || !expanded[key]) { continue; }
+        expanded[key] = false; closed = true;
+        detail = byId("detail-" + key); if (detail) { detail.parentNode.removeChild(detail); }
+        row = byId("staff-row-" + key); if (row) { row.className = "staff-row"; }
+        target = byId("staff-button-" + key);
+        if (target) {
+          target.setAttribute("aria-expanded", "false"); target.title = "担当CAごとの内訳を開く";
+          spans = target.getElementsByTagName("span"); if (spans.length > 1) { setText(spans[1], "＋"); }
+        }
+      }
+      if (closed) { cancelDetailRender(); }
+    }
+    function toggleStaff(id) {
+      var target, row, detail, staff, spans;
+      if (!commitSupport(true, function () { toggleStaff(id); })) { return; }
+      expanded[id] = !expanded[id];
+      if (expanded[id]) { closeOtherStaff(id); }
+      target = byId("staff-button-" + id);
+      row = byId("staff-row-" + id); detail = byId("detail-" + id); staff = staffIndex["@" + id];
+      if (!target || !row || !staff) { renderTable(); return; }
+      if (expanded[id]) {
+        if (!detail) {
+          detail = tableRows(detailHTML(staff, true)).firstChild;
+          row.parentNode.insertBefore(detail, row.nextSibling); queueDetail(staff);
+        }
+      } else if (detail) { detail.parentNode.removeChild(detail); cancelDetailRender(); }
+      row.className = "staff-row" + (expanded[id] ? " expanded" : "");
+      target.setAttribute("aria-expanded", expanded[id] ? "true" : "false");
+      target.title = "担当CAごとの内訳を" + (expanded[id] ? "閉じる" : "開く");
+      spans = target.getElementsByTagName("span");
+      if (spans.length > 1) { setText(spans[spans.length - 1], expanded[id] ? "−" : "＋"); }
+      updateCommitVisibility(); resizeRanking();
+      if (target) { target.focus(); }
+    }
+    function collapseAll() {
+      if (!commitSupport(true, collapseAll)) { return; }
+      expanded = {}; cancelDetailRender();
+      renderTable();
+    }
+    function runSearch() {
+      searchTimer = null;
+      var nextSearch = normalized(trim(byId("searchInput").value)), ranked, i, opened = false;
+      searchFocus(document.activeElement === byId("searchInput"));
+      if (nextSearch === searchText) { return; }
+      if (!commitSupport(true, runSearch)) { return; }
+      searchText = nextSearch;
+      if (searchText) {
+        ranked = rankedStaff();
+        for (i = 0; i < ranked.length; i++) { if (matches(ranked[i].staff) && expanded[ranked[i].staff.id]) { opened = true; break; } }
+        if (!opened) {
+          expanded = {};
+          for (i = 0; i < ranked.length; i++) { if (matches(ranked[i].staff)) { expanded[ranked[i].staff.id] = true; break; } }
+        }
+      }
+      renderTable();
+    }
+    function applySearch() {
+      searchFocus(document.activeElement === byId("searchInput"));
+      if (searchTimer) { window.clearTimeout(searchTimer); }
+      searchTimer = window.setTimeout(runSearch, 150);
+    }
+    function clearSearch() {
+      if (!commitSupport(true, clearSearch)) { return; }
+      if (searchTimer) { window.clearTimeout(searchTimer); searchTimer = null; }
+      byId("searchInput").value = "";
+      searchText = "";
+      renderTable();
+      byId("searchInput").focus();
+    }
+    function applySort() {
+      if (!commitSupport(true, applySort)) { return; }
+      sortKey = byId("sortSelect").value;
+      renderTable();
+    }
+    function filterByTeam(staffId) {
+      var i;
+      for (i = 0; i < staffData.length; i++) {
+        if (staffData[i].id === staffId) {
+          if (!commitSupport(true, function () { filterByTeam(staffId); })) { return; }
+          if (searchTimer) { window.clearTimeout(searchTimer); searchTimer = null; }
+          selectedTeam = teamNameOf(staffData[i]);
+          byId("searchInput").value = "";
+          searchText = "";
+          searchFocus(false);
+          renderTable();
+          byId("clearTeamFilter").focus();
+          return;
+        }
+      }
+    }
+    function clearTeamFilter() {
+      if (!commitSupport(true, clearTeamFilter)) { return; }
+      if (searchTimer) { window.clearTimeout(searchTimer); searchTimer = null; }
+      selectedTeam = "";
+      byId("searchInput").value = "";
+      searchText = "";
+      renderTable();
+      byId("searchInput").focus();
+    }
+    function requestRemoval(caId, slot) {
+      var ca;
+      if (!commitSupport(true, function () { requestRemoval(caId, slot); })) { return; }
+      ca = findCA(caId);
+      if (!ca || ca.committedAt || !ca.checked || slot < 0 || slot >= ca.supports.length) { return; }
+      pendingRemoval = { caId: caId, slot: slot, name: ca.supports[slot], entryId: ca.supportEntries[slot] };
+      setText(byId("removalName"), ca.supports[slot]);
+      setText(byId("removalCA"), ca.name);
+      byId("removalOverlay").style.display = "block";
+      document.body.style.overflow = "hidden";
+      byId("removalCancel").focus();
+    }
+    function closeRemoval() {
+      var target;
+      if (!pendingRemoval || shareWriteBusy) { return; }
+      target = byId("support-" + pendingRemoval.caId + "-" + pendingRemoval.slot);
+      pendingRemoval = null;
+      byId("removalOverlay").style.display = "none";
+      document.body.style.overflow = "";
+      if (target) { target.focus(); }
+      applyShared(false);
+    }
+    function confirmRemoval() {
+      var ca, name, entry;
+      if (!pendingRemoval || shareWriteBusy) { return; }
+      ca = findCA(pendingRemoval.caId); name = pendingRemoval.name; entry = pendingRemoval.entryId;
+      if (!ca) { closeRemoval(); return; }
+      setShareBusy(true);
+      WorkloadShare.finishSupport(ca, entry, function (error, snapshot) {
+        setShareBusy(false);
+        if (error) { sharedSaveError(error, snapshot); return; }
+        if (snapshot) { sharedSnapshot = snapshot; } sharedError = "";
+        closeRemoval(); applyShared(true); shareStatus(); toast(name + "さんのサポートを解除しました。");
+      });
+    }
+    function requestCommit(caId) {
+      var ca = findCA(caId), button;
+      if (shareWriteBusy || importBusy || pendingRemoval || !ca || (!ca.committedAt && new Date().getHours() < 17)) { return; }
+      if (!ca.committedAt && !ca.checked) { return; }
+      if (!commitSupport(true, function () { requestCommit(caId); })) { return; }
+      if (ca.committedAt) { cancelCommit(caId); return; }
+      if (!window.confirm(ca.name + " CAはコミット完了でよいでしょうか？\n組織：" + ca.organization)) { return; }
+      button = byId("commit-" + caId); if (button) { button.disabled = true; }
+      setShareBusy(true);
+      WorkloadShare.commitCA(ca, function (error, snapshot) {
+        setShareBusy(false);
+        if (error) { if (button) { button.disabled = false; } sharedSaveError(error, snapshot); return; }
+        if (snapshot) { sharedSnapshot = snapshot; } sharedError = "";
+        applyShared(true); shareStatus(); toast(ca.name + " CAをコミット完了にしました。");
+      });
+    }
+    function cancelCommit(caId) {
+      var ca = findCA(caId), button = byId("commit-" + caId);
+      if (!ca || !ca.committedAt || shareWriteBusy) { return; }
+      if (button) { button.disabled = true; }
+      setShareBusy(true);
+      WorkloadShare.cancelCommitCA(ca, sharedSnapshot ? sharedSnapshot.revision : -1, function (error, snapshot) {
+        setShareBusy(false);
+        if (error) { if (button) { button.disabled = false; } sharedSaveError(error, snapshot); return; }
+        if (snapshot) { sharedSnapshot = snapshot; } sharedError = "";
+        applyShared(true); shareStatus(); toast(ca.name + " CAのコミットを取り消しました。");
+      });
+    }
+    function requestCACheck(caId) {
+      var ca = findCA(caId), button;
+      if (shareWriteBusy || importBusy || pendingRemoval || !ca || ca.checked || ca.committedAt) { return; }
+      if (!commitSupport(true, function () { requestCACheck(caId); })) { return; }
+      button = byId("ca-check-" + caId); if (button) { button.disabled = true; }
+      setShareBusy(true);
+      WorkloadShare.checkCA(ca, function (error, snapshot) {
+        setShareBusy(false);
+        if (error) { if (button) { button.disabled = false; } sharedSaveError(error, snapshot); return; }
+        if (snapshot) { sharedSnapshot = snapshot; } sharedError = "";
+        applyShared(true); shareStatus(); toast(ca.name + " CAをチェック済みにしました。");
+      });
+    }
+    function requestSupportWanted(staffId) {
+      var staff = staffIndex["@" + staffId], control = byId("support-request-" + staffId), pin = byId("pinned-support-request-" + staffId), wanted;
+      /* 保存成功までは表示を元の状態に戻し、失敗時に希望だけが残らないようにする。 */
+      if (control && staff) { control.checked = !!staff.supportRequested; }
+      if (pin && staff) { pin.checked = !!staff.supportRequested; }
+      if (shareWriteBusy || importBusy || pendingRemoval || !supportRequestEnabled(staff)) { return; }
+      if (!commitSupport(true, function () { requestSupportWanted(staffId); })) { return; }
+      wanted = !staff.supportRequested;
+      if (control) { control.disabled = true; } if (pin) { pin.disabled = true; } setShareBusy(true);
+      WorkloadShare.setStaffSupportRequest(staff, wanted, function (error, snapshot) {
+        setShareBusy(false);
+        if (error) { refreshStaffSupport(staff); sharedSaveError(error, snapshot); refreshStaffPin(); return; }
+        if (snapshot) { sharedSnapshot = snapshot; } sharedError = "";
+        applyShared(true); shareStatus(); toast(staff.name + "さんのサポ希望を" + (wanted ? "設定" : "解除") + "しました。");
+      });
+    }
+    function globalKey(e) {
+      var key, current;
+      if (pendingSupport) {
+        e = e || window.event; key = e.keyCode || e.which;
+        if (key === 27) { rejectSupport(); return stopEvent(e); }
+        if (key === 9) {
+          current = document.activeElement;
+          if (current === byId("supportConfirmNo")) { byId("supportConfirmYes").focus(); }
+          else { byId("supportConfirmNo").focus(); }
+          return stopEvent(e);
+        }
+        return true;
+      }
+      if (!pendingRemoval) { return true; }
+      if (shareWriteBusy) { return stopEvent(e); }
+      e = e || window.event; key = e.keyCode || e.which;
+      if (key === 27) { closeRemoval(); return stopEvent(e); }
+      if (key === 9) {
+        current = document.activeElement;
+        if (current === byId("removalCancel")) { byId("removalConfirm").focus(); }
+        else { byId("removalCancel").focus(); }
+        return stopEvent(e);
+      }
+      return true;
+    }
+    function searchFocus(hasFocus) {
+      byId("searchPlaceholder").style.display = hasFocus || byId("searchInput").value ? "none" : "block";
+    }
+    function refreshStaffPin() {
+      var key, row = null, detail = null, source, body = byId("pinnedStaffBody"), nodes, i, html, focus, target;
+      for (key in expanded) {
+        if (!Object.prototype.hasOwnProperty.call(expanded, key) || !expanded[key]) { continue; }
+        row = byId("staff-row-" + key); detail = byId("detail-" + key);
+        if (row && detail) { break; }
+        row = null; detail = null;
+      }
+      pinnedStaffRow = row; pinnedStaffDetail = detail;
+      html = row ? row.id + "|" + row.innerHTML : "";
+      /* 担当者の見出し1行だけを複製する。CA一覧や入力欄には触れない。 */
+      if (html !== pinnedStaffHTML) {
+        focus = document.activeElement && document.activeElement.id;
+        while (body.firstChild) { body.removeChild(body.firstChild); }
+        if (row) {
+          source = row.cloneNode(true); source.id = "pinned-" + source.id;
+          nodes = source.getElementsByTagName("*");
+          for (i = 0; i < nodes.length; i++) { if (nodes[i].id) { nodes[i].id = "pinned-" + nodes[i].id; } }
+          body.appendChild(source);
+        }
+        pinnedStaffHTML = html;
+      }
+      positionStaffPin();
+      if (focus && focus.indexOf("pinned-") === 0 && byId("pinnedStaff").style.display === "block") {
+        target = byId(focus); if (target) { try { target.focus(); } catch (ignore) {} }
+      }
+    }
+    function positionStaffPin() {
+      var pin = byId("pinnedStaff"), list = byId("rankingScroll"), body = byId("rankingBody");
+      var listBox, rowBox, detailBox, top, height, y, right, visible;
+      if (!pinnedStaffRow || !pinnedStaffDetail || pinnedStaffRow.parentNode !== body || pinnedStaffDetail.parentNode !== body) {
+        if (pin.style.display !== "none") { pin.style.display = "none"; }
+        return;
+      }
+      listBox = list.getBoundingClientRect(); rowBox = pinnedStaffRow.getBoundingClientRect(); detailBox = pinnedStaffDetail.getBoundingClientRect();
+      top = listBox.top + (list.clientTop || 0); height = rowBox.bottom - rowBox.top || pinnedStaffRow.offsetHeight;
+      visible = rowBox.top < top && detailBox.bottom > top;
+      y = Math.min(0, Math.floor(detailBox.bottom - top - height));
+      right = Math.max(0, list.offsetWidth - list.clientWidth) + "px";
+      /* CA欄を通り過ぎたら固定を解除し、次の担当者に重ならないようにする。 */
+      if (pin.style.right !== right) { pin.style.right = right; }
+      if (visible && pin.style.top !== y + "px") { pin.style.top = y + "px"; }
+      if (pin.style.display !== (visible ? "block" : "none")) { pin.style.display = visible ? "block" : "none"; }
+    }
+    function updateCommitVisibility() {
+      var now = new Date(), list = byId("rankingScroll");
+      var name = "ranking-scroll" + (now.getHours() >= 17 ? " commit-visible" : "");
+      if (list.className !== name) { list.className = name; resizeRanking(); }
+    }
+    function resizeRanking() {
+      var list = byId("rankingScroll"), header = byId("rankingHeader");
+      var height = document.documentElement.clientHeight || document.body.clientHeight;
+      var width = document.documentElement.clientWidth || document.body.clientWidth;
+      var layout = byId("dashboard"), ranking = byId("rankingPane"), overview = byId("overviewPane");
+      var first = width >= 1280 ? ranking : overview;
+      var bottom = byId("rankingFooter").offsetHeight + byId("pageFooter").offsetHeight + 24;
+      /* 横幅が足りないときは従来と同じく、件数・余力をランキングの上に置く。 */
+      if (layout.firstChild !== first) { layout.insertBefore(first, layout.firstChild); }
+      byId("overviewContent").style.maxHeight = width >= 1280 ? Math.max(180, Math.floor(height - layout.getBoundingClientRect().top - byId("pageFooter").offsetHeight - 24)) + "px" : "none";
+      list.style.height = Math.max(180, Math.floor(height - list.getBoundingClientRect().top - bottom)) + "px";
+      /* IE9でも見出しを固定できるよう別の表にし、スクロールバーの幅をそろえる。 */
+      header.style.paddingRight = Math.max(0, list.offsetWidth - list.clientWidth) + "px";
+      refreshStaffPin();
+    }
+    function init() {
+      cancelDetailRender();
+      if (searchTimer) { window.clearTimeout(searchTimer); searchTimer = null; }
+      /* 起動時は取込データ・検索・集計時刻を空にし、当日の共有履歴は再読込する。 */
+      staffData = []; expanded = {}; editing = null; pendingRemoval = null; pendingSupport = null;
+      if (supportBlurTimer) { window.clearTimeout(supportBlurTimer); supportBlurTimer = null; }
+      rebuildDataIndexes();
+      searchText = ""; sortKey = "total"; selectedTeam = ""; importBusy = false; importPhase = "";
+      capturedTime = ""; capturedTimeValid = false; hourlyRate = 16;
+      sharedSnapshot = null; sharedVersion = ""; sharedError = ""; shareWriteBusy = false;
+      if (toastTimer) { window.clearTimeout(toastTimer); toastTimer = null; }
+      if (commitTimer) { window.clearInterval(commitTimer); commitTimer = null; }
+      if (importPreparationTimer) { window.clearTimeout(importPreparationTimer); importPreparationTimer = null; }
+      byId("toast").style.display = "none";
+      byId("shareErrorNotice").style.display = "none";
+      byId("removalOverlay").style.display = "none";
+      byId("supportConfirmOverlay").style.display = "none";
+      byId("removalConfirm").disabled = false; byId("removalCancel").disabled = false;
+      document.body.style.overflow = "";
+      byId("searchInput").value = ""; searchFocus(false);
+      byId("sortSelect").value = "total";
+      byId("capturedTimeInput").className = "time-input";
+      byId("aggregateLog").disabled = false; setText(byId("aggregateLog"), "ログ集計");
+      setText(byId("dataStatus"), "未集計 ／ 起動時にデータをクリア");
+      setText(byId("dataFooter"), "「ログ集計」でCSVと振分表を取り込みます。");
+      if (typeof WorkloadConfig !== "undefined" && WorkloadConfig.capacity && typeof WorkloadConfig.capacity.hourlyRate === "number" && WorkloadConfig.capacity.hourlyRate > 0) {
+        hourlyRate = WorkloadConfig.capacity.hourlyRate;
+      }
+      renderSummary();
+      byId("capturedTimeInput").value = capturedTime;
+      renderCapacity();
+      renderTable();
+      document.onkeydown = globalKey;
+      byId("rankingScroll").onscroll = positionStaffPin;
+      window.onresize = resizeRanking;
+      resizeRanking();
+      updateCommitVisibility();
+      commitTimer = window.setInterval(updateCommitVisibility, 30000);
+      window.onbeforeunload = beforeClose;
+      window.onunload = closeImportSession;
+      if (typeof WorkloadShare !== "undefined") { WorkloadShare.start(sharedChanged); }
+    }
+    return {
+      init: init,
+      refreshBrowserShare: function () { sharedVersion = ""; applyShared(true); renderTable(true); },
+      canChooseBrowserFiles: function () { return !(importBusy || shareWriteBusy || editing || pendingSupport || pendingRemoval); },
+      canRetryBrowserWrites: function () { return !(importBusy || shareWriteBusy); },
+      browserWriteRecovered: function (action, snapshot) {
+        var ca;
+        if (snapshot) { sharedSnapshot = snapshot; }
+        if (action.kind === "add" && editing) {
+          syncDraft(); ca = findCA(editing.caId);
+          if (ca && WorkloadShare.keyOf(ca.organization, ca.name) === WorkloadShare.keyOf(action.organization, action.caName) &&
+              trim(editing.draft) === trim(action.supportName)) { editing = null; }
+        }
+        if (action.kind === "finish" && pendingRemoval && pendingRemoval.entryId === action.entryId) { closeRemoval(); }
+        sharedError = ""; applyShared(true); shareStatus();
+      },
+      applyCapturedTime: applyCapturedTime,
+      capturedTimeKey: capturedTimeKey,
+      requestLogAggregate: requestLogAggregate,
+      requestCommit: requestCommit,
+      requestCACheck: requestCACheck,
+      requestSupportWanted: requestSupportWanted,
+      showCALinkStatus: showCALinkStatus,
+      toggleStaff: toggleStaff,
+      collapseAll: collapseAll,
+      applySearch: applySearch,
+      searchFocus: searchFocus,
+      clearSearch: clearSearch,
+      applySort: applySort,
+      filterByTeam: filterByTeam,
+      clearTeamFilter: clearTeamFilter,
+      startSupport: startSupport,
+      syncDraft: syncDraft,
+      supportKey: supportKey,
+      supportBlur: supportBlur,
+      confirmSupport: confirmSupport,
+      rejectSupport: rejectSupport,
+      commitSupport: commitSupport,
+      requestRemoval: requestRemoval,
+      closeRemoval: closeRemoval,
+      confirmRemoval: confirmRemoval
+    };
+  }());
+  </script>
+</head>
+<body onload="WorkloadUI.init(); WorkloadBrowser.init()">
+  <div class="page">
+    <div class="page-header">
+      <div class="brand">
+        <span class="brand-icon" aria-hidden="true"><span class="bar1"></span><span class="bar2"></span><span class="bar3"></span></span>
+        <div class="brand-text"><h1>業務量モニター3.0tag</h1><p class="tagline">残件数を見て、サポートの入り先を判断する。</p></div>
+      </div>
+      <div class="prototype-status"><span class="prototype-badge"><span class="status-dot"></span>HTML版&nbsp; v0.8.3</span><p class="prototype-note" id="dataStatus">未集計 ／ 起動時にデータをクリア</p></div>
+    </div>
+
+    <section class="browser-controls" aria-label="取込ファイルと共有設定">
+      <div class="browser-inputs">
+        <div class="browser-file"><button type="button" id="chooseUnread" onclick="WorkloadBrowser.choose('unread')">未読CSVを選択</button><span id="unreadFileName" class="browser-file-name">未選択</span></div>
+        <div class="browser-file"><button type="button" id="chooseFlag" onclick="WorkloadBrowser.choose('flag')">フラグCSVを選択</button><span id="flagFileName" class="browser-file-name">未選択</span></div>
+        <div class="browser-file"><button type="button" id="chooseAssignment" onclick="WorkloadBrowser.choose('assignment')">振分表を選択</button><span id="assignmentFileName" class="browser-file-name">未選択</span></div>
+        <button type="button" id="connectShared" class="connect-button" onclick="WorkloadBrowser.connectShared()">共有フォルダを接続</button>
+        <button type="button" id="retryShared" onclick="WorkloadBrowser.retryShared()">保存を再試行</button>
+      </div>
+      <p id="browserStatus" class="browser-note" role="status" aria-live="polite">ファイルを選択し、全員が使う共有フォルダを接続してください。</p>
+      <details><summary>読込フォルダ設定・共有履歴</summary><div class="browser-extra">
+        <button type="button" onclick="WorkloadBrowser.chooseRoot('unread')">未読の親フォルダ</button><span id="unreadRootName">未設定</span>
+        <button type="button" onclick="WorkloadBrowser.chooseRoot('flag')">フラグの親フォルダ</button><span id="flagRootName">未設定</span>
+        <button type="button" onclick="WorkloadBrowser.exportHistory()">共有履歴を出力</button>
+        <button type="button" onclick="WorkloadBrowser.exportPending()">保存待ちの控えを出力</button>
+      </div><p class="browser-note">未読は親フォルダ／yyyymm／mmdd、フラグは親フォルダ／yyyymmを選択画面の初期位置に使います。共有先は全員同じフォルダを指定してください。</p>
+      <div id="browserConflict" class="browser-note browser-conflict"></div></details>
+      <input type="file" id="browserFileInput" style="display:none" />
+    </section>
+    <div class="dashboard" id="dashboard"><div class="ranking-pane" id="rankingPane">
+    <div class="ranking-card">
+      <div class="ranking-heading">
+        <div class="heading-title"><h2>担当者別ランキング</h2><p class="ranking-description">担当者名を選択すると、当日の担当CAを表示されます</p></div>
+        <div class="heading-count">表示 <strong id="visibleStaff">0</strong> ／ <span id="staffTotal">0</span> 名 &nbsp;・&nbsp; 全 <span id="caTotal">0</span> CA</div>
+      </div>
+      <div id="teamCheckSummary" class="team-ca-check-summary" role="status" aria-live="polite" style="display:none"></div>
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <div class="search-box"><span class="search-icon" aria-hidden="true"></span><input type="text" id="searchInput" title="担当者・CA名で検索" aria-label="担当者・CA名で検索" onfocus="WorkloadUI.searchFocus(true)" onblur="WorkloadUI.searchFocus(false)" onkeyup="WorkloadUI.applySearch()" oninput="WorkloadUI.applySearch()" onchange="WorkloadUI.applySearch()" /><label for="searchInput" id="searchPlaceholder" class="search-placeholder">担当者・CA名で検索</label><button type="button" class="search-clear" id="searchClear" title="検索をクリア" aria-label="検索をクリア" onclick="WorkloadUI.clearSearch()">×</button></div>
+          <select id="sortSelect" class="sort-select" aria-label="ランキングの並び順" onchange="WorkloadUI.applySort()"><option value="total">合計が多い順</option><option value="unread">純粋未読が多い順</option><option value="flag">フラグが多い順</option><option value="unsorted">未仕分が多い順</option></select>
+        </div>
+      </div>
+      <div id="teamFilterBar" class="team-filter-bar" style="display:none" aria-live="polite"><span class="team-filter-label">表示チーム</span><strong id="teamFilterName" class="team-filter-name"></strong><span class="team-filter-rank">チーム内順位</span><button type="button" id="clearTeamFilter" class="team-filter-clear" onclick="WorkloadUI.clearTeamFilter()">全チームに戻す</button></div>
+      <div class="ranking-header-wrap" id="rankingHeader">
+      <table class="ranking-table" aria-label="ランキングの項目">
+        <colgroup><col style="width:5%" /><col style="width:18%" /><col style="width:10%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>
+        <thead><tr><th scope="col" class="rank-heading">順位</th><th scope="col" class="staff-heading">担当者</th><th scope="col" id="heading-team" class="team-heading">チーム</th><th scope="col" id="heading-unsorted">未仕分</th><th scope="col" id="heading-unread">純粋未読</th><th scope="col" id="heading-flag">フラグ</th><th scope="col" id="heading-total" class="active-sort">合計</th><th scope="col" class="support-heading">サポート投入状況<span class="support-heading-note">人数／担当CA別の氏名</span></th></tr></thead>
+      </table></div>
+      <div class="ranking-scroll-wrap">
+      <div class="pinned-staff" id="pinnedStaff" role="group" aria-label="展開中の担当者">
+      <table class="ranking-table" aria-label="展開中の担当者の業務量">
+        <colgroup><col style="width:5%" /><col style="width:18%" /><col style="width:10%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>
+        <tbody id="pinnedStaffBody"></tbody>
+      </table></div>
+      <div class="ranking-scroll" id="rankingScroll" tabindex="0" aria-label="担当者ランキング一覧">
+      <table class="ranking-table" aria-label="担当者別の業務量ランキング">
+        <colgroup><col style="width:5%" /><col style="width:18%" /><col style="width:10%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>
+        <tbody id="rankingBody"></tbody>
+      </table></div>
+      </div>
+      <div class="ranking-footer" id="rankingFooter"><span class="footer-dot">●</span>サポート欄：空欄をクリック → 氏名入力 → Enterまたは ✓ で登録。氏名をクリックすると解除できます。（Escで入力取消）</div>
+    </div>
+    </div><div class="overview-pane" id="overviewPane"><div class="overview-content" id="overviewContent">
+    <div class="summary" role="group" aria-label="全体の件数" title="担当なし・札幌担当・新潟担当・首都圏担当の区分を除いた件数です">
+      <div class="summary-item first"><div class="summary-card primary"><div class="summary-text"><p class="summary-label">全体の残件数</p><p class="summary-caption">純粋未読 ＋ フラグ</p></div><div class="summary-amount"><span class="summary-value" id="summaryTotal">0</span><span class="summary-unit">件</span></div></div></div>
+      <div class="summary-item second"><div class="summary-card"><div class="summary-text"><p class="summary-label">純粋未読</p><p class="summary-caption">対象担当CAの合計</p></div><div class="summary-amount"><span class="summary-value" id="summaryUnread">0</span><span class="summary-unit">件</span></div></div></div>
+      <div class="summary-item third"><div class="summary-card"><div class="summary-text"><p class="summary-label">フラグ</p><p class="summary-caption">対象担当CAの合計</p></div><div class="summary-amount"><span class="summary-value" id="summaryFlag">0</span><span class="summary-unit">件</span></div></div></div>
+      <div class="summary-item last"><div class="summary-card"><div class="summary-text"><p class="summary-label">未仕分</p><p class="summary-caption">残件数とは分けて表示</p></div><div class="summary-amount"><span class="summary-value" id="summaryUnsorted">0</span><span class="summary-unit">件</span></div></div></div>
+    </div>
+    <div class="capacity-card" id="capacityCard" aria-label="対応余力">
+      <div class="capacity-main"><p class="capacity-label">対応余力<span class="capacity-state" id="capacityState">—</span></p><span class="capacity-value" id="capacityValue">—</span><span class="capacity-unit">件</span></div>
+      <div class="capacity-details">
+        <p class="capacity-equation" title="担当なし・札幌担当・新潟担当・首都圏担当を除外し、担当者1人を1名として数えます。">対象 <strong id="capacityPeople">0</strong> 名 × <span id="capacityRate">16</span> 件/時 × 残り <span id="capacityRemaining">—</span></p>
+        <p class="capacity-components">処理見込 <span id="capacityEstimate">—</span> 件 − 全体の残件数 <span id="capacityBacklog">0</span> 件</p>
+        <p class="capacity-timing" id="capacityTiming">—</p>
+      </div>
+      <div class="capacity-controls"><label for="capturedTimeInput">集計時刻</label><input type="text" id="capturedTimeInput" class="time-input" maxlength="5" value="" title="ログ集計時に自動入力。変更する場合はHH:mmで入力" aria-label="集計時刻" onkeydown="return WorkloadUI.capturedTimeKey(event)" /><button type="button" class="capacity-recalculate" id="recalculateCapacity" onclick="WorkloadUI.applyCapturedTime()">余力再計算</button><span class="capacity-log-action"><button type="button" class="capacity-log-button" id="aggregateLog" title="上部で選択した未読CSV・フラグCSV・振分表を読み込みます" onclick="WorkloadUI.requestLogAggregate()">ログ集計</button></span><p class="capacity-controls-note">14:00以降は休憩控除なし</p></div>
+    </div>
+    </div></div></div>
+    <div class="page-footer" id="pageFooter"><div class="footer-left">合計 ＝ 純粋未読 ＋ フラグ　／　未仕分は合計に含めません。</div><div class="footer-right" id="dataFooter">「ログ集計」でCSVと振分表を取り込みます。</div></div>
+  </div>
+  <div id="supportConfirmOverlay" class="modal-overlay">
+    <div class="modal-layout"><div class="modal-cell">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="supportConfirmTitle" aria-describedby="supportConfirmDescription">
+        <div class="modal-icon" aria-hidden="true">?</div>
+        <h3 id="supportConfirmTitle">サポート投入の確認</h3>
+        <p id="supportConfirmDescription">入力を確定しますか？<strong id="supportConfirmName" style="display:none"></strong></p>
+        <div class="modal-buttons"><button type="button" id="supportConfirmNo" class="modal-button" onclick="WorkloadUI.rejectSupport()">いいえ</button><button type="button" id="supportConfirmYes" class="modal-button confirm" onclick="WorkloadUI.confirmSupport()">はい</button></div>
+      </div>
+    </div></div>
+  </div>
+  <div id="removalOverlay" class="modal-overlay">
+    <div class="modal-layout"><div class="modal-cell">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="removalTitle" aria-describedby="removalDescription">
+        <div class="modal-icon" aria-hidden="true">?</div>
+        <h3 id="removalTitle">サポートを外れますか？</h3>
+        <p id="removalDescription"><strong id="removalName"></strong> さんを<br /><strong id="removalCA"></strong> CAのサポートから外します。</p>
+        <div class="modal-buttons"><button type="button" id="removalCancel" class="modal-button" onclick="WorkloadUI.closeRemoval()">いいえ</button><button type="button" id="removalConfirm" class="modal-button confirm" onclick="WorkloadUI.confirmRemoval()">はい</button></div>
+      </div>
+    </div></div>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="shareErrorNotice" class="share-error-notice" role="alert" aria-live="polite"></div>
+</body>
+</html>
