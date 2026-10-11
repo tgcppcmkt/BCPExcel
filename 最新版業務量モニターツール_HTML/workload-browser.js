@@ -139,7 +139,11 @@ var WorkloadWorkbook = (function () {
         for (rel of rels.values()) { if (/\/sharedStrings$/.test(rel.getAttribute("Type")) && rel.getAttribute("TargetMode") !== "External") { shared = await archive.read(packagePath(base, rel.getAttribute("Target"))); } }
         if (shared) { strings = nodes(xml(shared), "si").map(textRuns); }
         var sheet = xml(await archive.read(sheetPath)), cols = config.assignment.columns, maximum = 0;
-        for (var name of Object.keys(cols)) { maximum = Math.max(maximum, WorkloadImport.columnIndex(cols[name])); }
+        var columnIndexes = {}, columnNames = Object.values(cols);
+        for (var name of Object.keys(cols)) {
+            columnIndexes[name] = WorkloadImport.columnIndex(cols[name]);
+            maximum = Math.max(maximum, columnIndexes[name]);
+        }
         var sparse = new Map(), formulas = new Map(), lastRow = 0;
         for (var cell of nodes(sheet, "c")) {
             var reference = cell.getAttribute("r"), match = /^([A-Z]{1,3})([1-9]\d*)$/.exec(reference);
@@ -151,18 +155,18 @@ var WorkloadWorkbook = (function () {
             if (type === "s") {
                 var index = Number(value); if (!/^\d+$/.test(value) || !Number.isSafeInteger(index) || index >= strings.length) { throw error(reference + " の文字列参照が不正です。"); } value = strings[index];
             } else if (type === "inlineStr") { value = inline ? textRuns(inline) : ""; }
-            else if (type === "e" && Object.values(cols).indexOf(match[1]) >= 0) { throw error(reference + " にExcelのエラーがあります：" + value); }
+            else if (type === "e" && columnNames.indexOf(match[1]) >= 0) { throw error(reference + " にExcelのエラーがあります：" + value); }
             else if (type === "b") { value = value === "1" ? "true" : "false"; }
             if (f) {
                 formulas.set(reference, f.textContent);
-                if (!v && !inline && column !== WorkloadImport.columnIndex(cols.calib) && column !== WorkloadImport.columnIndex(cols.canvas) && Object.values(cols).indexOf(match[1]) >= 0) {
+                if (!v && !inline && column !== columnIndexes.calib && column !== columnIndexes.canvas && columnNames.indexOf(match[1]) >= 0) {
                     throw error(reference + " の数式結果が保存されていません。Excelで開いて保存したブックを選択してください。");
                 }
             }
             if (!value && !f) { continue; }
             if (!sparse.has(row)) { sparse.set(row, Array(maximum + 1).fill("")); }
             sparse.get(row)[column] = value;
-            if ((column === WorkloadImport.columnIndex(cols.organization) || column === WorkloadImport.columnIndex(cols.caName)) && String(value).trim()) { lastRow = Math.max(lastRow, row); }
+            if ((column === columnIndexes.organization || column === columnIndexes.caName) && String(value).trim()) { lastRow = Math.max(lastRow, row); }
         }
         if (lastRow < config.assignment.startRow) { throw error("「" + config.assignment.sheetName + "」に取込対象のCAがありません。"); }
         if (lastRow > 200000) { throw error("対象シートの最終行が200,000行を超えています。"); }
@@ -187,7 +191,7 @@ var WorkloadWorkbook = (function () {
         for (var rowIndex = config.assignment.startRow - 1; rowIndex < lastRow; rowIndex++) {
             for (var property of ["calib", "canvas"]) {
                 var columnName = cols[property], cellRef = columnName + (rowIndex + 1);
-                var savedValue = String(rows[rowIndex][WorkloadImport.columnIndex(columnName)] || "").trim();
+                var savedValue = String(rows[rowIndex][columnIndexes[property]] || "").trim();
                 if (!(links["@" + (rowIndex + 1)] || {})[property] && !WorkloadImport.validURL(savedValue) && (savedValue || formulas.has(cellRef))) {
                     warnings.push(cellRef + "：リンク先URLを取得できません。URLを直接記入するか、通常のハイパーリンクを設定してください。");
                 }
@@ -415,15 +419,6 @@ var WorkloadBrowser = (function () {
         } catch (error) { fail(error); }
         finally { choosing = false; node("connectShared").disabled = false; }
     }
-    async function retryShared() {
-        if (choosing || window.WorkloadUI && !WorkloadUI.canRetryBrowserWrites()) { info("保存・集計が完了してから再読み込みしてください。", true); return; }
-        try {
-            if (!remembered) { await connectShared(); return; }
-            if (await remembered.handle.requestPermission({ mode: "readwrite" }) !== "granted") { throw new Error("共有フォルダへの読み書きを許可してください。"); }
-            if (!WorkloadShare.isConnected()) { await WorkloadShare.connect(remembered.handle, remembered.key); }
-            else { await WorkloadShare.refresh(); }
-        } catch (error) { fail(error); }
-    }
     async function fileOf(kind) {
         var choice = selected[kind];
         if (!choice) { throw new Error(kind === "assignment" ? "「設定」の「振分表」から振分表を指定してください。" : "「ログ集計」で" + (kind === "unread" ? "未読CSV" : "フラグCSV") + "を選択してください。"); }
@@ -467,10 +462,6 @@ var WorkloadBrowser = (function () {
         var box = node("browserConflict");
         if (box) { box.textContent = value.rejected.map(function (x) { return x.stamp + "　" + x.organization + "／" + x.caName + "：" + x.message; }).join("\n"); }
     }
-    function download(text, filename) {
-        var url = URL.createObjectURL(new Blob([text], { type: "application/json;charset=utf-8" })), a = document.createElement("a");
-        a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); window.setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-    }
     async function init() {
         try {
             for (var kind of ["unread", "flag", "assignment"]) {
@@ -489,10 +480,8 @@ var WorkloadBrowser = (function () {
             if (!window.showDirectoryPicker || !window.isSecureContext) { info("この開き方では共有フォルダを利用できません。通常のEdgeでHTMLファイルを開いてください。", true); }
         } catch (error) { info("設定を復元できません：" + (error.message || String(error)) + "　ファイルと共有先を選択してください。", true); }
     }
-    return { init: init, choose: choose, chooseRoot: chooseRoot, connectShared: connectShared, retryShared: retryShared,
+    return { init: init, choose: choose, chooseRoot: chooseRoot, connectShared: connectShared,
         selectLogs: selectLogs, runWeekday: runWeekday, sharedStatus: sharedStatus,
-        selectWeekendLogs: selectWeekendLogs, runWeekend: runWeekend, isChoosing: function () { return choosing; },
-        exportHistory: function () { download(WorkloadShare.historyText(), WorkloadShare.dayKey(new Date()) + "_HTML履歴.json"); },
-        exportPending: function () { try { download(JSON.stringify({ schemaVersion: 1, application: "WorkloadRankingHTML", jobs: WorkloadShare.pendingExport() }, null, 2), "業務量モニター_保存待ち控え.json"); } catch (error) { fail(error); } }
+        selectWeekendLogs: selectWeekendLogs, runWeekend: runWeekend, isChoosing: function () { return choosing; }
     };
 }());

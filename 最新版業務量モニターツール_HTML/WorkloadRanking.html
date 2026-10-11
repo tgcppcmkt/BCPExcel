@@ -584,12 +584,6 @@
       }
       return allCommitted ? 0 : total;
     }
-    function refreshSupportCounts() {
-      var i;
-      for (i = 0; i < staffData.length; i++) {
-        refreshStaffSupport(staffData[i]);
-      }
-    }
     function hasSupportRequest(staff) {
       var i;
       for (i = 0; i < staff.cas.length; i++) {
@@ -857,7 +851,7 @@
       return changes;
     }
     function applyShared(force) {
-      var version, list, scroll, focus, target, changes, i, key, staff, label;
+      var version, list, scroll, focus, target, changes, i, key, staff;
       if (!sharedSnapshot || importBusy || shareWriteBusy || editing || pendingRemoval) { return; }
       version = sharedSnapshot.date + "|" + sharedSnapshot.revision;
       if (!force && sharedVersion === version) { return; }
@@ -893,10 +887,9 @@
       applyShared(false);
     }
     function setShareBusy(value) {
-      var input = byId("supportInput"), save = byId("supportSave");
+      var input = byId("supportInput");
       shareWriteBusy = value;
       if (input) { input.disabled = value; }
-      if (save) { save.disabled = value; }
       if (pendingRemoval) { byId("removalConfirm").disabled = value; byId("removalCancel").disabled = value; }
       shareStatus();
     }
@@ -1367,11 +1360,6 @@
       updateCommitVisibility(); resizeRanking();
       if (target) { target.focus(); }
     }
-    function collapseAll() {
-      if (!commitSupport(true, collapseAll)) { return; }
-      expanded = {}; cancelDetailRender();
-      renderTable();
-    }
     function runSearch() {
       searchTimer = null;
       var nextSearch = normalized(trim(byId("searchInput").value)), ranked, i, opened = false;
@@ -1668,7 +1656,6 @@
       setMode: setMode, setWeekendItem: setWeekendItem,
       refreshBrowserShare: function () { sharedVersion = ""; applyShared(true); renderTable(true); },
       canChooseBrowserFiles: function () { return !(importBusy || shareWriteBusy || editing || pendingSupport || pendingRemoval); },
-      canRetryBrowserWrites: function () { return !(importBusy || shareWriteBusy); },
       browserWriteRecovered: function (action, snapshot) {
         var ca;
         if (snapshot) { sharedSnapshot = snapshot; }
@@ -1688,7 +1675,6 @@
       requestSupportWanted: requestSupportWanted,
       showCALinkStatus: showCALinkStatus,
       toggleStaff: toggleStaff,
-      collapseAll: collapseAll,
       applySearch: applySearch,
       searchFocus: searchFocus,
       clearSearch: clearSearch,
