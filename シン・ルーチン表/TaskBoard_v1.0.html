@@ -726,8 +726,6 @@ noscript {display:block;padding:20px;color:var(--danger)}
     }
     menuItem('編集する','edit',function(){openTask(task.id);});
     menu.append(node('div','menu-divider'));
-    for(const status of C.STATUSES)if(status!==task.status)menuItem(labels[status]+'へ移動','arrow',function(){moveTask(task.id,status);});
-    menu.append(node('div','menu-divider'));
     menuItem('削除する','trash',async function(){
       if(!confirm('「'+task.title+'」を削除しますか？'+(state.mode==='shared'?'\n共有している全員の画面から削除されます。':'')))return;
       try{await savePatch(task.id,{deleted:true});toast('タスクを削除しました。');}catch(error){toast(errorText(error),true);}
@@ -805,7 +803,7 @@ noscript {display:block;padding:20px;color:var(--danger)}
     const past=state.selectedDate<currentDate;
     $('add-button').disabled=past;
     document.querySelectorAll('.column-add').forEach(function(button){button.disabled=past;});
-    $('task-date').min=state.editing?'':currentDate;
+    $('task-date').min=currentDate;
   }
   function openTask(id,status) {
     if(dialogBusy||state.booting)return;
@@ -837,7 +835,7 @@ noscript {display:block;padding:20px;color:var(--danger)}
     const patch={date:$('task-date').value,time:$('task-time').value,title:$('task-title').value.trim(),assignee:$('task-assignee').value.trim(),assignee2:$('task-assignee2').value.trim(),status:$('task-status').value,notes:$('task-notes').value};
     if(!Object.keys(patch).every(function(k){return C.validField(k,patch[k]);})){showError('task-error','日付・時間・タスクを確認してください。');return;}
     const original=state.editing;
-    if(!original&&patch.date<today()){showError('task-error','過去日にはタスクを追加できません。');return;}
+    if(patch.date<today()){showError('task-error','日付は今日以降を選択してください。');return;}
     const targetDate=patch.date;
     if(original)for(const key of Object.keys(patch))if(patch[key]===original[key])delete patch[key];
     if(!Object.keys(patch).length){$('task-dialog').close();return;}
