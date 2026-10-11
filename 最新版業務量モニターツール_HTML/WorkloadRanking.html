@@ -76,15 +76,14 @@
     .heading-title, .heading-count { display: table-cell; vertical-align: middle; }
     h2 { margin: 0 0 2px; font-size: 17px; font-weight: 700; }
     .ranking-description { margin: 0; color: #4e5d72; font-size: 11px; }
+    .heading-tools { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 4px; }
+    .heading-tools .search-box { flex: 0 0 258px; }
     .heading-count { width: 190px; text-align: right; color: #526178; font-size: 11px; }
     .heading-count strong { color: #4b5c74; font-weight: 700; }
     .team-ca-check-summary { padding: 0 22px 12px; }
     .team-ca-check-item { display: inline-block; width: 50%; padding: 3px 12px 3px 0; font-size: 11px; line-height: 20px; vertical-align: top; }
     .team-ca-check-name { display: inline-block; width: 55%; color: #465873; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
     .team-ca-check-count { display: inline-block; width: 45%; color: #a83e53; white-space: nowrap; vertical-align: middle; }
-    .toolbar { display: table; width: 100%; padding: 0 22px 16px; }
-    .toolbar-left, .toolbar-right { display: table-cell; vertical-align: middle; }
-    .toolbar-right { text-align: right; white-space: nowrap; }
     .search-box { position: relative; display: inline-block; width: 258px; vertical-align: middle; }
     .search-box input { width: 100%; height: 34px; border: 1px solid #7384a0; border-radius: 7px; padding: 7px 34px 7px 33px; background: #e4e9f0; color: #33435a; }
     .search-placeholder { position: absolute; left: 33px; top: 8px; color: #536179; font-size: 12px; cursor: text; }
@@ -92,7 +91,10 @@
     .search-icon:after { content: ""; position: absolute; width: 5px; height: 1.5px; background: #95a0b3; left: 6px; top: 7px; -ms-transform: rotate(45deg); transform: rotate(45deg); }
     .search-clear { display: none; position: absolute; top: 5px; right: 5px; height: 24px; width: 24px; border: 0; border-radius: 4px; color: #71819a; background: transparent; font-size: 17px; line-height: 20px; }
     .search-clear:hover { background: #e9edf5; }
-    .sort-select { margin-left: 9px; height: 34px; min-width: 176px; border: 1px solid #7384a0; border-radius: 7px; padding: 4px 7px; color: #3f5069; background: #e9edf2; vertical-align: middle; font-size: 12px; }
+    .sort-button { width: 19px; height: 22px; margin-left: 3px; padding: 0; border: 0; color: inherit; background: transparent; font-size: 9px; vertical-align: middle; opacity: .65; }
+    .sort-button:hover, .sort-button:focus, .active-sort .sort-button { opacity: 1; color: #a83e53; }
+    .sort-button:focus { outline: none; }
+    .sort-button:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
     .quiet-button { height: 32px; background: #e9edf2; color: #455873; border: 1px solid #7384a0; border-radius: 6px; padding: 4px 11px; margin-left: 6px; font-size: 11px; }
     .quiet-button:hover { background: #dde3ec; border-color: #cbd3e3; }
     .ranking-header-wrap { background: #dce3ed; }
@@ -104,7 +106,10 @@
     .ranking-table th.rank-heading { text-align: center; }
     .ranking-table th.staff-heading { text-align: left; }
     .ranking-table th.team-heading { text-align: left; }
-    .ranking-table th.active-sort { color: #4d568d; }
+    .ranking-table th.active-sort { color: #a83e53; }
+    .ranking-table th.sortable-heading { padding-left: 4px; padding-right: 4px; white-space: nowrap; }
+    .ranking-table th.reference-heading { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .reference-heading span { display: inline-block; max-width: calc(100% - 22px); overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
     .ranking-table th.support-heading { text-align: center; }
     .support-heading-note { display: block; color: #536179; font-size: 9px; font-weight: 500; }
     .staff-row td.staff-support { text-align: center; }
@@ -334,7 +339,7 @@
       .capacity-details, .capacity-controls, .capacity-log-action { border-color: var(--wm-border); }
       .time-input, .search-box input, .support-input { color: var(--wm-text); background: #16191f; border-color: #7b8ba3; }
       .time-input.invalid, .support-input.invalid { border-color: var(--wm-red); background: var(--wm-red-bg); }
-      .capacity-recalculate, .quiet-button, .sort-select, .modal-button,
+      .capacity-recalculate, .quiet-button, .modal-button,
       .browser-controls button { background: var(--wm-raised); color: var(--wm-text); border-color: #7b8ba3; }
       .capacity-recalculate:hover, .quiet-button:hover, .modal-button:hover { background: #3a4250; border-color: #a1b4d1; }
       .capacity-log-button, .ca-link-button, .team-filter-clear, .support-save,
@@ -350,7 +355,9 @@
       .search-icon:after { background: var(--wm-muted); }
       .ranking-header-wrap, .ranking-table th, .ranking-footer { background: #181c22; border-color: var(--wm-border); }
       .ranking-table th { color: var(--wm-muted); }
-      .ranking-table th.active-sort, .staff-name:hover,
+      .ranking-table th.active-sort, .sort-button:hover, .sort-button:focus,
+      .active-sort .sort-button { color: var(--wm-red); }
+      .staff-name:hover,
       .detail-header strong, .ca-table td.ca-name-cell.name-match { color: var(--wm-accent); }
       .staff-row td, .ca-table { background: var(--wm-card); }
       .staff-row td, .ca-table td { border-color: #485567; }
@@ -548,6 +555,15 @@
       }
       cachedSupports["@" + staff.id] = count; return count;
     }
+    function weekendReferenceFor(staff) {
+      var total = 0, allCommitted = true, i, ca;
+      for (i = 0; i < staff.cas.length; i++) {
+        ca = staff.cas[i];
+        if (!ca.committedAt) { allCommitted = false; }
+        total += (ca.weekendCounts || [])[9] || 0;
+      }
+      return allCommitted ? 0 : total;
+    }
     function refreshSupportCounts() {
       var i;
       for (i = 0; i < staffData.length; i++) {
@@ -622,13 +638,13 @@
       return changed;
     }
     function rankedStaff() {
-      var result = [], i;
+      var result = [], i, referenceSort = displayMode === "weekend" && sortKey === "reference";
       for (i = 0; i < staffData.length; i++) {
         if (selectedTeam && teamNameOf(staffData[i]) !== selectedTeam) { continue; }
-        result.push({ staff: staffData[i], totals: totalsFor(staffData[i]), originalOrder: i });
+        result.push({ staff: staffData[i], totals: totalsFor(staffData[i]), reference: referenceSort ? weekendReferenceFor(staffData[i]) : 0, originalOrder: i });
       }
       result.sort(function (a, b) {
-        return (b.totals[sortKey] - a.totals[sortKey]) || (a.originalOrder - b.originalOrder);
+        return (referenceSort ? b.reference - a.reference : b.totals[sortKey] - a.totals[sortKey]) || (a.originalOrder - b.originalOrder);
       });
       return result;
     }
@@ -672,12 +688,11 @@
       byId("modeWeekend").setAttribute("aria-pressed", weekend ? "true" : "false");
       for (i = 0; i < ids.length; i++) {
         columns = byId(ids[i]); if (!weekdayColumns[ids[i]]) { weekdayColumns[ids[i]] = columns.innerHTML; }
-        columns.innerHTML = weekend ? '<col style="width:5%" /><col style="width:37%" /><col style="width:9%" /><col style="width:14%" /><col style="width:35%" />' : weekdayColumns[ids[i]];
+        columns.innerHTML = weekend ? '<col style="width:5%" /><col style="width:28%" /><col style="width:9%" /><col style="width:14%" /><col style="width:9%" /><col style="width:35%" />' : weekdayColumns[ids[i]];
       }
       byId("heading-team").style.display = weekend ? "none" : "";
       byId("heading-unread").style.display = byId("heading-flag").style.display = weekend ? "none" : "";
-      byId("sortUnread").hidden = byId("sortFlag").hidden = weekend;
-      byId("sortUnread").disabled = byId("sortFlag").disabled = weekend;
+      byId("heading-reference").style.display = weekend ? "" : "none";
       setText(byId("summaryFormula"), weekend ? "チェックした対象ログの合計" : "純粋未読 ＋ フラグ");
       setText(byId("totalFormula"), weekend ? "合計 ＝ チェックした対象ログ　／　未仕分・参考項目は合計に含めません。" : "合計 ＝ 純粋未読 ＋ フラグ　／　未仕分は合計に含めません。");
       byId("aggregateLog").title = weekend ? "共有情報を更新し、当日の土日ログCSVを3つ選択して振分表と集計します" : "共有情報を更新してから未読CSV・フラグCSVを順に選択し、設定した振分表と集計します";
@@ -698,7 +713,7 @@
       searchText = view ? view.search : ""; sortKey = view ? view.sort : "total"; selectedTeam = mode === "weekend" ? "" : view ? view.team : "";
       capturedTime = view ? view.time : ""; capturedTimeValid = view ? view.valid : false;
       hourlyRate = view ? view.rate : mode === "weekend" ? 10 : WorkloadConfig.capacity.hourlyRate;
-      byId("searchInput").value = view ? view.searchValue : ""; byId("sortSelect").value = sortKey;
+      byId("searchInput").value = view ? view.searchValue : "";
       byId("capturedTimeInput").value = view ? view.input : ""; byId("capturedTimeInput").className = view ? view.inputClass : "time-input";
       setText(byId("dataFooter"), view ? view.footer : "「ログ集計」でCSVと振分表を取り込みます。");
       pinnedStaffRow = pinnedStaffDetail = null; pinnedStaffHTML = ""; tableDataVersion = -1; sharedVersion = "";
@@ -1015,6 +1030,7 @@
       html.push('<td class="ca-unsorted">' + format(unsorted) + '</td>');
       if (displayMode === "weekday") { html.push('<td class="ca-unread">' + format(unread) + '</td><td class="ca-flag">' + format(flag) + '</td>'); }
       html.push('<td class="ca-total">' + format(unread + flag) + '</td>');
+      if (displayMode === "weekend") { html.push('<td class="ca-reference">' + format(ca.committedAt ? 0 : (ca.weekendCounts || [])[9] || 0) + '</td>'); }
       html.push('<td class="support-cell"><div class="support-layout"><span class="ca-support-request-control" id="ca-support-request-control-' + ca.id + '">' + supportRequestHTML(ca) + '</span><span class="support-names" id="supports-' + ca.id + '">' + supportHTML(ca) + '</span></div></td></tr>');
       return html.join("");
     }
@@ -1032,16 +1048,16 @@
     }
     function detailHTML(staff, deferred) {
       var html = [], i, cas;
-      html.push('<tr class="detail-row" id="detail-' + staff.id + '"><td class="detail-cell" colspan="' + (displayMode === "weekend" ? 5 : 8) + '">');
+      html.push('<tr class="detail-row" id="detail-' + staff.id + '"><td class="detail-cell" colspan="' + (displayMode === "weekend" ? 6 : 8) + '">');
       html.push('<div class="detail-header"><strong>' + esc(staff.name) + ' さんの担当CA</strong><span class="detail-note">サポートはCAごとに最大3名</span></div>');
       html.push('<table class="ca-table" aria-label="' + esc(staff.name) + 'さんの担当CA別内訳">');
-      html.push(displayMode === "weekend" ? '<colgroup><col style="width:32%" /><col style="width:10%" /><col style="width:9%" /><col style="width:14%" /><col style="width:35%" /></colgroup>' : '<colgroup><col style="width:24%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>');
+      html.push(displayMode === "weekend" ? '<colgroup><col style="width:23%" /><col style="width:10%" /><col style="width:9%" /><col style="width:14%" /><col style="width:9%" /><col style="width:35%" /></colgroup>' : '<colgroup><col style="width:24%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>');
       html.push('<tbody id="ca-body-' + staff.id + '">');
       if (!deferred) {
         cas = rankedCAs(staff);
         for (i = 0; i < cas.length; i++) { html.push(caRowHTML(cas[i])); }
       }
-      if (!staff.cas.length) { html.push('<tr><td class="ca-empty" colspan="' + (displayMode === "weekend" ? 5 : 7) + '">担当CAはありません。</td></tr>'); }
+      if (!staff.cas.length) { html.push('<tr><td class="ca-empty" colspan="' + (displayMode === "weekend" ? 6 : 7) + '">担当CAはありません。</td></tr>'); }
       html.push('</tbody></table></td></tr>');
       return html.join("");
     }
@@ -1131,7 +1147,7 @@
     }
     function renderTable(forceDetails) {
       var ranked = rankedStaff(), html = [], visible = 0, i, item, staff, t, opened, barWidth;
-      var maxTotal = 0, headings = ["unsorted", "unread", "flag", "total"];
+      var maxTotal = 0, headings = ["unsorted", "unread", "flag", "total", "reference"];
       var reused = {}, pending = [], oldDetail;
       var canReuse = !forceDetails && tableDataVersion === dataVersion && detailSearchText === searchText;
       if (!canReuse) { cancelDetailRender(); }
@@ -1152,6 +1168,7 @@
           html.push('<td class="staff-flag"><span class="metric-value flag">' + format(t.flag) + '</span></td>');
         }
         html.push('<td class="staff-total"><span class="metric-value total-value">' + format(t.total) + '</span><div class="load-track" title="合計件数の比較（最多の担当者を100%として表示）"><span class="load-fill" style="width:' + barWidth + '%"></span></div></td>');
+        if (displayMode === "weekend") { html.push('<td class="staff-reference"><span class="metric-value unsorted">' + format(weekendReferenceFor(staff)) + '</span></td>'); }
         html.push('<td class="staff-support"><span class="staff-support-top"><span class="support-count" id="supportCount-' + staff.id + '" title="担当CA全体のサポート人数（同じ氏名は1名として集計）">' + supportCountFor(staff) + '名</span></span>' + supportWantedHTML(staff) + '</td></tr>');
         if (opened) {
           oldDetail = canReuse && byId("detail-" + staff.id);
@@ -1162,7 +1179,7 @@
       }
       if (!visible) {
         html.push(staffData.length ? '<tr><td colspan="8" class="empty-state"><strong>該当する担当者・CAが見つかりませんでした</strong>名前を変えて検索するか、検索欄をクリアしてください。</td></tr>' : '<tr><td colspan="8" class="empty-state"><strong>データはまだ集計されていません</strong>「ログ集計」ボタンで取り込んでください。</td></tr>');
-        if (displayMode === "weekend") { html[html.length - 1] = html[html.length - 1].replace('colspan="8"', 'colspan="5"'); }
+        if (displayMode === "weekend") { html[html.length - 1] = html[html.length - 1].replace('colspan="8"', 'colspan="6"'); }
       }
       replaceRankingRows(html.join(""), reused);
       tableDataVersion = dataVersion; detailSearchText = searchText;
@@ -1170,7 +1187,14 @@
       setText(byId("visibleStaff"), visible);
       byId("searchClear").style.display = searchText ? "block" : "none";
       for (i = 0; i < headings.length; i++) {
-        byId("heading-" + headings[i]).className = sortKey === headings[i] ? "active-sort" : "";
+        byId("heading-" + headings[i]).className = "sortable-heading" + (headings[i] === "reference" ? " reference-heading" : "") + (sortKey === headings[i] ? " active-sort" : "");
+        byId("heading-" + headings[i]).setAttribute("aria-sort", sortKey === headings[i] ? "descending" : "none");
+        byId("sort-" + headings[i]).setAttribute("aria-pressed", sortKey === headings[i] ? "true" : "false");
+      }
+      if (displayMode === "weekend") {
+        setText(byId("heading-reference-label"), byId("weekendLabel9").textContent);
+        byId("sort-reference").setAttribute("aria-label", byId("weekendLabel9").textContent + "が多い順に並び替え");
+        byId("sort-reference").setAttribute("title", byId("weekendLabel9").textContent + "が多い順に並び替え");
       }
       byId("teamFilterBar").style.display = selectedTeam ? "block" : "none";
       setText(byId("teamFilterName"), selectedTeam);
@@ -1358,9 +1382,10 @@
       renderTable();
       byId("searchInput").focus();
     }
-    function applySort() {
-      if (!commitSupport(true, applySort)) { return; }
-      sortKey = byId("sortSelect").value;
+    function applySort(key) {
+      if (["total", "unread", "flag", "unsorted", "reference"].indexOf(key) === -1 || displayMode === "weekend" && (key === "unread" || key === "flag") || displayMode !== "weekend" && key === "reference") { return; }
+      if (!commitSupport(true, function () { applySort(key); })) { return; }
+      sortKey = key;
       renderTable();
     }
     function filterByTeam(staffId) {
@@ -1596,7 +1621,6 @@
       byId("removalConfirm").disabled = false; byId("removalCancel").disabled = false;
       document.body.style.overflow = "";
       byId("searchInput").value = ""; searchFocus(false);
-      byId("sortSelect").value = "total";
       byId("capturedTimeInput").className = "time-input";
       byId("aggregateLog").disabled = false; setText(byId("aggregateLog"), "ログ集計");
       setText(byId("dataStatus"), "未集計 ／ 起動時にデータをクリア");
@@ -1694,21 +1718,17 @@
     <div class="dashboard" id="dashboard"><div class="ranking-pane" id="rankingPane">
     <div class="ranking-card">
       <div class="ranking-heading">
-        <div class="heading-title"><h2>担当者別ランキング</h2><p class="ranking-description">担当者名を選択すると、当日の担当CAを表示されます</p></div>
+        <div class="heading-title"><h2>担当者別ランキング</h2><div class="heading-tools"><p class="ranking-description">担当者名を選択すると、当日の担当CAを表示されます</p>
+          <div class="search-box"><span class="search-icon" aria-hidden="true"></span><input type="text" id="searchInput" title="担当者・CA名で検索" aria-label="担当者・CA名で検索" onfocus="WorkloadUI.searchFocus(true)" onblur="WorkloadUI.searchFocus(false)" onkeyup="WorkloadUI.applySearch()" oninput="WorkloadUI.applySearch()" onchange="WorkloadUI.applySearch()" /><label for="searchInput" id="searchPlaceholder" class="search-placeholder">担当者・CA名で検索</label><button type="button" class="search-clear" id="searchClear" title="検索をクリア" aria-label="検索をクリア" onclick="WorkloadUI.clearSearch()">×</button></div>
+        </div></div>
         <div class="heading-count">表示 <strong id="visibleStaff">0</strong> ／ <span id="staffTotal">0</span> 名 &nbsp;・&nbsp; 全 <span id="caTotal">0</span> CA</div>
       </div>
       <div id="teamCheckSummary" class="team-ca-check-summary" role="status" aria-live="polite" style="display:none"></div>
-      <div class="toolbar">
-        <div class="toolbar-left">
-          <div class="search-box"><span class="search-icon" aria-hidden="true"></span><input type="text" id="searchInput" title="担当者・CA名で検索" aria-label="担当者・CA名で検索" onfocus="WorkloadUI.searchFocus(true)" onblur="WorkloadUI.searchFocus(false)" onkeyup="WorkloadUI.applySearch()" oninput="WorkloadUI.applySearch()" onchange="WorkloadUI.applySearch()" /><label for="searchInput" id="searchPlaceholder" class="search-placeholder">担当者・CA名で検索</label><button type="button" class="search-clear" id="searchClear" title="検索をクリア" aria-label="検索をクリア" onclick="WorkloadUI.clearSearch()">×</button></div>
-          <select id="sortSelect" class="sort-select" aria-label="ランキングの並び順" onchange="WorkloadUI.applySort()"><option value="total">合計が多い順</option><option value="unread" id="sortUnread">純粋未読が多い順</option><option value="flag" id="sortFlag">フラグが多い順</option><option value="unsorted">未仕分が多い順</option></select>
-        </div>
-      </div>
       <div id="teamFilterBar" class="team-filter-bar" style="display:none" aria-live="polite"><span class="team-filter-label">表示チーム</span><strong id="teamFilterName" class="team-filter-name"></strong><span class="team-filter-rank">チーム内順位</span><button type="button" id="clearTeamFilter" class="team-filter-clear" onclick="WorkloadUI.clearTeamFilter()">全チームに戻す</button></div>
       <div class="ranking-header-wrap" id="rankingHeader">
       <table class="ranking-table" aria-label="ランキングの項目">
         <colgroup id="rankingHeaderCols"><col style="width:5%" /><col style="width:18%" /><col style="width:10%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>
-        <thead><tr><th scope="col" class="rank-heading">順位</th><th scope="col" class="staff-heading">担当者</th><th scope="col" id="heading-team" class="team-heading">チーム</th><th scope="col" id="heading-unsorted">未仕分</th><th scope="col" id="heading-unread">純粋未読</th><th scope="col" id="heading-flag">フラグ</th><th scope="col" id="heading-total" class="active-sort">合計</th><th scope="col" class="support-heading">サポート投入状況<span class="support-heading-note">人数／担当CA別の氏名</span></th></tr></thead>
+        <thead><tr><th scope="col" class="rank-heading">順位</th><th scope="col" class="staff-heading">担当者</th><th scope="col" id="heading-team" class="team-heading">チーム</th><th scope="col" id="heading-unsorted" class="sortable-heading" aria-sort="none">未仕分<button type="button" id="sort-unsorted" class="sort-button" aria-label="未仕分が多い順に並び替え" title="未仕分が多い順に並び替え" aria-pressed="false" onclick="WorkloadUI.applySort('unsorted')">▼</button></th><th scope="col" id="heading-unread" class="sortable-heading" aria-sort="none">純粋未読<button type="button" id="sort-unread" class="sort-button" aria-label="純粋未読が多い順に並び替え" title="純粋未読が多い順に並び替え" aria-pressed="false" onclick="WorkloadUI.applySort('unread')">▼</button></th><th scope="col" id="heading-flag" class="sortable-heading" aria-sort="none">フラグ<button type="button" id="sort-flag" class="sort-button" aria-label="フラグが多い順に並び替え" title="フラグが多い順に並び替え" aria-pressed="false" onclick="WorkloadUI.applySort('flag')">▼</button></th><th scope="col" id="heading-total" class="sortable-heading active-sort" aria-sort="descending">合計<button type="button" id="sort-total" class="sort-button" aria-label="合計が多い順に並び替え" title="合計が多い順に並び替え" aria-pressed="true" onclick="WorkloadUI.applySort('total')">▼</button></th><th scope="col" id="heading-reference" class="sortable-heading reference-heading" aria-sort="none" style="display:none" title="合計件数には含めません"><span id="heading-reference-label">Q列</span><button type="button" id="sort-reference" class="sort-button" aria-label="Q列が多い順に並び替え" title="Q列が多い順に並び替え" aria-pressed="false" onclick="WorkloadUI.applySort('reference')">▼</button></th><th scope="col" class="support-heading">サポート投入状況<span class="support-heading-note">人数／担当CA別の氏名</span></th></tr></thead>
       </table></div>
       <div class="ranking-scroll-wrap">
       <div class="pinned-staff" id="pinnedStaff" role="group" aria-label="展開中の担当者">
