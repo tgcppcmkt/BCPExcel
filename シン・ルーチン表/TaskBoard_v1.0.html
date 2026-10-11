@@ -1,0 +1,1045 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="時刻順のタスクを未対応・対応中・完了へドラッグして管理。共有フォルダ、期限リマインド、ライト／ダークモードに対応。">
+<title>タスク管理</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%2334473e'/%3E%3Crect x='14' y='16' width='10' height='31' rx='4' fill='%23f6cbd1'/%3E%3Crect x='27' y='16' width='10' height='22' rx='4' fill='%23bbd8ed'/%3E%3Crect x='40' y='16' width='10' height='15' rx='4' fill='%23d5d8d6'/%3E%3C/svg%3E">
+<style>
+:root {
+  color-scheme: light dark;
+  --bg:#f5f5f1; --surface:#fff; --ink:#27332d; --muted:#6b756f; --line:#e1e5df;
+  --accent:#344b3f; --accent-hover:#253a30; --on-accent:#fff; --soft:#eef1eb;
+  --pending:#f9e8e9; --pending-line:#efd0d4; --pending-ink:#904552; --pending-dot:#c97b89;
+  --progress:#e9f2f9; --progress-line:#cadfeb; --progress-ink:#476f8b; --progress-dot:#729ebd;
+  --done:#edf0ed; --done-line:#dce1dc; --done-ink:#68756c; --done-dot:#96a49a;
+  --danger:#ab2f40; --danger-bg:#ffe0e4; --danger-line:#d75467;
+  --shadow:0 3px 14px #26352e08; --modal-shadow:0 24px 100px #0003;
+}
+@media(prefers-color-scheme:dark) {
+  :root {
+    --bg:#171d1a; --surface:#222a25; --ink:#e7eee9; --muted:#a1afa5; --line:#354138;
+    --accent:#bdd6c6; --accent-hover:#d2e5d9; --on-accent:#17251c; --soft:#2b362e;
+    --pending:#3e2d32; --pending-line:#64464e; --pending-ink:#f1bdc8; --pending-dot:#d496a3;
+    --progress:#263641; --progress-line:#425d6f; --progress-ink:#b9d8ec; --progress-dot:#94bad4;
+    --done:#2b3430; --done-line:#414d46; --done-ink:#b9c7be; --done-dot:#93a69a;
+    --danger:#ffb3c0; --danger-bg:#552632; --danger-line:#e68297;
+    --shadow:0 3px 14px #0002; --modal-shadow:0 24px 100px #0007;
+  }
+}
+* {box-sizing:border-box}
+body {margin:0; background:var(--bg); color:var(--ink); font:15px/1.6 "Yu Gothic UI","Hiragino Kaku Gothic ProN",Meiryo,system-ui,sans-serif}
+button,input,textarea,select {font:inherit}
+button {cursor:pointer; color:inherit}
+button:disabled {opacity:.5; cursor:wait}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[tabindex]:focus-visible {
+  outline:3px solid var(--progress-dot); outline-offset:3px;
+}
+button {touch-action:manipulation}
+[hidden] {display:none!important}
+svg.icon {width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.app {max-width:1880px; margin:0 auto; padding:32px 40px 20px}
+.header {display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:28px}
+.brand {display:flex;align-items:center;gap:14px}
+.brand-mark {width:46px;height:46px;border-radius:14px;display:flex;gap:4px;align-items:flex-start;justify-content:center;background:var(--accent);padding:11px 9px;box-shadow:var(--shadow)}
+.brand-mark span {width:7px;border-radius:3px; background:#f1c4cd;height:25px}
+.brand-mark span:nth-child(2) {background:#b7d6eb;height:18px}
+.brand-mark span:nth-child(3) {background:#d9dfd9;height:12px}
+.eyebrow {font-size:10px;font-weight:700;letter-spacing:2.2px;color:var(--muted);line-height:1.3;margin-bottom:3px}
+h1 {font-size:25px;line-height:1.4;letter-spacing:.02em;margin:0;font-weight:700}
+.header-right {display:flex;align-items:center;gap:18px}
+.clock {font-variant-numeric:tabular-nums;font-size:26px;font-weight:600;letter-spacing:.035em;line-height:1.3}
+.clock small {font-size:11px;font-weight:500;color:var(--muted);display:block;text-align:right;letter-spacing:.08em}
+.button {display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--surface);padding:10px 15px;border-radius:11px;font-size:13px;font-weight:600;white-space:nowrap;transition:background .15s,transform .15s}
+.button:hover {background:var(--soft)}
+.button.primary {background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.button.primary:hover {background:var(--accent-hover)}
+.button.small {padding:7px 11px;font-size:12px;border-radius:9px}
+.button.text {background:transparent;border-color:transparent;color:var(--muted)}
+.button.text:hover {background:var(--soft);color:var(--ink)}
+.icon-button {width:32px;height:32px;border:0;border-radius:9px;background:transparent;display:inline-flex;align-items:center;justify-content:center}
+.icon-button:hover {background:var(--surface)}
+.toolbar {display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
+.date-group {display:flex;align-items:center;gap:8px}
+.date-shell {display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:8px 12px;position:relative}
+.date-shell .icon {color:var(--muted)}
+.date-shell input {color:var(--ink);background:transparent;border:0;width:142px;font-size:13px;font-weight:600;padding:2px 0;cursor:pointer}
+.date-label {color:var(--muted);font-size:12px}
+.toolbar-right {display:flex;align-items:center;gap:16px}
+.search {display:flex;align-items:center;gap:8px;max-width:300px;min-width:200px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--muted)}
+.search input {border:0;outline:none;background:transparent;color:var(--ink);width:100%;min-width:0;font-size:12px}
+.search:focus-within {outline:2px solid var(--progress-dot);outline-offset:2px}
+.mine-filter {padding:9px 12px;font-size:12px}
+.mine-filter[aria-pressed="true"] {background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.profile-button .button-label {max-width:100px;overflow:hidden;text-overflow:ellipsis}
+.drag-hint {display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);white-space:nowrap}
+.summary {display:flex;align-items:center;justify-content:space-between;gap:20px;border-top:1px solid var(--line);padding:17px 0 18px}
+.summary-title {font-size:14px;font-weight:600}
+.summary-title span {font-size:12px;font-weight:400;color:var(--muted);margin-left:10px}
+.progress-group {display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;min-width:180px}
+.progress-track {width:100px;height:5px;background:var(--line);border-radius:8px;overflow:hidden}
+.progress-fill {height:100%;background:var(--accent);border-radius:8px;transition:width .2s}
+.reminder {display:flex;align-items:center;gap:12px;background:var(--danger-bg);color:var(--danger);border:1px solid var(--pending-line);border-radius:12px;padding:12px 16px;margin-bottom:18px;font-size:13px}
+.reminder strong {font-weight:650}
+.reminder .button {margin-left:auto;color:var(--danger);background:transparent;border-color:var(--danger-line)}
+.system-message {padding:10px 14px;background:var(--surface);border:1px solid var(--danger-line);color:var(--danger);border-radius:10px;font-size:12px;margin-bottom:16px}
+.board {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:stretch}
+.column {border:1px solid var(--line);border-radius:16px;background:color-mix(in srgb,var(--surface) 48%,transparent);display:flex;flex-direction:column;min-height:calc(100dvh - 292px);transition:background .15s,border-color .15s}
+.column.pending {--tone:var(--surface);--tone-line:var(--line);--tone-ink:var(--muted);--dot:var(--muted)}
+.column.progress {--tone:var(--progress);--tone-line:var(--progress-line);--tone-ink:var(--progress-ink);--dot:var(--progress-dot)}
+.column.done {--tone:var(--done);--tone-line:var(--done-line);--tone-ink:var(--done-ink);--dot:var(--done-dot)}
+.column.drag-over {background:var(--tone);border-color:var(--dot);box-shadow:inset 0 0 0 1px var(--dot)}
+.column-head {padding:19px 20px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.column-title {display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700;margin:0}
+.status-dot {width:8px;height:8px;border-radius:50%;background:var(--dot)}
+.column-count {padding:1px 8px;min-width:25px;line-height:1.6;border-radius:7px;background:var(--tone);color:var(--tone-ink);font-size:11px;font-weight:600}
+.column-head .icon-button {color:var(--muted);width:26px;height:26px}
+.card-list {padding:0 14px 14px;flex:1;min-height:270px}
+.task-card {border:1px solid var(--tone-line);background:var(--tone);border-radius:10px;padding:10px 12px;position:relative;margin-bottom:8px;box-shadow:var(--shadow);cursor:grab;transition:box-shadow .15s,transform .15s,border-color .15s}
+.task-card:last-child {margin-bottom:0}
+.task-card:hover {box-shadow:0 5px 18px #26352e14;transform:translateY(-1px)}
+.task-card.dragging {opacity:.45;cursor:grabbing}
+.task-card.overdue {background:var(--danger-bg);border-color:var(--danger-line);box-shadow:inset 3px 0 0 var(--danger-line),var(--shadow)}
+.task-card:focus {scroll-margin:80px}
+.card-row {display:grid;grid-template-columns:64px minmax(0,1fr) minmax(78px,118px) 55px;align-items:center;gap:10px;min-height:40px}
+.card-time-block {min-width:0}
+.card-time {display:flex;align-items:center;gap:5px;color:var(--tone-ink);font-size:16px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:.01em;white-space:nowrap}
+.card-time .icon {width:13px;height:13px;opacity:.8}
+.overdue .card-time {color:var(--danger)}
+.done .card-time {color:var(--done-ink)}
+.card-buttons {display:flex;align-items:center;gap:1px;color:var(--tone-ink)}
+.card-buttons .icon-button {width:27px;height:27px}
+.expand-button .icon {width:16px;height:16px;transition:transform .15s}
+.expand-button[aria-expanded="true"] .icon {transform:rotate(45deg)}
+.task-title {font-size:14px;font-weight:600;line-height:1.55;margin:0;min-width:0;overflow-wrap:anywhere;white-space:pre-wrap}
+.card-assignees {display:flex;flex-direction:column;gap:2px;min-width:0}
+.assignee {display:flex;align-items:center;gap:5px;color:var(--tone-ink);font-size:11px;line-height:1.6;min-width:0}
+.assignee-slot {flex-shrink:0;font-size:10px;opacity:.75}
+.assignee-name {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.late-label {font-size:9px;font-weight:700;color:var(--danger);display:block;white-space:nowrap;line-height:1.4;margin-top:2px}
+.card-notes {border-top:1px solid var(--tone-line);padding-top:9px;margin-top:10px}
+.notes-label {color:var(--tone-ink);font-size:10px;letter-spacing:.06em;font-weight:650;margin-bottom:5px}
+.notes-text {font-size:12px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink)}
+.card-menu {position:fixed;left:0;top:0;z-index:20;width:170px;max-width:calc(100vw - 16px);padding:5px;border:1px solid var(--line);background:var(--surface);border-radius:10px;box-shadow:0 12px 30px #0002;cursor:default;overflow-y:auto;overscroll-behavior:contain}
+.card-menu button {display:flex;gap:8px;align-items:center;border:0;background:transparent;width:100%;text-align:left;padding:9px 10px;border-radius:6px;font-size:12px}
+.card-menu button:hover {background:var(--soft)}
+.card-menu button.danger {color:var(--danger)}
+.menu-divider {height:1px;background:var(--line);margin:4px}
+.empty {min-height:245px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;padding:24px 16px}
+.empty-art {width:50px;height:58px;margin-bottom:10px;position:relative}
+.empty-art:before,.empty-art:after {content:"";position:absolute;width:35px;height:42px;border:1.5px solid var(--tone-line);border-radius:6px;background:var(--tone);top:6px;left:4px;transform:rotate(-9deg)}
+.empty-art:after {top:10px;left:13px;transform:rotate(7deg);background:var(--surface)}
+.empty strong {font-size:12px;font-weight:550;color:var(--tone-ink)}
+.empty p {margin:0;font-size:11px;color:var(--muted)}
+.column-bottom {padding:12px 20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;color:var(--muted);font-size:10px;letter-spacing:.025em}
+.footer {display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:15px;color:var(--muted);font-size:11px}
+.save-state {display:flex;align-items:center;gap:7px;min-width:0}
+.save-dot {width:6px;height:6px;border-radius:50%;background:var(--done-dot);flex-shrink:0}
+.save-dot.shared {background:#71a885}
+.save-dot.error {background:var(--danger-line)}
+.footer-actions {display:flex;align-items:center;gap:4px}
+.footer-actions .button {font-size:11px;padding:5px 8px}
+dialog {width:min(520px,calc(100% - 32px));border:1px solid var(--line);border-radius:19px;padding:0;background:var(--surface);color:var(--ink);box-shadow:var(--modal-shadow);max-height:calc(100dvh - 40px)}
+dialog::backdrop {background:#13281e66;backdrop-filter:blur(3px)}
+.dialog-head {display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px 26px 17px;border-bottom:1px solid var(--line)}
+.dialog-head h2 {font-size:19px;margin:0;line-height:1.5}
+.dialog-head p {font-size:11px;color:var(--muted);margin:3px 0 0}
+.dialog-body {padding:22px 26px}
+.field {margin-bottom:17px}
+.field:last-child {margin-bottom:0}
+.field label {display:block;font-size:12px;font-weight:650;margin-bottom:6px}
+.field label span {font-weight:400;color:var(--muted);font-size:10px;margin-left:5px}
+.field input,.field textarea,.field select {width:100%;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:10px 12px;outline:none;font-size:13px}
+.field input:focus,.field textarea:focus,.field select:focus {border-color:var(--progress-dot);outline:2px solid color-mix(in srgb,var(--progress-dot) 25%,transparent)}
+.field textarea {resize:vertical;min-height:105px;max-height:230px;line-height:1.8}
+.field-row {display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.field-label-row {display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.field-label-row label {margin-bottom:0}
+.field-label-row .button {padding:4px 7px;font-size:11px;color:var(--accent)}
+.field-label-row .icon {width:14px;height:14px}
+.dialog-foot {display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:16px 26px 22px}
+.form-error {padding:10px 12px;background:var(--danger-bg);color:var(--danger);border-radius:8px;font-size:12px;margin-top:16px;white-space:pre-wrap}
+.help-intro {font-size:13px;line-height:1.9;margin:0 0 20px;color:var(--muted)}
+.help-step {display:flex;gap:12px;align-items:flex-start;margin:0 0 19px}
+.step-number {display:flex;align-items:center;justify-content:center;flex-shrink:0;width:25px;height:25px;border-radius:8px;background:var(--soft);font-size:12px;font-weight:650}
+.help-step strong {font-size:13px;display:block;margin-bottom:2px}
+.help-step p {font-size:12px;margin:0;color:var(--muted);line-height:1.85}
+.share-status {padding:13px 15px;border:1px solid var(--line);background:var(--bg);border-radius:10px;font-size:12px;line-height:1.8;margin-bottom:14px;overflow-wrap:anywhere}
+.share-buttons {display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.note {font-size:11px;color:var(--muted);line-height:1.9;margin:12px 0 0}
+.settings-section {padding-top:20px;margin-top:20px;border-top:1px solid var(--line)}
+.settings-section h3 {font-size:13px;margin:0 0 10px}
+.checkbox-label {display:flex;align-items:flex-start;gap:8px;font-size:12px;margin:13px 0}
+.checkbox-label input {margin-top:5px;accent-color:var(--accent)}
+kbd {font-size:10px;background:var(--soft);border:1px solid var(--line);border-radius:4px;padding:1px 4px}
+.toast {position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:30;background:var(--accent);color:var(--on-accent);padding:12px 20px;border-radius:12px;box-shadow:0 8px 28px #0002;font-size:13px;max-width:min(560px,calc(100% - 30px));text-align:center}
+.toast.error {background:var(--danger-bg);color:var(--danger);border:1px solid var(--danger-line)}
+noscript {display:block;padding:20px;color:var(--danger)}
+@media(min-width:1100px) {
+  .column {height:calc(100dvh - 292px);min-height:420px}
+  .card-list {overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+  body:has(.reminder:not([hidden])) .column {height:calc(100dvh - 356px)}
+}
+@media(max-width:1050px) {
+  .app {padding:25px 24px 18px}
+  .board {gap:12px}
+  .drag-hint {display:none}
+  .card-list {padding:0 10px 10px}
+  .column-head {padding:17px 15px 14px}
+  .column {min-height:530px}
+}
+@media (min-width:721px) and (max-width:1440px), (max-width:480px) {
+  .card-row {grid-template-columns:64px minmax(0,1fr) 55px;gap:4px 8px}
+  .card-time-block {grid-column:1;grid-row:1 / span 2;align-self:start}
+  .task-title {grid-column:2;grid-row:1}
+  .card-assignees {grid-column:2;grid-row:2;flex-direction:row;flex-wrap:wrap;gap:2px 8px}
+  .card-assignees .assignee {max-width:100%}
+  .card-buttons {grid-column:3;grid-row:1 / span 2;align-self:start}
+}
+@media(max-width:480px) {
+  .assignee-fields {grid-template-columns:1fr;gap:0}
+}
+@media(max-width:720px) {
+  .app {padding:20px 16px 18px}
+  .header {align-items:flex-start;margin-bottom:23px;gap:12px;flex-wrap:wrap}
+  .brand-mark {width:39px;height:39px;padding:9px 7px;gap:3px;border-radius:12px}
+  .brand-mark span {height:22px}
+  .brand-mark span:nth-child(2) {height:16px}
+  .brand-mark span:nth-child(3) {height:11px}
+  .brand {gap:10px}
+  h1 {font-size:22px}
+  .clock {font-size:22px}
+  .header-right {gap:10px;flex-wrap:wrap;justify-content:flex-end;flex:1}
+  .header-right > .button {padding:8px 12px}
+  .header-right > .button .button-label {display:none}
+  .header-right > .button.primary .button-label {display:inline}
+  .clock {display:none}
+  .toolbar {flex-wrap:wrap;gap:12px}
+  .toolbar-right {width:100%}
+  .search {max-width:none;flex:1;min-width:0}
+  .toolbar-right {gap:8px}
+  .mine-filter {padding:9px 10px;font-size:11px}
+  .board {grid-template-columns:1fr;gap:16px}
+  .column {min-height:260px}
+  .card-list {min-height:140px}
+  .empty {min-height:150px}
+  .column-bottom {padding:9px 16px}
+  .summary {padding:14px 0}
+  .summary-title span {display:block;margin-left:0;font-size:11px}
+  .progress-group {min-width:130px;gap:7px}
+  .progress-track {width:68px}
+  .reminder {align-items:flex-start;gap:8px;font-size:12px;padding:12px}
+  .reminder .icon {margin-top:3px}
+  .reminder .button {padding:5px 8px}
+  .footer {align-items:flex-start}
+  .save-state {font-size:10px;max-width:60%}
+  .dialog-head {padding:19px 20px 15px}
+  .dialog-body {padding:19px 20px}
+  .dialog-foot {padding:14px 20px 20px}
+}
+@media(prefers-reduced-motion:reduce) {
+  *,*::before,*::after {transition:none!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+<svg style="display:none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4M17 3v4M3 10h18M7 14h2M13 14h2"/></symbol>
+<symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></symbol>
+<symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="m10 4-8 14a2 2 0 0 0 2 3h16a2 2 0 0 0 2-3L14 4a2.3 2.3 0 0 0-4 0Z"/><path d="M12 9v5M12 17h.01"/></symbol>
+<symbol id="i-grip" viewBox="0 0 24 24"><path d="M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01" stroke-width="3"/></symbol>
+<symbol id="i-left" viewBox="0 0 24 24"><path d="m14 6-6 6 6 6"/></symbol>
+<symbol id="i-right" viewBox="0 0 24 24"><path d="m10 6 6 6-6 6"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24"><path d="m15 4 5 5M4 20l5-1L20 8a2.5 2.5 0 0 0-4-4L5 15Z"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
+</svg>
+<noscript>このHTMLを使うには、ブラウザのJavaScriptを有効にしてください。</noscript>
+<main class="app">
+<header class="header">
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div><div class="eyebrow">TASKBOARD</div><h1>タスク管理</h1></div>
+  </div>
+  <div class="header-right">
+    <div class="clock"><time id="live-clock">--:--</time><small>現在の時刻</small></div>
+    <button class="button profile-button" id="profile-button"><svg class="icon"><use href="#i-user"/></svg><span class="button-label" id="profile-label">名前を登録</span></button>
+    <button class="button" id="share-button"><svg class="icon"><use href="#i-folder"/></svg><span class="button-label">共有設定</span></button>
+    <button class="button primary" id="add-button"><svg class="icon"><use href="#i-plus"/></svg><span class="button-label">タスク追加</span></button>
+  </div>
+</header>
+<div class="toolbar">
+  <div class="date-group">
+    <button class="icon-button" id="previous-day" aria-label="前日を表示"><svg class="icon"><use href="#i-left"/></svg></button>
+    <label class="date-shell"><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><input id="board-date" type="date" aria-label="表示する日付"></label>
+    <button class="icon-button" id="next-day" aria-label="翌日を表示"><svg class="icon"><use href="#i-right"/></svg></button>
+    <button class="button small text" id="today-button">今日</button>
+    <span class="date-label" id="weekday"></span>
+  </div>
+  <div class="toolbar-right">
+    <span class="drag-hint"><svg class="icon" aria-hidden="true"><use href="#i-grip"/></svg>ドラッグで状況を変更</span>
+    <label class="search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input id="search-input" type="search" placeholder="タスク・担当を検索" aria-label="表示日のタスク・担当を検索"></label>
+    <button class="button mine-filter" id="mine-filter" aria-pressed="false"><svg class="icon"><use href="#i-user"/></svg>自分が担当</button>
+  </div>
+</div>
+<div class="summary">
+  <div class="summary-title" id="summary-title">今日のタスク<span id="summary-count">0件のタスク</span></div>
+  <div class="progress-group"><span id="completion-label">完了 0 / 0</span><div class="progress-track" role="progressbar" aria-label="表示日の完了率" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="completion-bar"><div class="progress-fill" id="completion-fill" style="width:0%"></div></div></div>
+</div>
+<div class="reminder" id="reminder" hidden role="status" aria-live="polite">
+  <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>
+  <span id="reminder-text"></span>
+  <button class="button small" id="review-overdue">確認</button>
+</div>
+<div class="system-message" id="system-message" role="status" hidden></div>
+<div class="board" id="board">
+  <section class="column pending" data-status="pending" aria-labelledby="heading-pending">
+    <div class="column-head"><h2 class="column-title" id="heading-pending"><span class="status-dot"></span>未対応 <span class="column-count" id="count-pending">0</span></h2><button class="icon-button column-add" data-status="pending" aria-label="未対応タスクを追加"><svg class="icon"><use href="#i-plus"/></svg></button></div>
+    <div class="card-list" id="list-pending"></div>
+    <div class="column-bottom"><span>TO DO</span><span>時刻の早い順</span></div>
+  </section>
+  <section class="column progress" data-status="progress" aria-labelledby="heading-progress">
+    <div class="column-head"><h2 class="column-title" id="heading-progress"><span class="status-dot"></span>対応中 <span class="column-count" id="count-progress">0</span></h2><button class="icon-button column-add" data-status="progress" aria-label="対応中タスクを追加"><svg class="icon"><use href="#i-plus"/></svg></button></div>
+    <div class="card-list" id="list-progress"></div>
+    <div class="column-bottom"><span>IN PROGRESS</span><span>時刻の早い順</span></div>
+  </section>
+  <section class="column done" data-status="done" aria-labelledby="heading-done">
+    <div class="column-head"><h2 class="column-title" id="heading-done"><span class="status-dot"></span>完了 <span class="column-count" id="count-done">0</span></h2><button class="icon-button column-add" data-status="done" aria-label="完了タスクを追加"><svg class="icon"><use href="#i-plus"/></svg></button></div>
+    <div class="card-list" id="list-done"></div>
+    <div class="column-bottom"><span>DONE</span><span>時刻の早い順</span></div>
+  </section>
+</div>
+<footer class="footer">
+  <div class="save-state"><span class="save-dot" id="save-dot"></span><span id="save-label">このブラウザに保存</span></div>
+  <div class="footer-actions"><button class="button text" id="demo-button">サンプルを試す</button><button class="button text" id="help-button">使い方</button><span style="font-size:10px;opacity:.6;margin-left:6px">v1.0</span></div>
+</footer>
+</main>
+<dialog id="task-dialog" aria-labelledby="task-dialog-title">
+<form id="task-form">
+  <div class="dialog-head"><div><h2 id="task-dialog-title">タスクを追加</h2><p>予定時刻を決めて、仕事を見える化。</p></div><button type="button" class="icon-button dialog-close" aria-label="閉じる"><svg class="icon"><use href="#i-close"/></svg></button></div>
+  <div class="dialog-body">
+    <div class="field-row">
+      <div class="field"><label for="task-date">日付</label><input id="task-date" type="date" required></div>
+      <div class="field"><label for="task-time">時間 <span>必須</span></label><input id="task-time" type="time" step="60" required></div>
+    </div>
+    <div class="field"><label for="task-title">タスク <span>必須</span></label><input id="task-title" type="text" maxlength="200" placeholder="例：日程調整の進捗を確認" required></div>
+    <div class="field-row assignee-fields">
+      <div class="field"><div class="field-label-row"><label for="task-assignee">担当者①</label><button class="button text" id="assign-me" type="button" aria-label="担当者①に自分を設定"><svg class="icon"><use href="#i-user"/></svg>自分が担当</button></div><input id="task-assignee" type="text" maxlength="100" placeholder="例：田中"></div>
+      <div class="field"><div class="field-label-row"><label for="task-assignee2">担当者②</label><button class="button text" id="assign-me2" type="button" aria-label="担当者②に自分を設定"><svg class="icon"><use href="#i-user"/></svg>自分が担当</button></div><input id="task-assignee2" type="text" maxlength="100" placeholder="2人目（任意）"></div>
+    </div>
+    <div class="field"><label for="task-status">対応状況</label><select id="task-status"><option value="pending">未対応</option><option value="progress">対応中</option><option value="done">完了</option></select></div>
+    <div class="field"><label for="task-notes">備考 <span>カードの＋で表示</span></label><textarea id="task-notes" maxlength="6000" placeholder="確認事項や引き継ぎのメモ"></textarea></div>
+    <div class="form-error" id="task-error" role="alert" hidden></div>
+  </div>
+  <div class="dialog-foot"><button class="button dialog-close" type="button">キャンセル</button><button class="button primary" type="submit" id="task-save">追加する</button></div>
+</form>
+</dialog>
+<dialog id="profile-dialog" aria-labelledby="profile-dialog-title">
+<form id="profile-form">
+  <div class="dialog-head"><div><h2 id="profile-dialog-title">自分の名前を登録</h2><p>次回から「自分が担当」で入力できます。</p></div><button type="button" class="icon-button dialog-close" aria-label="閉じる"><svg class="icon"><use href="#i-close"/></svg></button></div>
+  <div class="dialog-body">
+    <div class="field"><label for="profile-name">名前 <span>担当欄に使う表記</span></label><input id="profile-name" type="text" maxlength="100" placeholder="例：田口" autocomplete="name" required></div>
+    <p class="note">名前はこのブラウザに記憶します。画面右上の名前ボタンから、あとで変更できます。</p>
+    <div class="form-error" id="profile-error" role="alert" hidden></div>
+  </div>
+  <div class="dialog-foot"><button class="button dialog-close" id="profile-cancel" type="button">あとで</button><button class="button primary" id="profile-save" type="submit">登録する</button></div>
+</form>
+</dialog>
+<dialog id="share-dialog" aria-labelledby="share-dialog-title">
+  <div class="dialog-head"><div><h2 id="share-dialog-title">保存・共有</h2><p>同じフォルダにつなぐと、同じタスクを表示します。</p></div><button class="icon-button dialog-close" aria-label="閉じる"><svg class="icon"><use href="#i-close"/></svg></button></div>
+  <div class="dialog-body">
+    <div class="share-status" id="share-description">このブラウザに保存しています。</div>
+    <div class="share-buttons"><button class="button primary" id="connect-folder"><svg class="icon"><use href="#i-folder"/></svg>共有フォルダを選択</button><button class="button" id="reconnect-folder" hidden>再接続</button><button class="button" id="disconnect-folder" hidden>個人用に戻る</button></div>
+    <label class="checkbox-label" id="publish-local-wrap"><input type="checkbox" id="publish-local">このブラウザの個人用タスクも共有先に追加する</label>
+    <p class="note">各PCで同じ共有フォルダを選んでください。フォルダ内の「TaskBoard_Data」に保存し、画面を開いている間は約3秒ごとに更新します。HTMLを配るだけでは、タスクは共有されません。</p>
+    <p class="note" id="folder-support-note">共有フォルダの接続は、Windows版のEdge／Chromeで利用できます。再起動後に再接続が必要な場合は、上のボタンから許可してください。</p>
+    <div class="settings-section">
+      <h3>バックアップ</h3>
+      <div class="share-buttons"><button class="button small" id="export-button">バックアップを保存</button><button class="button small" id="import-button">バックアップから追加</button></div>
+      <input type="file" id="import-file" accept=".json,application/json" hidden>
+      <p class="note">すべての日付のタスクを保存します。復元時は現在のタスクを残し、コピーとして追加します。</p>
+    </div>
+    <div class="form-error" id="share-error" role="alert" hidden></div>
+  </div>
+  <div class="dialog-foot"><button class="button dialog-close">閉じる</button></div>
+</dialog>
+<dialog id="help-dialog" aria-labelledby="help-dialog-title">
+  <div class="dialog-head"><div><h2 id="help-dialog-title">使い方</h2><p>今日の仕事を、ひと目で。</p></div><button class="icon-button dialog-close" aria-label="閉じる"><svg class="icon"><use href="#i-close"/></svg></button></div>
+  <div class="dialog-body">
+    <div class="help-step"><span class="step-number">1</span><div><strong>タスクを追加</strong><p>「タスク追加」から時間・タスク・担当者①／②・備考を入力。担当者は2名まで設定できます。日付は表示中の日が入ります。</p></div></div>
+    <div class="help-step"><span class="step-number">2</span><div><strong>カードを動かす</strong><p>未対応 → 対応中 → 完了へドラッグ。カードの「…」からも移動でき、編集・削除も行えます。各列は時間順に並びます。</p></div></div>
+    <div class="help-step"><span class="step-number">3</span><div><strong>備考を見る</strong><p>カードは時間・タスク・担当者を横並びで表示します。右側の「＋」で備考を展開し、もう一度押すと閉じます。長い担当者名は名前にカーソルを重ねると全文が見られます。</p></div></div>
+    <div class="help-step"><span class="step-number">4</span><div><strong>時刻を過ぎたら赤くお知らせ</strong><p>未対応のカードだけが赤くなります。前日の未対応もお知らせに含みます。「確認」で該当日を表示します。リマインドはこの画面を開いている間に行います。</p></div></div>
+    <div class="help-step"><span class="step-number">5</span><div><strong>自分が担当のタスクを操作</strong><p>初回に名前を登録すると、追加・編集画面の各「自分が担当」で担当者①または②へ入力できます。検索欄の横の「自分が担当」は、①・②のどちらかに自分の名前があるタスクに絞り込みます。もう一度押すと解除し、キーワード検索との併用もできます。名前は画面右上から変更できます。</p></div></div>
+    <div class="help-step"><span class="step-number">6</span><div><strong>ほかの人と共有</strong><p>全員がこの2名対応版のHTMLを使用し、「共有設定」で同じ共有フォルダを選択すると、変更が約3秒で反映されます。共有先は読み書きできるフォルダを選んでください。</p></div></div>
+    <p class="note">配色はブラウザのライト／ダーク設定に追従します。個人用のデータはこのブラウザに保存されます。ブラウザのデータを消す前に、バックアップを保存してください。</p>
+  </div>
+  <div class="dialog-foot"><button class="button primary dialog-close">わかった</button></div>
+</dialog>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<script id="taskboard-core">
+'use strict';
+(function(global) {
+  const STATUSES = ['pending','progress','done'];
+  const REQUIRED_FIELDS = ['date','time','title','assignee','notes','status'];
+  const FIELDS = [...REQUIRED_FIELDS,'assignee2','deleted','demo'];
+  const validDate = function(value) {
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const [y,m,d] = value.split('-').map(Number);
+    if (y < 1900 || y > 9999 || m < 1 || m > 12 || d < 1) return false;
+    return new Date(y,m,0).getDate() >= d;
+  };
+  const validTime = function(value) {return typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);};
+  function validPersonalName(value) {return typeof value==='string' && value.trim().length>0 && value.trim().length<=100;}
+  function normalizeName(value) {return String(value).normalize('NFKC').replace(/\s+/g,'').toLocaleLowerCase();}
+  function isAssignedToMe(task,name) {
+    return validPersonalName(name) && [task.assignee,task.assignee2].some(function(value){
+      return typeof value==='string' && normalizeName(value)===normalizeName(name);
+    });
+  }
+  function filterTasks(tasks,query,name,onlyMine) {
+    const text=String(query||'').trim().toLocaleLowerCase();
+    return tasks.filter(function(task){
+      return (!onlyMine || isAssignedToMe(task,name)) && (!text || (task.title+' '+task.assignee+' '+(task.assignee2||'')+' '+task.notes).toLocaleLowerCase().includes(text));
+    });
+  }
+  function validField(key,value) {
+    if(key === 'date') return validDate(value);
+    if(key === 'time') return validTime(value);
+    if(key === 'status') return STATUSES.includes(value);
+    if(key === 'deleted' || key === 'demo') return typeof value === 'boolean';
+    if(key === 'title') return typeof value === 'string' && value.trim().length > 0 && value.length <= 200;
+    if(key === 'assignee' || key === 'assignee2') return typeof value === 'string' && value.length <= 100;
+    if(key === 'notes') return typeof value === 'string' && value.length <= 6000;
+    return false;
+  }
+  function backupTaskPatch(task) {
+    if(!task || typeof task!=='object' || Array.isArray(task))throw new Error('バックアップに不正なタスクが含まれています。');
+    const patch={};
+    for(const key of REQUIRED_FIELDS) {
+      if(!validField(key,task[key]))throw new Error('バックアップに不正なタスクが含まれています。');
+      patch[key]=task[key];
+    }
+    patch.assignee2=task.assignee2===undefined?'':task.assignee2;
+    if(!validField('assignee2',patch.assignee2))throw new Error('バックアップに不正な担当者②が含まれています。');
+    return patch;
+  }
+  function validOperation(op) {
+    if(!op || op.v !== 1 || typeof op.id !== 'string' || !/^[a-zA-Z0-9-]{8,80}$/.test(op.id)
+       || typeof op.taskId !== 'string' || !/^[a-zA-Z0-9-]{8,80}$/.test(op.taskId)
+       || !Number.isSafeInteger(op.seq) || op.seq < 1 || !op.patch || Array.isArray(op.patch)) return false;
+    const keys = Object.keys(op.patch);
+    return keys.length > 0 && keys.every(function(key){return FIELDS.includes(key) && validField(key,op.patch[key]);});
+  }
+  function compareClock(a,b) {return a[0] - b[0] || (a[1]<b[1]?-1:a[1]>b[1]?1:0);}
+  function reduceOperations(ops) {
+    const records = new Map();
+    for(const op of ops) {
+      if(!validOperation(op)) continue;
+      if(!records.has(op.taskId)) records.set(op.taskId,{id:op.taskId,fields:{},clocks:{}});
+      const task = records.get(op.taskId);
+      for(const key of Object.keys(op.patch)) {
+        const clock = [op.seq,op.id];
+        if(!task.clocks[key] || compareClock(clock,task.clocks[key]) > 0) {
+          task.fields[key] = op.patch[key]; task.clocks[key] = clock;
+        }
+      }
+    }
+    const tasks = [];
+    for(const record of records.values()) {
+      const f = record.fields;
+      if(f.deleted || !REQUIRED_FIELDS.every(function(k){return validField(k,f[k]);})) continue;
+      tasks.push(Object.assign({id:record.id,assignee2:''},f));
+    }
+    return tasks;
+  }
+  function sortedTasks(tasks) {
+    return tasks.slice().sort(function(a,b){return a.date.localeCompare(b.date) || a.time.localeCompare(b.time) || a.id.localeCompare(b.id,'en');});
+  }
+  function dueTime(task) {return new Date(task.date + 'T' + task.time + ':00').getTime();}
+  function isOverdue(task,now) {return task.status === 'pending' && dueTime(task) < Number(now);}
+  function nextSequence(ops) {let max=0;for(const op of ops) max=Math.max(max,op.seq);return max+1;}
+  class FolderStore {
+    constructor(handle) {this.handle=handle;this.operations=new Map();this.unread=0;this.refreshing=null;}
+    refresh() {
+      if(this.refreshing) return this.refreshing;
+      this.refreshing=this._refresh().finally(()=>{this.refreshing=null;});
+      return this.refreshing;
+    }
+    async _refresh() {
+      const unknown=[];
+      for await(const [name,handle] of this.handle.entries()) {
+        if(handle.kind==='file' && /^op-[a-zA-Z0-9-]{8,80}\.json$/.test(name) && !this.operations.has(name.slice(3,-5))) unknown.push([name,handle]);
+      }
+      let changed=0,unread=0;
+      for(let i=0;i<unknown.length;i+=20) {
+        const results=await Promise.all(unknown.slice(i,i+20).map(async ([name,handle])=>{
+          try {
+            const file=await handle.getFile();
+            if(file.size > 50000) return null;
+            const op=JSON.parse(await file.text());
+            if(!validOperation(op) || op.id!==name.slice(3,-5)) return null;
+            return op;
+          } catch(error) {return null;}
+        }));
+        for(const op of results) {if(op) {if(!this.operations.has(op.id)) changed++;this.operations.set(op.id,op);} else unread++;}
+      }
+      this.unread=unread;
+      return changed;
+    }
+    async append(op) {
+      if(!validOperation(op)) throw new Error('保存するタスクの形式が正しくありません。');
+      const file=await this.handle.getFileHandle('op-'+op.id+'.json',{create:true});
+      const writer=await file.createWritable();
+      try {await writer.write(JSON.stringify(op));await writer.close();}
+      catch(error) {try {await writer.abort();}catch(_){}throw error;}
+      this.operations.set(op.id,op);
+    }
+  }
+  global.TaskBoardCore={STATUSES,REQUIRED_FIELDS,FIELDS,validDate,validTime,validPersonalName,isAssignedToMe,filterTasks,validField,backupTaskPatch,validOperation,reduceOperations,sortedTasks,dueTime,isOverdue,nextSequence,FolderStore};
+})(typeof window!=='undefined'?window:globalThis);
+</script>
+<script id="taskboard-app">
+'use strict';
+(function() {
+  const C=window.TaskBoardCore;
+  const $=function(id){return document.getElementById(id);};
+  const labels={pending:'未対応',progress:'対応中',done:'完了'};
+  const PREFIX='tag-taskboard-v1:';
+  const LOCAL_PREFIX=PREFIX+'local-op:';
+  const PROFILE_KEY=PREFIX+'my-name';
+  const state={mode:'local',ops:new Map(),tasks:[],selectedDate:today(),expanded:new Set(),store:null,config:null,syncState:'local',lastSync:null,dragging:null,renderPending:false,writing:0,queue:Promise.resolve(),editing:null,previousOverdue:null,booting:true,myName:readMyName(),onlyMine:false};
+  let toastTimer,dbPromise,dragInteractive=false,dialogBusy=false,profileAction=null,activeMenu=null;
+  const uuid=function(){return globalThis.crypto&&crypto.randomUUID?crypto.randomUUID():'tb-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+'-'+Math.random().toString(36).slice(2);};
+  function today(){return localDate(new Date());}
+  function localDate(d){return String(d.getFullYear()).padStart(4,'0')+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+  function readMyName(){try{const name=localStorage.getItem(PROFILE_KEY);return C.validPersonalName(name)?name.trim():'';}catch(_){return '';}}
+  function updatePersonalUI() {
+    $('profile-label').textContent=state.myName||'名前を登録';
+    $('profile-button').title=state.myName?'自分の名前を変更：'+state.myName:'自分の名前を登録';
+    $('profile-button').setAttribute('aria-label',$('profile-button').title);
+    $('mine-filter').setAttribute('aria-pressed',String(state.onlyMine));
+    $('mine-filter').title=state.myName?'担当者①・②のどちらかが「'+state.myName+'」のタスクに絞り込みます':'名前を登録して自分のタスクに絞り込みます';
+    $('assign-me').title=state.myName?'担当者①に「'+state.myName+'」を入力します':'名前を登録して担当者①に入力します';
+    $('assign-me2').title=state.myName?'担当者②に「'+state.myName+'」を入力します':'名前を登録して担当者②に入力します';
+  }
+  function openProfile(action) {
+    if(dialogBusy||state.booting)return;
+    profileAction=action||null;
+    $('profile-dialog-title').textContent=state.myName?'自分の名前を変更':'自分の名前を登録';
+    $('profile-name').value=state.myName;
+    $('profile-save').textContent=state.myName?'保存する':'登録する';
+    $('profile-cancel').textContent=state.myName?'キャンセル':'あとで';
+    showError('profile-error','');
+    $('profile-dialog').showModal();$('profile-name').focus();
+  }
+  function assignMe(field) {
+    if(dialogBusy)return;
+    if(!state.myName){openProfile(field);return;}
+    $(field).value=state.myName;$(field).focus();
+  }
+  $('profile-button').addEventListener('click',function(){openProfile();});
+  $('assign-me').addEventListener('click',function(){assignMe('task-assignee');});
+  $('assign-me2').addEventListener('click',function(){assignMe('task-assignee2');});
+  $('mine-filter').addEventListener('click',function(){
+    if(dialogBusy||state.booting)return;
+    if(!state.myName){openProfile('filter');return;}
+    state.onlyMine=!state.onlyMine;render();
+  });
+  $('profile-form').addEventListener('submit',function(event){
+    event.preventDefault();if(dialogBusy)return;
+    const name=$('profile-name').value.trim();
+    if(!C.validPersonalName(name)){showError('profile-error','名前を1〜100文字で入力してください。');return;}
+    try{localStorage.setItem(PROFILE_KEY,name);}
+    catch(_){showError('profile-error','このブラウザに名前を記憶できません。ブラウザの保存設定を確認してください。');return;}
+    const action=profileAction;
+    state.myName=name;
+    if(action==='filter')state.onlyMine=true;
+    $('profile-dialog').close();profileAction=null;render();
+    if((action==='task-assignee'||action==='task-assignee2')&&$('task-dialog').open)assignMe(action);
+    toast('自分の名前を登録しました。');
+  });
+  $('profile-dialog').addEventListener('close',function(){profileAction=null;});
+  function icon(name){const el=document.createElementNS('http://www.w3.org/2000/svg','svg');el.classList.add('icon');el.setAttribute('aria-hidden','true');const use=document.createElementNS('http://www.w3.org/2000/svg','use');use.setAttribute('href','#i-'+name);el.append(use);return el;}
+  function node(tag,cls,text){const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el;}
+  function toast(message,error){clearTimeout(toastTimer);const el=$('toast');el.textContent=message;el.classList.toggle('error',!!error);el.hidden=false;toastTimer=setTimeout(function(){el.hidden=true;},error?6500:3200);}
+  function showError(id,message){$(id).textContent=message;$(id).hidden=!message;}
+  function errorText(error) {
+    if(error&&error.name==='NotAllowedError') return '共有フォルダのアクセス許可が必要です。「共有設定」から再接続してください。';
+    if(error&&error.name==='SecurityError') return 'この環境ではフォルダ接続が許可されていません。Edge／Chromeで開くか、社内のブラウザ設定を確認してください。';
+    return error&&error.message?error.message:'保存できませんでした。共有フォルダの接続と書き込み権限を確認してください。';
+  }
+  function readLocal() {
+    const ops=new Map();
+    try {
+      for(let i=0;i<localStorage.length;i++) {
+        const key=localStorage.key(i);
+        if(!key||!key.startsWith(LOCAL_PREFIX))continue;
+        try{const op=JSON.parse(localStorage.getItem(key));if(C.validOperation(op))ops.set(op.id,op);}catch(_){}
+      }
+    } catch(error) {showError('system-message','ブラウザの保存領域を利用できません。共有フォルダを接続して保存してください。');}
+    return ops;
+  }
+  function rebuild(){state.tasks=C.reduceOperations(state.ops.values());if(state.dragging)state.renderPending=true;else render();}
+  function cacheShared() {
+    if(!state.config)return;
+    try{localStorage.setItem(PREFIX+'cache:'+state.config.cacheId,JSON.stringify(Array.from(state.ops.values())));}catch(_){}
+  }
+  function readCache(config) {
+    const map=new Map();
+    try{const ops=JSON.parse(localStorage.getItem(PREFIX+'cache:'+config.cacheId)||'[]');if(Array.isArray(ops))for(const op of ops)if(C.validOperation(op))map.set(op.id,op);}catch(_){}
+    return map;
+  }
+  function db() {
+    if(!dbPromise)dbPromise=new Promise(function(resolve,reject){
+      if(!window.indexedDB){reject(new Error('接続先の保存を利用できません。'));return;}
+      const request=indexedDB.open('tag-taskboard-v1',1);
+      request.onupgradeneeded=function(){request.result.createObjectStore('settings');};
+      request.onsuccess=function(){resolve(request.result);};
+      request.onerror=function(){reject(request.error);};
+    });
+    return dbPromise;
+  }
+  async function setting(action,value) {
+    const database=await db();
+    return new Promise(function(resolve,reject){
+      const tx=database.transaction('settings',action==='get'?'readonly':'readwrite');
+      const store=tx.objectStore('settings');
+      const request=action==='get'?store.get('connection'):action==='put'?store.put(value,'connection'):store.delete('connection');
+      let result;
+      request.onsuccess=function(){result=request.result;};
+      tx.oncomplete=function(){resolve(result);};tx.onerror=function(){reject(tx.error);};tx.onabort=function(){reject(tx.error);};
+    });
+  }
+  async function syncShared(strict) {
+    if(state.mode!=='shared'||!state.store)return;
+    const store=state.store;
+    try {
+      const changed=await store.refresh();
+      if(state.store!==store)return;
+      state.ops=store.operations;
+      state.syncState=store.unread?'partial':'ok';
+      state.lastSync=new Date();
+      cacheShared();
+      if(changed)rebuild();else refreshReminders();
+      if(!store.unread)showError('system-message','');
+      else showError('system-message','共有データ '+store.unread+' 件を読み込み待ちです。書き込み中のデータは次の更新で再確認します。');
+      updateSaveState();
+    } catch(error) {
+      if(state.store!==store)return;
+      state.syncState='error';
+      showError('system-message',errorText(error));updateSaveState();
+      if(strict)throw error;
+    }
+  }
+  function enqueue(work) {
+    const run=state.queue.then(work,work);
+    state.queue=run.catch(function(){});
+    return run;
+  }
+  async function savePatch(taskId,patch) {
+    return enqueue(async function(){
+      state.writing++;updateSaveState();
+      try {
+        if(state.mode==='shared') {
+          if(!state.store)throw new Error('共有フォルダへの再接続が必要です。「共有設定」を開いてください。');
+          await syncShared(true);
+        } else state.ops=readLocal();
+        const history=Array.from(state.ops.values()).filter(function(op){return op.taskId===taskId;});
+        const current=C.reduceOperations(history)[0];
+        if((history.length&&!current)||(!history.length&&!C.REQUIRED_FIELDS.every(function(k){return C.validField(k,patch[k]);})))throw new Error('このタスクは削除されたか、読み込めていません。入力内容をコピーし、新しいタスクとして追加してください。');
+        const op={v:1,id:uuid(),taskId:taskId,seq:C.nextSequence(state.ops.values()),at:new Date().toISOString(),patch:patch};
+        if(!C.validOperation(op))throw new Error('入力内容を確認してください。時間とタスクは必須です。');
+        if(state.mode==='shared') {
+          try{await state.store.append(op);}
+          catch(error){state.syncState='error';showError('system-message',errorText(error));throw error;}
+          state.ops=state.store.operations;state.lastSync=new Date();cacheShared();
+        } else {
+          try{localStorage.setItem(LOCAL_PREFIX+op.id,JSON.stringify(op));}
+          catch(error){throw new Error('このブラウザに保存できません。共有フォルダを接続するか、保存領域を確認してください。');}
+          state.ops.set(op.id,op);
+        }
+        rebuild();return op;
+      } finally {state.writing--;updateSaveState();}
+    });
+  }
+  function render() {
+    if(activeMenu)closeMenus(activeMenu.menu.contains(document.activeElement));
+    state.renderPending=false;
+    const dayTasks=C.sortedTasks(state.tasks.filter(function(t){return t.date===state.selectedDate;}));
+    const query=$('search-input').value.trim().toLocaleLowerCase();
+    const filtering=!!query||state.onlyMine;
+    const filtered=C.filterTasks(dayTasks,query,state.myName,state.onlyMine);
+    const active=document.activeElement;
+    const focusCard=active&&active.closest?active.closest('.task-card'):null;
+    const focusId=focusCard&&focusCard.dataset.id;
+    const focusAction=active&&active.dataset&&active.dataset.action;
+    for(const status of C.STATUSES) {
+      const list=$('list-'+status);
+      const scroll=list.scrollTop;
+      list.replaceChildren();
+      const tasks=filtered.filter(function(t){return t.status===status;});
+      $('count-'+status).textContent=filtering?tasks.length+' / '+dayTasks.filter(function(t){return t.status===status;}).length:String(tasks.length);
+      if(!tasks.length) {
+        const empty=node('div','empty');
+        empty.append(node('div','empty-art'));
+        empty.append(node('strong','',query?'一致するタスクはありません':state.onlyMine?'自分が担当のタスクはありません':status==='pending'?'今日の仕事を、ここから。':status==='progress'?'取りかかったら、ここへ。':'完了した仕事が並びます。'));
+        empty.append(node('p','',filtering?'表示日・担当者名・検索条件を確認してください。':status==='pending'?'「タスク追加」から始めましょう。':'カードをドラッグして移動できます。'));
+        list.append(empty);
+      } else for(const task of tasks)list.append(taskCard(task));
+      list.scrollTop=scroll;
+    }
+    const done=dayTasks.filter(function(t){return t.status==='done';}).length;
+    const percent=dayTasks.length?Math.round(done/dayTasks.length*100):0;
+    $('completion-label').textContent='完了 '+done+' / '+dayTasks.length;
+    $('completion-fill').style.width=percent+'%';
+    $('completion-bar').setAttribute('aria-valuenow',String(percent));
+    $('summary-title').firstChild.textContent=state.selectedDate===today()?'今日のタスク':'この日のタスク';
+    $('summary-count').textContent=(filtering?filtered.length+' / ':'')+dayTasks.length+'件のタスク'+(state.onlyMine?' · 自分が担当':'')+(query?' · 検索中':'');
+    $('board-date').value=state.selectedDate;
+    $('weekday').textContent=new Date(state.selectedDate+'T12:00:00').toLocaleDateString('ja-JP',{weekday:'short'});
+    $('today-button').disabled=state.selectedDate===today();
+    $('demo-button').hidden=state.mode!=='local'||state.tasks.length>0;
+    if(focusId) {
+      const card=Array.from(document.querySelectorAll('.task-card')).find(function(el){return el.dataset.id===focusId;});
+      if(card){const target=focusAction?card.querySelector('[data-action="'+focusAction+'"]'):card;(target||card).focus({preventScroll:true});}
+    }
+    updatePersonalUI();refreshReminders();updateSaveState();
+  }
+  function taskCard(task) {
+    const card=node('article','task-card');card.dataset.id=task.id;card.dataset.time=task.time;card.draggable=true;card.tabIndex=0;
+    card.setAttribute('aria-label',task.time+' '+task.title+' 担当者① '+(task.assignee||'未割当')+' 担当者② '+(task.assignee2||'未割当')+' '+labels[task.status]);
+    const row=node('div','card-row');
+    const timeBlock=node('div','card-time-block');
+    const time=node('div','card-time');time.append(icon('clock'),node('time','',task.time));time.querySelector('time').dateTime=task.date+'T'+task.time;
+    const late=node('span','late-label');late.hidden=true;timeBlock.append(time,late);
+    const assignees=node('div','card-assignees');
+    for(const [index,name] of [[1,task.assignee],[2,task.assignee2]]) {
+      if(!name||!name.trim())continue;
+      const assignee=node('div','assignee');assignee.title='担当者'+(index===1?'①':'②')+'：'+name;
+      assignee.setAttribute('aria-label',assignee.title);
+      assignee.append(node('span','assignee-slot',index===1?'①':'②'),node('span','assignee-name',name));
+      assignees.append(assignee);
+    }
+    if(!assignees.children.length)assignees.append(node('span','assignee','未割当'));
+    const buttons=node('div','card-buttons');
+    const expand=node('button','icon-button expand-button');expand.type='button';expand.dataset.action='expand';
+    expand.setAttribute('aria-label',state.expanded.has(task.id)?'備考を閉じる':'備考を表示');
+    expand.setAttribute('aria-expanded',String(state.expanded.has(task.id)));expand.setAttribute('aria-controls','notes-'+task.id);expand.append(icon('plus'));
+    expand.addEventListener('click',function(){
+      const open=!state.expanded.has(task.id);
+      if(open)state.expanded.add(task.id);else state.expanded.delete(task.id);
+      card.querySelector('.card-notes').hidden=!open;expand.setAttribute('aria-expanded',String(open));expand.setAttribute('aria-label',open?'備考を閉じる':'備考を表示');
+    });
+    const more=node('button','icon-button');more.type='button';more.dataset.action='menu';more.setAttribute('aria-label','タスクのメニュー');more.setAttribute('aria-haspopup','menu');more.setAttribute('aria-expanded','false');more.append(icon('more'));
+    buttons.append(expand,more);row.append(timeBlock,node('h3','task-title',task.title),assignees,buttons);card.append(row);
+    const notes=node('div','card-notes');notes.id='notes-'+task.id;notes.hidden=!state.expanded.has(task.id);notes.append(node('div','notes-label','備考'),node('div','notes-text',task.notes||'備考はありません。'));card.append(notes);
+    const menu=node('div','card-menu');menu.hidden=true;menu.id='menu-'+task.id;menu.setAttribute('role','menu');menu.setAttribute('aria-label','タスクの操作');more.setAttribute('aria-controls',menu.id);
+    function menuItem(text,name,callback,cls) {
+      const item=node('button',cls||'');item.type='button';item.setAttribute('role','menuitem');item.append(icon(name),node('span','',text));
+      item.addEventListener('click',function(){closeMenus();callback();});menu.append(item);
+    }
+    menuItem('編集する','edit',function(){openTask(task.id);});
+    menu.append(node('div','menu-divider'));
+    for(const status of C.STATUSES)if(status!==task.status)menuItem(labels[status]+'へ移動','arrow',function(){moveTask(task.id,status);});
+    menu.append(node('div','menu-divider'));
+    menuItem('削除する','trash',async function(){
+      if(!confirm('「'+task.title+'」を削除しますか？'+(state.mode==='shared'?'\n共有している全員の画面から削除されます。':'')))return;
+      try{await savePatch(task.id,{deleted:true});toast('タスクを削除しました。');}catch(error){toast(errorText(error),true);}
+    },'danger');
+    more.addEventListener('click',function(event){
+      event.stopPropagation();
+      const open=menu.hidden;
+      closeMenus();
+      if(open)openCardMenu(card,more,menu);
+    });
+    menu.addEventListener('keydown',function(event){
+      const items=Array.from(menu.querySelectorAll('button'));
+      const current=items.indexOf(document.activeElement);
+      if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();items[(current+(event.key==='ArrowDown'?1:items.length-1))%items.length].focus();}
+      if(event.key==='Escape'){event.stopPropagation();closeMenus();more.focus();}
+    });
+    card.append(menu);return card;
+  }
+  function openCardMenu(card,button,menu) {
+    const margin=8,gap=6,width=document.documentElement.clientWidth,height=window.innerHeight;
+    activeMenu={card:card,button:button,menu:menu};
+    // Keep the open menu outside card transforms and scrolling column clips.
+    document.body.append(menu);
+    menu.style.left='0px';menu.style.top='0px';
+    menu.style.maxWidth=Math.max(0,width-margin*2)+'px';
+    menu.style.maxHeight=Math.max(0,height-margin*2)+'px';
+    menu.hidden=false;
+    button.setAttribute('aria-expanded','true');
+    const anchor=button.getBoundingClientRect(),size=menu.getBoundingClientRect();
+    const below=height-margin-anchor.bottom-gap,above=anchor.top-margin-gap;
+    const targetTop=below>=size.height||below>=above?anchor.bottom+gap:anchor.top-gap-size.height;
+    const left=Math.max(margin,Math.min(anchor.right-size.width,width-size.width-margin));
+    const top=Math.max(margin,Math.min(targetTop,height-size.height-margin));
+    menu.style.left=left+'px';menu.style.top=top+'px';
+    menu.querySelector('button').focus({preventScroll:true});
+  }
+  function closeMenus(restoreFocus) {
+    if(!activeMenu)return;
+    const current=activeMenu;activeMenu=null;
+    current.menu.hidden=true;
+    current.button.setAttribute('aria-expanded','false');
+    current.card.append(current.menu);
+    if(restoreFocus)current.button.focus({preventScroll:true});
+  }
+  function refreshReminders() {
+    const now=Date.now();
+    const overdue=C.sortedTasks(state.tasks.filter(function(t){return C.isOverdue(t,now);}));
+    const ids=new Set(overdue.map(function(t){return t.id;}));
+    for(const card of document.querySelectorAll('.task-card')) {
+      const late=ids.has(card.dataset.id);
+      card.classList.toggle('overdue',late);
+      const el=card.querySelector('.late-label');el.hidden=!late;
+      if(late) {
+        const task=overdue.find(function(t){return t.id===card.dataset.id;});
+        const minutes=Math.max(0,Math.floor((now-C.dueTime(task))/60000));
+        el.textContent=minutes===0?'時刻超過':minutes<60?minutes+'分超過':minutes<1440?Math.floor(minutes/60)+'時間超過':Math.floor(minutes/1440)+'日超過';
+        el.title='予定時刻を過ぎています';
+      }
+    }
+    $('reminder').hidden=!overdue.length;
+    const reminderText=overdue.length?'予定時刻を過ぎた未対応タスクが '+overdue.length+' 件あります。':'';
+    if($('reminder-text').textContent!==reminderText)$('reminder-text').textContent=reminderText;
+    document.title=overdue.length?'('+overdue.length+'件超過) タスク管理':'タスク管理';
+    if(state.previousOverdue&&!state.booting) {
+      const newlyLate=overdue.filter(function(t){return !state.previousOverdue.has(t.id);});
+      if(newlyLate.length)toast('未対応のタスク '+newlyLate.length+' 件が予定時刻を過ぎました。',true);
+    }
+    state.previousOverdue=ids;
+  }
+  function updateSaveState() {
+    const shared=state.mode==='shared';
+    const problem=shared&&['error','paused','partial'].includes(state.syncState);
+    $('save-dot').className='save-dot'+(problem?' error':shared?' shared':'');
+    let text=shared?'共有中 · '+(state.config?state.config.parentName:'共有フォルダ'):'このブラウザに保存';
+    if(state.writing)text='保存しています…';
+    else if(shared&&state.syncState==='paused')text='共有：再接続が必要です';
+    else if(shared&&state.syncState==='error')text='共有：接続を確認してください';
+    else if(shared&&state.syncState==='partial')text='共有中 · 一部のデータを読み込み待ち';
+    else if(shared&&state.lastSync)text+=' · '+state.lastSync.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})+' 更新';
+    $('save-label').textContent=text;
+    if($('share-dialog').open)updateShareDialog();
+  }
+  function openTask(id,status) {
+    if(dialogBusy||state.booting)return;
+    state.editing=id?state.tasks.find(function(t){return t.id===id;}):null;
+    if(id&&!state.editing){toast('このタスクは削除されています。',true);return;}
+    const t=state.editing;
+    $('task-dialog-title').textContent=t?'タスクを編集':'タスクを追加';
+    $('task-save').textContent=t?'保存する':'追加する';
+    $('task-date').value=t?t.date:state.selectedDate;
+    const now=new Date();now.setMinutes(now.getMinutes()+30);
+    if(!t&&state.selectedDate===today()&&localDate(now)!==today())$('task-date').value=localDate(now);
+    $('task-time').value=t?t.time:String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+    $('task-title').value=t?t.title:'';
+    $('task-assignee').value=t?t.assignee:'';
+    $('task-assignee2').value=t?t.assignee2:'';
+    $('task-status').value=t?t.status:status||'pending';
+    $('task-notes').value=t?t.notes:'';
+    showError('task-error','');$('task-dialog').showModal();$('task-title').focus();
+  }
+  function formBusy(busy) {
+    dialogBusy=busy;
+    $('task-form').querySelectorAll('button,input,select,textarea').forEach(function(el){el.disabled=busy;});
+    $('task-save').textContent=busy?'保存中…':state.editing?'保存する':'追加する';
+  }
+  $('task-form').addEventListener('submit',async function(event){
+    event.preventDefault();if(dialogBusy)return;
+    const patch={date:$('task-date').value,time:$('task-time').value,title:$('task-title').value.trim(),assignee:$('task-assignee').value.trim(),assignee2:$('task-assignee2').value.trim(),status:$('task-status').value,notes:$('task-notes').value};
+    if(!Object.keys(patch).every(function(k){return C.validField(k,patch[k]);})){showError('task-error','日付・時間・タスクを確認してください。');return;}
+    const original=state.editing;
+    const targetDate=patch.date;
+    if(original)for(const key of Object.keys(patch))if(patch[key]===original[key])delete patch[key];
+    if(!Object.keys(patch).length){$('task-dialog').close();return;}
+    formBusy(true);showError('task-error','');
+    try {
+      const id=original?original.id:uuid();
+      if(original&&!state.tasks.some(function(t){return t.id===id;}))throw new Error('ほかの利用者がこのタスクを削除しています。入力内容をコピーし、新しいタスクとして追加してください。');
+      await savePatch(id,patch);
+      state.selectedDate=targetDate;render();$('task-dialog').close();toast(original?'変更を保存しました。':'タスクを追加しました。');
+    }catch(error){showError('task-error',errorText(error));}
+    finally{formBusy(false);}
+  });
+  async function moveTask(id,status) {
+    const task=state.tasks.find(function(t){return t.id===id;});if(!task||task.status===status)return;
+    try{await savePatch(id,{status:status});toast(labels[status]+'に移動しました。');}
+    catch(error){toast(errorText(error),true);}
+  }
+  $('board').addEventListener('pointerdown',function(event){dragInteractive=!!event.target.closest('button,input,select,textarea,.card-menu');});
+  $('board').addEventListener('dragstart',function(event){
+    const card=event.target.closest('.task-card');
+    if(!card||dragInteractive){event.preventDefault();return;}
+    closeMenus();state.dragging=card.dataset.id;card.classList.add('dragging');event.dataTransfer.setData('application/x-taskboard-id',state.dragging);event.dataTransfer.setData('text/plain',state.dragging);event.dataTransfer.effectAllowed='move';
+  });
+  for(const column of document.querySelectorAll('.column')) {
+    column.addEventListener('dragover',function(event){if(!state.dragging)return;event.preventDefault();event.dataTransfer.dropEffect='move';column.classList.add('drag-over');});
+    column.addEventListener('dragleave',function(event){if(!column.contains(event.relatedTarget))column.classList.remove('drag-over');});
+    column.addEventListener('drop',function(event){
+      if(!state.dragging)return;event.preventDefault();
+      const id=state.dragging;endDrag();moveTask(id,column.dataset.status);
+    });
+  }
+  function endDrag() {
+    state.dragging=null;dragInteractive=false;
+    document.querySelectorAll('.dragging,.drag-over').forEach(function(el){el.classList.remove('dragging','drag-over');});
+    if(state.renderPending)render();
+  }
+  $('board').addEventListener('dragend',endDrag);
+  function selectDate(value) {if(C.validDate(value)){state.selectedDate=value;state.expanded.clear();render();}}
+  function shiftDate(amount){const date=new Date(state.selectedDate+'T12:00:00');date.setDate(date.getDate()+amount);selectDate(localDate(date));}
+  $('board-date').addEventListener('change',function(){selectDate(this.value);});
+  $('previous-day').addEventListener('click',function(){shiftDate(-1);});
+  $('next-day').addEventListener('click',function(){shiftDate(1);});
+  $('today-button').addEventListener('click',function(){selectDate(today());});
+  $('search-input').addEventListener('input',render);
+  $('add-button').addEventListener('click',function(){openTask();});
+  document.querySelectorAll('.column-add').forEach(function(button){button.addEventListener('click',function(){openTask(null,button.dataset.status);});});
+  document.addEventListener('click',function(event){if(!event.target.closest('.card-menu')&&!event.target.closest('[data-action="menu"]'))closeMenus();});
+  document.addEventListener('keydown',function(event){if(event.key==='Escape')closeMenus();});
+  document.addEventListener('scroll',function(event){if(activeMenu&&!activeMenu.menu.contains(event.target))closeMenus(true);},true);
+  window.addEventListener('resize',function(){closeMenus(true);});
+  document.querySelectorAll('.dialog-close').forEach(function(button){button.addEventListener('click',function(){if(!dialogBusy)button.closest('dialog').close();});});
+  document.querySelectorAll('dialog').forEach(function(dialog){dialog.addEventListener('cancel',function(event){if(dialogBusy)event.preventDefault();});});
+  $('help-button').addEventListener('click',function(){$('help-dialog').showModal();});
+  $('review-overdue').addEventListener('click',function(){
+    const task=C.sortedTasks(state.tasks.filter(function(t){return C.isOverdue(t,Date.now());}))[0];
+    if(!task)return;
+    $('search-input').value='';state.onlyMine=false;selectDate(task.date);
+    const card=Array.from(document.querySelectorAll('.task-card')).find(function(el){return el.dataset.id===task.id;});
+    if(card){card.focus({preventScroll:true});card.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'});}
+  });
+  function updateShareDialog() {
+    const shared=state.mode==='shared';
+    $('share-description').textContent=shared?'共有先：'+(state.config?state.config.parentName:'共有フォルダ')+' / TaskBoard_Data\n'+(state.syncState==='ok'?'共有データを読み書きしています。':state.syncState==='paused'?'再接続してアクセスを許可してください。':state.syncState==='partial'?'一部のデータを再読み込みしています。':'接続や書き込み権限を確認してください。'):'個人用：このブラウザに保存しています。';
+    $('share-description').style.whiteSpace='pre-line';
+    $('reconnect-folder').hidden=!shared||!state.config;
+    $('disconnect-folder').hidden=!shared;
+    $('publish-local-wrap').hidden=shared||!state.tasks.length;
+    $('connect-folder').disabled=state.writing>0||state.booting||dialogBusy;
+    $('reconnect-folder').disabled=state.writing>0||dialogBusy;
+    $('disconnect-folder').disabled=state.writing>0||dialogBusy;
+    const supported='showDirectoryPicker' in window;
+    if(!supported)$('folder-support-note').textContent='このブラウザでは共有フォルダの接続を利用できません。Windows版Edge／ChromeでHTMLを開いてください。個人用とバックアップは引き続き使えます。';
+  }
+  $('share-button').addEventListener('click',function(){showError('share-error','');$('publish-local').checked=false;updateShareDialog();$('share-dialog').showModal();});
+  async function connectFolder() {
+    if(state.writing||dialogBusy)return;
+    if(!('showDirectoryPicker'in window)){showError('share-error','Windows版Edge／Chromeで開いてください。このブラウザはフォルダ接続に対応していません。');return;}
+    let publish=state.mode==='local'&&$('publish-local').checked?state.tasks.slice():[];
+    try {
+      const root=await window.showDirectoryPicker({id:'tag-taskboard-shared',mode:'readwrite'});
+      dialogBusy=true;updateShareDialog();
+      const handle=root.name==='TaskBoard_Data'?root:await root.getDirectoryHandle('TaskBoard_Data',{create:true});
+      let same=false;
+      try{same=!!state.config&&await state.config.handle.isSameEntry(handle);}catch(_){}
+      const config={handle:handle,parentName:root.name==='TaskBoard_Data'?'選択した共有フォルダ':root.name,cacheId:same?state.config.cacheId:uuid()};
+      const store=new C.FolderStore(handle);
+      await store.refresh();
+      try{await setting('put',config);}catch(_){toast('共有先の記憶ができません。次回はもう一度フォルダを選択してください。',true);}
+      state.config=config;state.store=store;state.mode='shared';state.ops=store.operations;state.syncState=store.unread?'partial':'ok';state.lastSync=new Date();cacheShared();showError('system-message','');state.expanded.clear();rebuild();
+      let added=0;
+      try {
+        for(const task of publish){const copy={};for(const key of C.FIELDS)if(key!=='deleted'&&task[key]!==undefined)copy[key]=task[key];await savePatch(uuid(),copy);added++;}
+      } catch(error){throw new Error(added+' 件追加したところで保存に失敗しました。'+errorText(error));}
+      toast('共有フォルダに接続しました。'+(added?' '+added+'件を追加しました。':''));
+      showError('share-error','');
+    } catch(error){if(error.name!=='AbortError')showError('share-error',errorText(error));}
+    finally{dialogBusy=false;updateShareDialog();}
+  }
+  $('connect-folder').addEventListener('click',connectFolder);
+  $('reconnect-folder').addEventListener('click',async function(){
+    if(!state.config||state.writing||dialogBusy)return;
+    try {
+      const allowed=await state.config.handle.requestPermission({mode:'readwrite'});
+      if(allowed!=='granted')throw new Error('アクセスが許可されませんでした。「共有フォルダを選択」から接続先を選び直すこともできます。');
+      state.store=new C.FolderStore(state.config.handle);
+      // Read canonical files afresh; do not treat a cache as proof that shared files still exist.
+      await syncShared(true);state.ops=state.store.operations;rebuild();showError('share-error','');toast('共有フォルダに再接続しました。');
+    } catch(error){showError('share-error',errorText(error));}
+  });
+  $('disconnect-folder').addEventListener('click',async function(){
+    if(state.writing||dialogBusy)return;
+    try{await setting('delete');}
+    catch(error){showError('share-error','接続先の記憶を消せませんでした。ブラウザを再起動すると共有の再接続が表示される場合があります。');}
+    state.mode='local';state.store=null;state.config=null;state.syncState='local';state.lastSync=null;state.ops=readLocal();state.expanded.clear();showError('system-message','');rebuild();updateShareDialog();toast('このブラウザの個人用タスクに戻りました。');
+  });
+  $('export-button').addEventListener('click',function(){
+    const payload={format:'tag-taskboard',version:1,exportedAt:new Date().toISOString(),tasks:C.sortedTasks(state.tasks)};
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);const link=node('a');link.href=url;link.download='TaskBoard_Backup_'+today().replaceAll('-','')+'.json';document.body.append(link);link.click();link.remove();setTimeout(function(){URL.revokeObjectURL(url);},1000);toast('バックアップを保存しました。');
+  });
+  $('import-button').addEventListener('click',function(){if(!dialogBusy&&!state.writing)$('import-file').click();});
+  $('import-file').addEventListener('change',async function(){
+    const file=this.files&&this.files[0];this.value='';if(!file)return;
+    let added=0;
+    try {
+      if(file.size>8*1024*1024)throw new Error('バックアップは8MB以下のファイルを選択してください。');
+      const payload=JSON.parse(await file.text());
+      if(payload.format!=='tag-taskboard'||payload.version!==1||!Array.isArray(payload.tasks)||payload.tasks.length>1000)throw new Error('このタスク管理のバックアップではありません（1,000件以内）。');
+      const tasks=payload.tasks.map(C.backupTaskPatch);
+      if(!tasks.length){toast('追加するタスクはありません。');return;}
+      if(!confirm(tasks.length+' 件をコピーとして追加しますか？\n既存のタスクは残ります。'))return;
+      dialogBusy=true;updateShareDialog();$('import-button').disabled=true;
+      for(const task of tasks){await savePatch(uuid(),task);added++;}
+      showError('share-error','');toast(added+' 件のタスクを追加しました。');
+    }catch(error){showError('share-error',(added?added+'件追加後に中断しました。 ':'')+errorText(error));}
+    finally{dialogBusy=false;$('import-button').disabled=false;updateShareDialog();}
+  });
+  $('demo-button').addEventListener('click',async function(){
+    if(state.tasks.length||state.mode!=='local'||dialogBusy)return;
+    $('demo-button').disabled=true;
+    const minutes=new Date().getHours()*60+new Date().getMinutes();
+    const time=function(offset){const m=Math.max(0,Math.min(1439,minutes+offset));return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');};
+    const examples=[
+      {time:time(-15),title:'メールの未仕分を確認',assignee:'田中',status:'pending',notes:'サンプルです。時刻を過ぎた未対応タスクは赤く表示されます。'},
+      {time:time(60),title:'日程調整の進捗チェック',assignee:'佐藤',assignee2:'田中',status:'pending',notes:'サンプルです。担当者は2名まで設定でき、予定時刻が早いカードから上に並びます。'},
+      {time:time(30),title:'引き継ぎメモを更新',assignee:'鈴木',status:'progress',notes:'サンプルです。この＋ボタンでメモを開閉できます。'},
+      {time:time(90),title:'担当者への確認連絡',assignee:'田中',assignee2:'鈴木',status:'progress',notes:'サンプルです。完了したら右の列へドラッグしてみてください。'},
+      {time:time(-60),title:'朝の共有事項を確認',assignee:'佐藤',status:'done',notes:'サンプルです。完了したタスクはリマインドの対象になりません。'}
+    ];
+    try{for(const task of examples)await savePatch(uuid(),Object.assign({date:today(),demo:true},task));toast('サンプルを追加しました。不要になったらカードのメニューから削除できます。');}
+    catch(error){toast(errorText(error),true);}finally{$('demo-button').disabled=false;}
+  });
+  async function boot() {
+    state.ops=readLocal();rebuild();
+    try {
+      const config=await setting('get');
+      if(config&&config.handle&&config.cacheId) {
+        state.config=config;state.mode='shared';state.ops=readCache(config);state.syncState='paused';rebuild();
+        const permission=await config.handle.queryPermission({mode:'readwrite'});
+        if(permission==='granted'){state.store=new C.FolderStore(config.handle);await syncShared(false);state.ops=state.store.operations;rebuild();}
+        else showError('system-message','前回の共有タスクを表示しています。編集する前に「共有設定」から再接続してください。');
+      }
+    } catch(_) {}
+    state.booting=false;refreshReminders();updateSaveState();
+    if(!state.myName&&!document.querySelector('dialog[open]'))openProfile();
+  }
+  window.addEventListener('storage',function(event){
+    if(event.key===PROFILE_KEY||event.key===null){state.myName=readMyName();if(!state.myName)state.onlyMine=false;render();}
+    if(state.mode==='local'&&event.key&&event.key.startsWith(LOCAL_PREFIX)){state.ops=readLocal();rebuild();}
+  });
+  document.addEventListener('visibilitychange',function(){if(!document.hidden){refreshReminders();syncShared(false);updateClock();}});
+  window.addEventListener('beforeunload',function(event){if(state.writing||dialogBusy){event.preventDefault();event.returnValue='';}});
+  function updateClock(){$('live-clock').textContent=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',hour12:false});}
+  setInterval(updateClock,1000);
+  setInterval(function(){if(!document.hidden)refreshReminders();},10000);
+  setInterval(function(){if(!document.hidden&&!state.booting&&!dialogBusy)syncShared(false);},3000);
+  updateClock();boot();
+})();
+</script>
+</body>
+</html>
