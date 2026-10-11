@@ -297,7 +297,7 @@ var WorkloadBrowser = (function () {
         if (!roots.unread) { missing.push("未読"); }
         if (!roots.flag) { missing.push("フラグ"); }
         if (!selected.assignment) { missing.push("振分表"); }
-        if (missing.length) { throw new Error("初期設定が完了していません。画面上部の「設定」で「" + missing.join("」「") + "」を設定してください。"); }
+        if (missing.length) { throw new Error("初期設定が完了していません。「ログ集計」の上にある「設定」で「" + missing.join("」「") + "」を設定してください。"); }
         var report = progress || function () {};
         choosing = true;
         try {
@@ -330,7 +330,7 @@ var WorkloadBrowser = (function () {
         if (!remembered) { missing.push("共有"); }
         if (!roots.weekend) { missing.push("土日ログ"); }
         if (!selected.assignment) { missing.push("振分表"); }
-        if (missing.length) { throw new Error("初期設定が完了していません。画面上部の「設定」で「" + missing.join("」「") + "」を設定してください。"); }
+        if (missing.length) { throw new Error("初期設定が完了していません。「ログ集計」の上にある「設定」で「" + missing.join("」「") + "」を設定してください。"); }
         choosing = true;
         try {
             await reloadForLogs(report);
@@ -412,7 +412,6 @@ var WorkloadBrowser = (function () {
             key = remembered && await handle.isSameEntry(remembered.handle) ? remembered.key : "shared-root-" + window.crypto.randomUUID();
             await WorkloadShare.connect(handle, key);
             remembered = { handle: handle, key: key }; await WorkloadBrowserStore.set("shared-current", remembered);
-            node("connectShared").textContent = "共有";
         } catch (error) { fail(error); }
         finally { choosing = false; node("connectShared").disabled = false; }
     }
@@ -485,7 +484,7 @@ var WorkloadBrowser = (function () {
             remembered = await WorkloadBrowserStore.get("shared-current");
             if (remembered) { node("sharedRootName").textContent = remembered.handle.name; node("sharedRootName").title = remembered.handle.name; }
             if (remembered && await remembered.handle.queryPermission({ mode: "readwrite" }) === "granted") {
-                await WorkloadShare.connect(remembered.handle, remembered.key); node("connectShared").textContent = "共有";
+                await WorkloadShare.connect(remembered.handle, remembered.key);
             } else if (remembered) { info("前回の共有先を記憶しています。「ログ集計」で読み書きを許可してください。共有先を変更する場合は「設定」の「共有」を選択してください。"); }
             if (!window.showDirectoryPicker || !window.isSecureContext) { info("この開き方では共有フォルダを利用できません。通常のEdgeでHTMLファイルを開いてください。", true); }
         } catch (error) { info("設定を復元できません：" + (error.message || String(error)) + "　ファイルと共有先を選択してください。", true); }

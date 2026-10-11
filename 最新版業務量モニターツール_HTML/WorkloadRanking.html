@@ -65,8 +65,8 @@
     .time-input.invalid { border-color: #c57681; background: #f2e2e7; }
     .capacity-recalculate { height: 31px; margin-left: 7px; border: 1px solid #7384a0; border-radius: 5px; background: #e9edf2; color: #43566f; padding: 4px 9px; font-size: 11px; }
     .capacity-recalculate:hover { background: #dde2e9; }
-    .capacity-log-action { display: inline-block; margin-left: 14px; padding-left: 14px; border-left: 1px solid #7384a0; }
-    .capacity-log-button { height: 31px; margin-left: 0; border: 1px solid #6c80a3; border-radius: 5px; background: #cbdcf4; color: #2e4872; padding: 4px 10px; font-size: 11px; }
+    .capacity-log-action { display: block; margin: 12px 0 0; padding: 12px 0 0; border-top: 1px solid #7384a0; }
+    .capacity-log-button { width: 100%; height: 31px; margin-left: 0; border: 1px solid #6c80a3; border-radius: 5px; background: #cbdcf4; color: #2e4872; padding: 4px 10px; font-size: 11px; }
     .capacity-log-button:hover { background: #bdd1ef; color: #233c65; }
     .capacity-controls-note { margin: 5px 0 0; color: #59667c; font-size: 9px; }
     .capacity-log-button:disabled { cursor: wait; color: #536179; background: #eef0f5; border-color: #d6dce6; }
@@ -305,6 +305,22 @@
     .browser-extra .browser-file { min-width: 0; }
     .browser-extra button { white-space: nowrap; }
     .browser-conflict { color: #a9253b; white-space: pre-wrap; }
+    .browser-feedback .browser-note { margin: 0 0 14px; }
+    .capacity-settings { margin-top: 12px; }
+    .capacity-settings-button { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 31px; padding: 5px 10px; border: 1px solid #7384a0; border-radius: 5px; background: #e5eaf1; color: #43566f; cursor: pointer; list-style: none; font-size: 11px; font-weight: 600; line-height: 1.5; }
+    .capacity-settings-button::-webkit-details-marker { display: none; }
+    .capacity-settings-button:hover { background: #dde3ec; }
+    .capacity-settings-button:focus-visible { outline: 2px solid #6381b8; outline-offset: 2px; }
+    .capacity-settings-button svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .capacity-settings-chevron { font-size: 10px; }
+    .capacity-settings[open] .capacity-settings-chevron { transform: rotate(180deg); }
+    .capacity-settings .browser-controls { margin: 8px 0 0; padding: 10px; white-space: normal; }
+    .capacity-settings .browser-extra { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; align-items: stretch; }
+    .capacity-settings .browser-file { min-width: 0; }
+    .capacity-settings .browser-file button { width: 100%; min-width: 0; text-align: left; }
+    .capacity-settings .browser-file-name { display: block; width: 100%; max-width: none; color: inherit; }
+    .browser-settings-hint { margin: 12px 0 0; font-size: 10px; color: #52637a; line-height: 1.7; white-space: normal; }
+    @media screen and (min-width: 1280px) { .capacity-settings-button { height: 42px; font-size: 13px; } }
 
     /* Keep the existing light palette; follow the browser's dark page preference. */
     @media (prefers-color-scheme: dark) {
@@ -324,6 +340,10 @@
       .detail-header .detail-note, .ca-table td.ca-empty, .ca-suffix, .empty-state,
       .ranking-footer, .page-footer, .modal p, .browser-file-name, .browser-note,
       .browser-settings-title { color: var(--wm-muted); }
+      .capacity-settings-button { background: var(--wm-raised); color: var(--wm-text); border-color: #7b8ba3; }
+      .capacity-settings-button:hover { background: #384150; }
+      .capacity-settings-button:focus-visible { outline-color: var(--wm-accent); }
+      .browser-settings-hint { color: var(--wm-muted); }
       .primary .summary-label { color: #e0ebff; }
       .primary .summary-unit { color: #d6e4fa; }
       .primary .summary-caption { color: #d6e4fa; }
@@ -402,8 +422,8 @@
     .weekend-mode .weekend-only { display: block; }
     .weekend-mode .browser-file.weekend-only { display: inline-flex; }
     .weekend-mode .summary-item.first { width: 100%; }
-    .capacity-mode-toggle { display: inline-flex; vertical-align: middle; width: 70px; height: 31px; margin-left: 6px; border: 1px solid #7384a0; border-radius: 5px; overflow: hidden; background: #e9edf2; }
-    .capacity-mode-toggle button { flex: 1; border: 0; padding: 0 4px; background: transparent; color: #43566f; font-size: 11px; }
+    .capacity-mode-toggle { display: inline-flex; vertical-align: middle; width: 96px; height: 31px; margin-left: 6px; border: 1px solid #7384a0; border-radius: 5px; overflow: hidden; background: #e9edf2; }
+    .capacity-mode-toggle button { flex: 1; border: 0; padding: 0 8px; background: transparent; color: #43566f; font-size: 11px; white-space: nowrap; }
     .capacity-mode-toggle button[aria-pressed="true"] { background: #cbdcf4; color: #2e4872; }
     .capacity-mode-toggle button:focus-visible { outline-offset: -3px; }
     .weekend-items { margin-bottom: 14px; padding: 6px 12px; background: #e9edf2; border: 1px solid #b5c1d4; border-radius: 12px; }
@@ -415,7 +435,7 @@
     .weekend-item > .weekend-item-name { flex: 1; min-width: 0; padding-left: 22px; }
     .weekend-item-value { white-space: nowrap; font-size: 16px; font-weight: 700; }
     .weekend-item.is-excluded { color: #536172; background: #d6dce5; border-radius: 4px; }
-    @media screen and (min-width:1280px) { .capacity-mode-toggle { width: 76px; height: 42px; } .capacity-mode-toggle button { font-size: 12px; } }
+    @media screen and (min-width:1280px) { .capacity-mode-toggle { width: 96px; height: 42px; } .capacity-mode-toggle button { font-size: 12px; } }
     @media (prefers-color-scheme: dark) {
       .capacity-mode-toggle { background: var(--wm-raised); border-color: var(--wm-border); }
       .capacity-mode-toggle button { color: var(--wm-text); }
@@ -1644,6 +1664,7 @@
     }
     return {
       init: init,
+      resizeRanking: resizeRanking,
       setMode: setMode, setWeekendItem: setWeekendItem,
       refreshBrowserShare: function () { sharedVersion = ""; applyShared(true); renderTable(true); },
       canChooseBrowserFiles: function () { return !(importBusy || shareWriteBusy || editing || pendingSupport || pendingRemoval); },
@@ -1698,23 +1719,10 @@
       <div class="prototype-status"><span class="prototype-badge"><span class="status-dot"></span>HTML版&nbsp; v0.8.3</span><p class="prototype-note" id="dataStatus">未集計 ／ 起動時にデータをクリア</p></div>
     </div>
 
-    <section class="browser-controls" aria-label="設定">
-      <div class="browser-inputs">
-        <div class="browser-file"><span>未読CSV：</span><span id="unreadFileName" class="browser-file-name">未選択</span></div>
-        <div class="browser-file"><span>フラグCSV：</span><span id="flagFileName" class="browser-file-name">未選択</span></div>
-      </div>
-      <div id="browserSettingsRow" class="browser-extra" role="group" aria-labelledby="browserSettingsTitle">
-        <strong id="browserSettingsTitle" class="browser-settings-title">設定</strong>
-        <div class="browser-file"><button type="button" id="connectShared" class="connect-button" onclick="WorkloadBrowser.connectShared()">共有</button><span id="sharedRootName" class="browser-file-name">未設定</span></div>
-        <div class="browser-file weekday-only"><button type="button" onclick="WorkloadBrowser.chooseRoot('unread')">未読</button><span id="unreadRootName" class="browser-file-name">未設定</span></div>
-        <div class="browser-file weekday-only"><button type="button" onclick="WorkloadBrowser.chooseRoot('flag')">フラグ</button><span id="flagRootName" class="browser-file-name">未設定</span></div>
-        <div class="browser-file weekend-only"><button type="button" onclick="WorkloadBrowser.chooseRoot('weekend')">土日ログ</button><span id="weekendRootName" class="browser-file-name">未設定</span></div>
-        <div class="browser-file"><button type="button" id="chooseAssignment" onclick="WorkloadBrowser.choose('assignment')">振分表</button><span id="assignmentFileName" class="browser-file-name">未選択</span></div>
-      </div>
+    <div class="browser-feedback">
       <p id="browserStatus" class="browser-note" role="status" aria-live="polite"></p>
       <div id="browserConflict" class="browser-note browser-conflict"></div>
-      <input type="file" id="browserFileInput" style="display:none" />
-    </section>
+    </div>
     <div class="dashboard" id="dashboard"><div class="ranking-pane" id="rankingPane">
     <div class="ranking-card">
       <div class="ranking-heading">
@@ -1770,7 +1778,26 @@
         <p class="capacity-components">処理見込 <span id="capacityEstimate">—</span> 件 − 全体の残件数 <span id="capacityBacklog">0</span> 件</p>
         <p class="capacity-timing" id="capacityTiming">—</p>
       </div>
-      <div class="capacity-controls"><label for="capturedTimeInput">集計時刻</label><input type="text" id="capturedTimeInput" class="time-input" maxlength="5" value="" title="ログ集計時に自動入力。変更する場合はHH:mmで入力" aria-label="集計時刻" onkeydown="return WorkloadUI.capturedTimeKey(event)" /><button type="button" class="capacity-recalculate" id="recalculateCapacity" onclick="WorkloadUI.applyCapturedTime()">余力再計算</button><span class="capacity-mode-toggle" role="group" aria-label="平日・土日の切り替え"><button type="button" id="modeWeekday" aria-pressed="true" onclick="WorkloadUI.setMode('weekday')">平日</button><button type="button" id="modeWeekend" aria-pressed="false" onclick="WorkloadUI.setMode('weekend')">土日</button></span><span class="capacity-log-action"><button type="button" class="capacity-log-button" id="aggregateLog" title="共有情報を更新してから未読CSV・フラグCSVを順に選択し、設定した振分表と集計します" onclick="WorkloadUI.requestLogAggregate()">ログ集計</button></span><p class="capacity-controls-note">14:00以降は休憩控除なし</p></div>
+      <div class="capacity-controls"><label for="capturedTimeInput">集計時刻</label><input type="text" id="capturedTimeInput" class="time-input" maxlength="5" value="" title="ログ集計時に自動入力。変更する場合はHH:mmで入力" aria-label="集計時刻" onkeydown="return WorkloadUI.capturedTimeKey(event)" /><button type="button" class="capacity-recalculate" id="recalculateCapacity" onclick="WorkloadUI.applyCapturedTime()">余力再計算</button><span class="capacity-mode-toggle" role="group" aria-label="平日・土日の切り替え"><button type="button" id="modeWeekday" aria-pressed="true" onclick="WorkloadUI.setMode('weekday')">平日</button><button type="button" id="modeWeekend" aria-pressed="false" onclick="WorkloadUI.setMode('weekend')">土日</button></span>
+        <details id="browserSettings" class="capacity-settings" ontoggle="WorkloadUI.resizeRanking()">
+          <summary id="browserSettingsToggle" class="capacity-settings-button" aria-controls="browserSettingsPanel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v1" /><path d="M3 7h18l-2 13H5L3 7Z" /></svg><span id="browserSettingsTitle">設定</span><span class="capacity-settings-chevron" aria-hidden="true">▾</span></summary>
+          <section id="browserSettingsPanel" class="browser-controls" aria-label="設定メニュー">
+            <div class="browser-inputs">
+              <div class="browser-file"><span>未読CSV：</span><span id="unreadFileName" class="browser-file-name">未選択</span></div>
+              <div class="browser-file"><span>フラグCSV：</span><span id="flagFileName" class="browser-file-name">未選択</span></div>
+            </div>
+            <div id="browserSettingsRow" class="browser-extra" role="group" aria-labelledby="browserSettingsTitle">
+              <div class="browser-file"><button type="button" id="connectShared" class="connect-button" title="共有フォルダを選択・変更" onclick="WorkloadBrowser.connectShared()"><span id="sharedRootName" class="browser-file-name">共有フォルダを選択</span></button></div>
+              <div class="browser-file weekday-only"><button type="button" title="未読フォルダを選択・変更" onclick="WorkloadBrowser.chooseRoot('unread')"><span id="unreadRootName" class="browser-file-name">未読フォルダを選択</span></button></div>
+              <div class="browser-file weekday-only"><button type="button" title="フラグフォルダを選択・変更" onclick="WorkloadBrowser.chooseRoot('flag')"><span id="flagRootName" class="browser-file-name">フラグフォルダを選択</span></button></div>
+              <div class="browser-file weekend-only"><button type="button" title="土日ログフォルダを選択・変更" onclick="WorkloadBrowser.chooseRoot('weekend')"><span id="weekendRootName" class="browser-file-name">土日ログフォルダを選択</span></button></div>
+              <div class="browser-file"><button type="button" id="chooseAssignment" title="振分表を選択・変更" onclick="WorkloadBrowser.choose('assignment')"><span id="assignmentFileName" class="browser-file-name">振分表を選択</span></button></div>
+            </div>
+            <p class="browser-settings-hint">業務量モニター3.0tagが格納されているフォルダ内のフォルダ・ファイルを選択する</p>
+            <input type="file" id="browserFileInput" style="display:none" />
+          </section>
+        </details>
+        <span class="capacity-log-action"><button type="button" class="capacity-log-button" id="aggregateLog" title="共有情報を更新してから未読CSV・フラグCSVを順に選択し、設定した振分表と集計します" onclick="WorkloadUI.requestLogAggregate()">ログ集計</button></span><p class="capacity-controls-note">14:00以降は休憩控除なし</p></div>
     </div>
     </div></div></div>
     <div class="page-footer" id="pageFooter"><div class="footer-left" id="totalFormula">合計 ＝ 純粋未読 ＋ フラグ　／　未仕分は合計に含めません。</div><div class="footer-right" id="dataFooter">「ログ集計」でCSVと振分表を取り込みます。</div></div>
