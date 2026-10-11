@@ -6,26 +6,26 @@
 <meta name="color-scheme" content="light dark">
 <meta name="description" content="時刻順のタスクを未対応・対応中・完了へドラッグして管理。共有フォルダ、期限リマインド、ライト／ダークモードに対応。">
 <title>タスク管理</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%2334473e'/%3E%3Crect x='14' y='16' width='10' height='31' rx='4' fill='%23f6cbd1'/%3E%3Crect x='27' y='16' width='10' height='22' rx='4' fill='%23bbd8ed'/%3E%3Crect x='40' y='16' width='10' height='15' rx='4' fill='%23d5d8d6'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2064%2064'%3E%3Cstyle%3E.tile%7Bfill%3A%23d9def4%7D.task%7Bfill%3Anone%3Bstroke%3A%2335436b%3Bstroke-width%3A3%3Bstroke-linecap%3Around%3Bstroke-linejoin%3Around%7D%40media(prefers-color-scheme%3Adark)%7B.tile%7Bfill%3A%23303545%7D.task%7Bstroke%3A%23d0d7f4%7D%7D%3C%2Fstyle%3E%3Crect%20class%3D'tile'%20width%3D'64'%20height%3D'64'%20rx%3D'16'%2F%3E%3Cg%20class%3D'task'%3E%3Crect%20x%3D'16'%20y%3D'12'%20width%3D'32'%20height%3D'40'%20rx%3D'5'%2F%3E%3Cpath%20d%3D'm22%2024%203%203%205-6M35%2025h7m-20%2013%203%203%205-6M35%2039h7'%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E">
 <style>
 :root {
   color-scheme: light dark;
-  --bg:#f5f5f1; --surface:#fff; --ink:#27332d; --muted:#6b756f; --line:#e1e5df;
-  --accent:#344b3f; --accent-hover:#253a30; --on-accent:#fff; --soft:#eef1eb;
-  --pending:#f9e8e9; --pending-line:#efd0d4; --pending-ink:#904552; --pending-dot:#c97b89;
-  --progress:#e9f2f9; --progress-line:#cadfeb; --progress-ink:#476f8b; --progress-dot:#729ebd;
-  --done:#edf0ed; --done-line:#dce1dc; --done-ink:#68756c; --done-dot:#96a49a;
-  --danger:#ab2f40; --danger-bg:#ffe0e4; --danger-line:#d75467;
-  --shadow:0 3px 14px #26352e08; --modal-shadow:0 24px 100px #0003;
+  --bg:#f2f1ef; --surface:#faf9f7; --ink:#2c2f38; --muted:#656873; --line:#d6d6de;
+  --accent:#d9def4; --accent-hover:#cbd2ee; --on-accent:#35436b; --accent-line:#9aa7cf; --accent-ink:#4d5f99; --soft:#ebeaf2;
+  --pending:#f4e4e8; --pending-line:#e6c6cf; --pending-ink:#8a4757; --pending-dot:#b87c8a;
+  --progress:#e3edf8; --progress-line:#bfcfe2; --progress-ink:#486385; --progress-dot:#6d91bb;
+  --done:#e8e8ec; --done-line:#d0d1d8; --done-ink:#636670; --done-dot:#9698a3;
+  --danger:#96354b; --danger-bg:#f7dfe4; --danger-line:#c35f76;
+  --shadow:0 3px 14px #1c1e260b; --modal-shadow:0 24px 100px #0003;
 }
 @media(prefers-color-scheme:dark) {
   :root {
-    --bg:#171d1a; --surface:#222a25; --ink:#e7eee9; --muted:#a1afa5; --line:#354138;
-    --accent:#bdd6c6; --accent-hover:#d2e5d9; --on-accent:#17251c; --soft:#2b362e;
-    --pending:#3e2d32; --pending-line:#64464e; --pending-ink:#f1bdc8; --pending-dot:#d496a3;
-    --progress:#263641; --progress-line:#425d6f; --progress-ink:#b9d8ec; --progress-dot:#94bad4;
-    --done:#2b3430; --done-line:#414d46; --done-ink:#b9c7be; --done-dot:#93a69a;
-    --danger:#ffb3c0; --danger-bg:#552632; --danger-line:#e68297;
+    --bg:#121214; --surface:#202023; --ink:#e8e8ed; --muted:#b0b0bc; --line:#3c3c44;
+    --accent:#bfc7ed; --accent-hover:#d0d7f4; --on-accent:#20263f; --accent-line:#8998d3; --accent-ink:#bfc7ed; --soft:#2c2c33;
+    --pending:#35262c; --pending-line:#60444d; --pending-ink:#e4b2c0; --pending-dot:#c48d9e;
+    --progress:#242d3d; --progress-line:#425572; --progress-ink:#b9cdef; --progress-dot:#90acda;
+    --done:#29292e; --done-line:#41414b; --done-ink:#bcbcc8; --done-dot:#9696a6;
+    --danger:#f2afbe; --danger-bg:#472832; --danger-line:#c97087;
     --shadow:0 3px 14px #0002; --modal-shadow:0 24px 100px #0007;
   }
 }
@@ -43,10 +43,8 @@ svg.icon {width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
 .app {max-width:1880px; margin:0 auto; padding:32px 40px 20px}
 .header {display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:28px}
 .brand {display:flex;align-items:center;gap:14px}
-.brand-mark {width:46px;height:46px;border-radius:14px;display:flex;gap:4px;align-items:flex-start;justify-content:center;background:var(--accent);padding:11px 9px;box-shadow:var(--shadow)}
-.brand-mark span {width:7px;border-radius:3px; background:#f1c4cd;height:25px}
-.brand-mark span:nth-child(2) {background:#b7d6eb;height:18px}
-.brand-mark span:nth-child(3) {background:#d9dfd9;height:12px}
+.brand-mark {width:46px;height:46px;border-radius:14px;display:flex;gap:4px;align-items:center;justify-content:center;background:var(--accent);color:var(--on-accent);padding:11px 9px;box-shadow:var(--shadow)}
+.brand-mark .icon {width:27px;height:27px;stroke-width:2}
 .eyebrow {font-size:10px;font-weight:700;letter-spacing:2.2px;color:var(--muted);line-height:1.3;margin-bottom:3px}
 h1 {font-size:25px;line-height:1.4;letter-spacing:.02em;margin:0;font-weight:700}
 .header-right {display:flex;align-items:center;gap:18px}
@@ -54,7 +52,7 @@ h1 {font-size:25px;line-height:1.4;letter-spacing:.02em;margin:0;font-weight:700
 .clock small {font-size:11px;font-weight:500;color:var(--muted);display:block;text-align:right;letter-spacing:.08em}
 .button {display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--surface);padding:10px 15px;border-radius:11px;font-size:13px;font-weight:600;white-space:nowrap;transition:background .15s,transform .15s}
 .button:hover {background:var(--soft)}
-.button.primary {background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.button.primary {background:var(--accent);color:var(--on-accent);border-color:var(--accent-line)}
 .button.primary:hover {background:var(--accent-hover)}
 .button.small {padding:7px 11px;font-size:12px;border-radius:9px}
 .button.text {background:transparent;border-color:transparent;color:var(--muted)}
@@ -62,17 +60,22 @@ h1 {font-size:25px;line-height:1.4;letter-spacing:.02em;margin:0;font-weight:700
 .icon-button {width:32px;height:32px;border:0;border-radius:9px;background:transparent;display:inline-flex;align-items:center;justify-content:center}
 .icon-button:hover {background:var(--surface)}
 .toolbar {display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
-.date-group {display:flex;align-items:center;gap:8px}
+.date-group {display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .date-shell {display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:8px 12px;position:relative}
 .date-shell .icon {color:var(--muted)}
-.date-shell input {color:var(--ink);background:transparent;border:0;width:142px;font-size:13px;font-weight:600;padding:2px 0;cursor:pointer}
-.date-label {color:var(--muted);font-size:12px}
+.date-shell input {position:absolute;inset:0;width:100%;height:100%;opacity:0;margin:0;padding:0;border:0;cursor:pointer}
+.date-shell input::-webkit-calendar-picker-indicator {position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;cursor:pointer}
+.date-shell:focus-within {outline:3px solid var(--progress-dot);outline-offset:3px}
+.date-display {min-width:142px;color:var(--ink);font-size:13px;font-weight:600;padding:2px 0}
+.date-shortcuts {display:flex;gap:4px}
+.date-shortcuts .button[aria-pressed="true"] {background:var(--accent);color:var(--on-accent);border-color:var(--accent-line)}
+.date-shortcuts .button:disabled {opacity:1;cursor:default}
 .toolbar-right {display:flex;align-items:center;gap:16px}
 .search {display:flex;align-items:center;gap:8px;max-width:300px;min-width:200px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--muted)}
 .search input {border:0;outline:none;background:transparent;color:var(--ink);width:100%;min-width:0;font-size:12px}
 .search:focus-within {outline:2px solid var(--progress-dot);outline-offset:2px}
 .mine-filter {padding:9px 12px;font-size:12px}
-.mine-filter[aria-pressed="true"] {background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.mine-filter[aria-pressed="true"] {background:var(--accent);color:var(--on-accent);border-color:var(--accent-line)}
 .profile-button .button-label {max-width:100px;overflow:hidden;text-overflow:ellipsis}
 .drag-hint {display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);white-space:nowrap}
 .summary {display:flex;align-items:center;justify-content:space-between;gap:20px;border-top:1px solid var(--line);padding:17px 0 18px}
@@ -80,7 +83,7 @@ h1 {font-size:25px;line-height:1.4;letter-spacing:.02em;margin:0;font-weight:700
 .summary-title span {font-size:12px;font-weight:400;color:var(--muted);margin-left:10px}
 .progress-group {display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;min-width:180px}
 .progress-track {width:100px;height:5px;background:var(--line);border-radius:8px;overflow:hidden}
-.progress-fill {height:100%;background:var(--accent);border-radius:8px;transition:width .2s}
+.progress-fill {height:100%;background:var(--accent-ink);border-radius:8px;transition:width .2s}
 .reminder {display:flex;align-items:center;gap:12px;background:var(--danger-bg);color:var(--danger);border:1px solid var(--pending-line);border-radius:12px;padding:12px 16px;margin-bottom:18px;font-size:13px}
 .reminder strong {font-weight:650}
 .reminder .button {margin-left:auto;color:var(--danger);background:transparent;border-color:var(--danger-line)}
@@ -99,7 +102,7 @@ h1 {font-size:25px;line-height:1.4;letter-spacing:.02em;margin:0;font-weight:700
 .card-list {padding:0 14px 14px;flex:1;min-height:270px}
 .task-card {border:1px solid var(--tone-line);background:var(--tone);border-radius:10px;padding:10px 12px;position:relative;margin-bottom:8px;box-shadow:var(--shadow);cursor:grab;transition:box-shadow .15s,transform .15s,border-color .15s}
 .task-card:last-child {margin-bottom:0}
-.task-card:hover {box-shadow:0 5px 18px #26352e14;transform:translateY(-1px)}
+.task-card:hover {box-shadow:0 5px 18px #1c1e2617;transform:translateY(-1px)}
 .task-card.dragging {opacity:.45;cursor:grabbing}
 .task-card.overdue {background:var(--danger-bg);border-color:var(--danger-line);box-shadow:inset 3px 0 0 var(--danger-line),var(--shadow)}
 .task-card:focus {scroll-margin:80px}
@@ -137,12 +140,12 @@ h1 {font-size:25px;line-height:1.4;letter-spacing:.02em;margin:0;font-weight:700
 .footer {display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:15px;color:var(--muted);font-size:11px}
 .save-state {display:flex;align-items:center;gap:7px;min-width:0}
 .save-dot {width:6px;height:6px;border-radius:50%;background:var(--done-dot);flex-shrink:0}
-.save-dot.shared {background:#71a885}
+.save-dot.shared {background:var(--accent-ink)}
 .save-dot.error {background:var(--danger-line)}
 .footer-actions {display:flex;align-items:center;gap:4px}
 .footer-actions .button {font-size:11px;padding:5px 8px}
 dialog {width:min(520px,calc(100% - 32px));border:1px solid var(--line);border-radius:19px;padding:0;background:var(--surface);color:var(--ink);box-shadow:var(--modal-shadow);max-height:calc(100dvh - 40px)}
-dialog::backdrop {background:#13281e66;backdrop-filter:blur(3px)}
+dialog::backdrop {background:#12121466;backdrop-filter:blur(3px)}
 .dialog-head {display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px 26px 17px;border-bottom:1px solid var(--line)}
 .dialog-head h2 {font-size:19px;margin:0;line-height:1.5}
 .dialog-head p {font-size:11px;color:var(--muted);margin:3px 0 0}
@@ -157,7 +160,7 @@ dialog::backdrop {background:#13281e66;backdrop-filter:blur(3px)}
 .field-row {display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .field-label-row {display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
 .field-label-row label {margin-bottom:0}
-.field-label-row .button {padding:4px 7px;font-size:11px;color:var(--accent)}
+.field-label-row .button {padding:4px 7px;font-size:11px;color:var(--accent-ink)}
 .field-label-row .icon {width:14px;height:14px}
 .dialog-foot {display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:16px 26px 22px}
 .form-error {padding:10px 12px;background:var(--danger-bg);color:var(--danger);border-radius:8px;font-size:12px;margin-top:16px;white-space:pre-wrap}
@@ -205,9 +208,7 @@ noscript {display:block;padding:20px;color:var(--danger)}
   .app {padding:20px 16px 18px}
   .header {align-items:flex-start;margin-bottom:23px;gap:12px;flex-wrap:wrap}
   .brand-mark {width:39px;height:39px;padding:9px 7px;gap:3px;border-radius:12px}
-  .brand-mark span {height:22px}
-  .brand-mark span:nth-child(2) {height:16px}
-  .brand-mark span:nth-child(3) {height:11px}
+  .brand-mark .icon {width:24px;height:24px}
   .brand {gap:10px}
   h1 {font-size:22px}
   .clock {font-size:22px}
@@ -246,6 +247,7 @@ noscript {display:block;padding:20px;color:var(--danger)}
 </head>
 <body>
 <svg style="display:none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+<symbol id="i-task" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="m7.5 8 1.5 1.5 2.5-3M13 8.5h3m-8.5 6 1.5 1.5 2.5-3M13 15h3"/></symbol>
 <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
 <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
 <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
@@ -267,7 +269,7 @@ noscript {display:block;padding:20px;color:var(--danger)}
 <main class="app">
 <header class="header">
   <div class="brand">
-    <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="brand-mark" aria-hidden="true"><svg class="icon"><use href="#i-task"/></svg></div>
     <div><div class="eyebrow">TASKBOARD</div><h1>タスク管理</h1></div>
   </div>
   <div class="header-right">
@@ -280,10 +282,13 @@ noscript {display:block;padding:20px;color:var(--danger)}
 <div class="toolbar">
   <div class="date-group">
     <button class="icon-button" id="previous-day" aria-label="前日を表示"><svg class="icon"><use href="#i-left"/></svg></button>
-    <label class="date-shell"><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><input id="board-date" type="date" aria-label="表示する日付"></label>
+    <label class="date-shell"><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><span class="date-display" id="date-display" aria-hidden="true"></span><input id="board-date" type="date" aria-label="表示する日付"></label>
     <button class="icon-button" id="next-day" aria-label="翌日を表示"><svg class="icon"><use href="#i-right"/></svg></button>
-    <button class="button small text" id="today-button">今日</button>
-    <span class="date-label" id="weekday"></span>
+    <div class="date-shortcuts" role="group" aria-label="今日を基準に日付を選択">
+      <button class="button small" id="yesterday-button" aria-pressed="false">昨日</button>
+      <button class="button small" id="today-button" aria-pressed="false">今日</button>
+      <button class="button small" id="tomorrow-button" aria-pressed="false">明日</button>
+    </div>
   </div>
   <div class="toolbar-right">
     <span class="drag-hint"><svg class="icon" aria-hidden="true"><use href="#i-grip"/></svg>ドラッグで状況を変更</span>
@@ -522,6 +527,7 @@ noscript {display:block;padding:20px;color:var(--danger)}
   const uuid=function(){return globalThis.crypto&&crypto.randomUUID?crypto.randomUUID():'tb-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+'-'+Math.random().toString(36).slice(2);};
   function today(){return localDate(new Date());}
   function localDate(d){return String(d.getFullYear()).padStart(4,'0')+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+  function relativeDate(amount){const date=new Date(today()+'T12:00:00');date.setDate(date.getDate()+amount);return localDate(date);}
   function readMyName(){try{const name=localStorage.getItem(PROFILE_KEY);return C.validPersonalName(name)?name.trim():'';}catch(_){return '';}}
   function updatePersonalUI() {
     $('profile-label').textContent=state.myName||'名前を登録';
@@ -706,7 +712,10 @@ noscript {display:block;padding:20px;color:var(--danger)}
     $('summary-title').firstChild.textContent=state.selectedDate===today()?'今日のタスク':'この日のタスク';
     $('summary-count').textContent=(filtering?filtered.length+' / ':'')+dayTasks.length+'件のタスク'+(state.onlyMine?' · 自分が担当':'')+(query?' · 検索中':'');
     $('board-date').value=state.selectedDate;
-    $('weekday').textContent=new Date(state.selectedDate+'T12:00:00').toLocaleDateString('ja-JP',{weekday:'short'});
+    $('date-display').textContent=state.selectedDate.replaceAll('-','/')+'('+new Date(state.selectedDate+'T12:00:00').toLocaleDateString('ja-JP',{weekday:'short'})+')';
+    $('yesterday-button').setAttribute('aria-pressed',String(state.selectedDate===relativeDate(-1)));
+    $('today-button').setAttribute('aria-pressed',String(state.selectedDate===today()));
+    $('tomorrow-button').setAttribute('aria-pressed',String(state.selectedDate===relativeDate(1)));
     $('today-button').disabled=state.selectedDate===today();
     $('demo-button').hidden=state.mode!=='local'||state.tasks.length>0;
     if(focusId) {
@@ -904,7 +913,9 @@ noscript {display:block;padding:20px;color:var(--danger)}
   $('board-date').addEventListener('change',function(){selectDate(this.value);});
   $('previous-day').addEventListener('click',function(){shiftDate(-1);});
   $('next-day').addEventListener('click',function(){shiftDate(1);});
+  $('yesterday-button').addEventListener('click',function(){selectDate(relativeDate(-1));});
   $('today-button').addEventListener('click',function(){selectDate(today());});
+  $('tomorrow-button').addEventListener('click',function(){selectDate(relativeDate(1));});
   $('search-input').addEventListener('input',render);
   $('add-button').addEventListener('click',function(){openTask();});
   document.querySelectorAll('.column-add').forEach(function(button){button.addEventListener('click',function(){openTask(null,button.dataset.status);});});
