@@ -34,6 +34,7 @@ body {margin:0; background:var(--bg); color:var(--ink); font:15px/1.6 "Yu Gothic
 button,input,textarea,select {font:inherit}
 button {cursor:pointer; color:inherit}
 button:disabled {opacity:.5; cursor:wait}
+#add-button:disabled,.column-add:disabled {cursor:not-allowed}
 button:focus-visible,summary:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[tabindex]:focus-visible {
   outline:3px solid var(--progress-dot); outline-offset:3px;
 }
@@ -687,6 +688,7 @@ noscript {display:block;padding:20px;color:var(--danger)}
       const card=Array.from(document.querySelectorAll('.task-card')).find(function(el){return el.dataset.id===focusId;});
       if(card){const target=focusAction?card.querySelector('[data-action="'+focusAction+'"]'):card;(target||card).focus({preventScroll:true});}
     }
+    updateTaskAddUI();
     updatePersonalUI();refreshReminders();updateSaveState();
   }
   function taskCard(task) {
@@ -798,11 +800,20 @@ noscript {display:block;padding:20px;color:var(--danger)}
   function updateSaveState() {
     if($('share-dialog').open)updateShareDialog();
   }
+  function updateTaskAddUI() {
+    const currentDate=today();
+    const past=state.selectedDate<currentDate;
+    $('add-button').disabled=past;
+    document.querySelectorAll('.column-add').forEach(function(button){button.disabled=past;});
+    $('task-date').min=state.editing?'':currentDate;
+  }
   function openTask(id,status) {
     if(dialogBusy||state.booting)return;
+    if(!id&&state.selectedDate<today()){toast('過去日にはタスクを追加できません。',true);return;}
     state.editing=id?state.tasks.find(function(t){return t.id===id;}):null;
     if(id&&!state.editing){toast('このタスクは削除されています。',true);return;}
     const t=state.editing;
+    updateTaskAddUI();
     $('task-dialog-title').textContent=t?'タスクを編集':'タスクを追加';
     $('task-save').textContent=t?'保存する':'追加する';
     $('task-date').value=t?t.date:state.selectedDate;
@@ -826,6 +837,7 @@ noscript {display:block;padding:20px;color:var(--danger)}
     const patch={date:$('task-date').value,time:$('task-time').value,title:$('task-title').value.trim(),assignee:$('task-assignee').value.trim(),assignee2:$('task-assignee2').value.trim(),status:$('task-status').value,notes:$('task-notes').value};
     if(!Object.keys(patch).every(function(k){return C.validField(k,patch[k]);})){showError('task-error','日付・時間・タスクを確認してください。');return;}
     const original=state.editing;
+    if(!original&&patch.date<today()){showError('task-error','過去日にはタスクを追加できません。');return;}
     const targetDate=patch.date;
     if(original)for(const key of Object.keys(patch))if(patch[key]===original[key])delete patch[key];
     if(!Object.keys(patch).length){$('task-dialog').close();return;}
@@ -980,7 +992,7 @@ noscript {display:block;padding:20px;color:var(--danger)}
   });
   document.addEventListener('visibilitychange',function(){if(!document.hidden){refreshReminders();syncShared(false);updateClock();}});
   window.addEventListener('beforeunload',function(event){if(state.writing||dialogBusy){event.preventDefault();event.returnValue='';}});
-  function updateClock(){$('live-clock').textContent=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',hour12:false});}
+  function updateClock(){$('live-clock').textContent=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',hour12:false});updateTaskAddUI();}
   setInterval(updateClock,1000);
   setInterval(function(){if(!document.hidden)refreshReminders();},10000);
   setInterval(function(){if(!document.hidden&&!state.booting&&!dialogBusy)syncShared(false);},3000);
