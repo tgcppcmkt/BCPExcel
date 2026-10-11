@@ -34,14 +34,14 @@ body {margin:0; background:var(--bg); color:var(--ink); font:15px/1.6 "Yu Gothic
 button,input,textarea,select {font:inherit}
 button {cursor:pointer; color:inherit}
 button:disabled {opacity:.5; cursor:wait}
-button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[tabindex]:focus-visible {
+button:focus-visible,summary:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[tabindex]:focus-visible {
   outline:3px solid var(--progress-dot); outline-offset:3px;
 }
 button {touch-action:manipulation}
 [hidden] {display:none!important}
 svg.icon {width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
 .app {max-width:1880px; margin:0 auto; padding:32px 40px 20px}
-.header {display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:28px}
+.header {position:relative;display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:28px}
 .brand {display:flex;align-items:center;gap:14px}
 .brand-mark {width:46px;height:46px;border-radius:14px;display:flex;gap:4px;align-items:center;justify-content:center;background:var(--accent);color:var(--on-accent);padding:11px 9px;box-shadow:var(--shadow)}
 .brand-mark .icon {width:27px;height:27px;stroke-width:2}
@@ -77,7 +77,6 @@ h1 {font-size:25px;line-height:1.4;letter-spacing:.02em;margin:0;font-weight:700
 .mine-filter {padding:9px 12px;font-size:12px}
 .mine-filter[aria-pressed="true"] {background:var(--accent);color:var(--on-accent);border-color:var(--accent-line)}
 .profile-button .button-label {max-width:100px;overflow:hidden;text-overflow:ellipsis}
-.drag-hint {display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);white-space:nowrap}
 .summary {display:flex;align-items:center;justify-content:space-between;gap:20px;border-top:1px solid var(--line);padding:17px 0 18px}
 .summary-title {font-size:14px;font-weight:600}
 .summary-title span {font-size:12px;font-weight:400;color:var(--muted);margin-left:10px}
@@ -103,7 +102,8 @@ h1 {font-size:25px;line-height:1.4;letter-spacing:.02em;margin:0;font-weight:700
 .task-card {border:1px solid var(--tone-line);background:var(--tone);border-radius:10px;padding:10px 12px;position:relative;margin-bottom:8px;box-shadow:var(--shadow);cursor:grab;transition:box-shadow .15s,transform .15s,border-color .15s}
 .task-card:last-child {margin-bottom:0}
 .task-card:hover {box-shadow:0 5px 18px #1c1e2617;transform:translateY(-1px)}
-.task-card.dragging {opacity:.45;cursor:grabbing}
+.task-card:active:not(:has(button:active,input:active,select:active,textarea:active,.card-menu:active)) {cursor:grabbing;transform:scale(.97)}
+.task-card.dragging {opacity:.45;cursor:grabbing;transform:scale(.97)}
 .task-card.overdue {background:var(--danger-bg);border-color:var(--danger-line);box-shadow:inset 3px 0 0 var(--danger-line),var(--shadow)}
 .task-card:focus {scroll-margin:80px}
 .card-row {display:grid;grid-template-columns:64px minmax(0,1fr) minmax(78px,118px) 55px;align-items:center;gap:10px;min-height:40px}
@@ -136,12 +136,7 @@ h1 {font-size:25px;line-height:1.4;letter-spacing:.02em;margin:0;font-weight:700
 .empty-art:after {top:10px;left:13px;transform:rotate(7deg);background:var(--surface)}
 .empty strong {font-size:12px;font-weight:550;color:var(--tone-ink)}
 .empty p {margin:0;font-size:11px;color:var(--muted)}
-.column-bottom {padding:12px 20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;color:var(--muted);font-size:10px;letter-spacing:.025em}
-.footer {display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:15px;color:var(--muted);font-size:11px}
-.save-state {display:flex;align-items:center;gap:7px;min-width:0}
-.save-dot {width:6px;height:6px;border-radius:50%;background:var(--done-dot);flex-shrink:0}
-.save-dot.shared {background:var(--accent-ink)}
-.save-dot.error {background:var(--danger-line)}
+.footer {display:flex;align-items:center;justify-content:flex-end;gap:16px;padding-top:15px;color:var(--muted);font-size:11px}
 .footer-actions {display:flex;align-items:center;gap:4px}
 .footer-actions .button {font-size:11px;padding:5px 8px}
 dialog {width:min(520px,calc(100% - 32px));border:1px solid var(--line);border-radius:19px;padding:0;background:var(--surface);color:var(--ink);box-shadow:var(--modal-shadow);max-height:calc(100dvh - 40px)}
@@ -164,16 +159,16 @@ dialog::backdrop {background:#12121466;backdrop-filter:blur(3px)}
 .field-label-row .icon {width:14px;height:14px}
 .dialog-foot {display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:16px 26px 22px}
 .form-error {padding:10px 12px;background:var(--danger-bg);color:var(--danger);border-radius:8px;font-size:12px;margin-top:16px;white-space:pre-wrap}
-.help-intro {font-size:13px;line-height:1.9;margin:0 0 20px;color:var(--muted)}
-.help-step {display:flex;gap:12px;align-items:flex-start;margin:0 0 19px}
-.step-number {display:flex;align-items:center;justify-content:center;flex-shrink:0;width:25px;height:25px;border-radius:8px;background:var(--soft);font-size:12px;font-weight:650}
-.help-step strong {font-size:13px;display:block;margin-bottom:2px}
-.help-step p {font-size:12px;margin:0;color:var(--muted);line-height:1.85}
-.share-status {padding:13px 15px;border:1px solid var(--line);background:var(--bg);border-radius:10px;font-size:12px;line-height:1.8;margin-bottom:14px;overflow-wrap:anywhere}
+.share-settings > summary {list-style:none;cursor:pointer;user-select:none}
+.share-settings > summary::-webkit-details-marker {display:none}
+.share-settings .settings-chevron {width:14px;height:14px;transform:rotate(90deg)}
+.share-settings[open] .settings-chevron {transform:rotate(-90deg)}
+.share-panel {position:absolute;right:0;top:calc(100% + 8px);z-index:21;width:min(350px,calc(100vw - 32px));max-height:calc(100dvh - 160px);overflow-y:auto;padding:14px;border:1px solid var(--line);background:var(--surface);border-radius:12px;box-shadow:var(--modal-shadow)}
+.share-panel .share-buttons .primary {width:100%}
+.share-panel .share-buttons .button:not(.primary) {flex:1}
+.share-status {padding:10px 12px;border:1px solid var(--line);background:var(--bg);border-radius:9px;font-size:12px;line-height:1.6;margin-bottom:10px;overflow-wrap:anywhere}
 .share-buttons {display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
 .note {font-size:11px;color:var(--muted);line-height:1.9;margin:12px 0 0}
-.settings-section {padding-top:20px;margin-top:20px;border-top:1px solid var(--line)}
-.settings-section h3 {font-size:13px;margin:0 0 10px}
 .checkbox-label {display:flex;align-items:flex-start;gap:8px;font-size:12px;margin:13px 0}
 .checkbox-label input {margin-top:5px;accent-color:var(--accent)}
 kbd {font-size:10px;background:var(--soft);border:1px solid var(--line);border-radius:4px;padding:1px 4px}
@@ -188,7 +183,6 @@ noscript {display:block;padding:20px;color:var(--danger)}
 @media(max-width:1050px) {
   .app {padding:25px 24px 18px}
   .board {gap:12px}
-  .drag-hint {display:none}
   .card-list {padding:0 10px 10px}
   .column-head {padding:17px 15px 14px}
   .column {min-height:530px}
@@ -226,7 +220,6 @@ noscript {display:block;padding:20px;color:var(--danger)}
   .column {min-height:260px}
   .card-list {min-height:140px}
   .empty {min-height:150px}
-  .column-bottom {padding:9px 16px}
   .summary {padding:14px 0}
   .summary-title span {display:block;margin-left:0;font-size:11px}
   .progress-group {min-width:130px;gap:7px}
@@ -235,7 +228,6 @@ noscript {display:block;padding:20px;color:var(--danger)}
   .reminder .icon {margin-top:3px}
   .reminder .button {padding:5px 8px}
   .footer {align-items:flex-start}
-  .save-state {font-size:10px;max-width:60%}
   .dialog-head {padding:19px 20px 15px}
   .dialog-body {padding:19px 20px}
   .dialog-foot {padding:14px 20px 20px}
@@ -275,7 +267,16 @@ noscript {display:block;padding:20px;color:var(--danger)}
   <div class="header-right">
     <div class="clock"><time id="live-clock">--:--</time><small>現在の時刻</small></div>
     <button class="button profile-button" id="profile-button"><svg class="icon"><use href="#i-user"/></svg><span class="button-label" id="profile-label">名前を登録</span></button>
-    <button class="button" id="share-button"><svg class="icon"><use href="#i-folder"/></svg><span class="button-label">共有設定</span></button>
+    <details class="share-settings" id="share-dialog">
+      <summary class="button" id="share-button" aria-controls="share-panel"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg><span class="button-label">設定</span><svg class="icon settings-chevron" aria-hidden="true"><use href="#i-right"/></svg></summary>
+      <section class="share-panel" id="share-panel" aria-label="設定">
+        <div class="share-status" id="share-description">個人用（このブラウザ）</div>
+        <div class="share-buttons"><button class="button primary" id="connect-folder"><svg class="icon"><use href="#i-folder"/></svg>共有フォルダを選択</button><button class="button" id="reconnect-folder" hidden>再接続</button><button class="button" id="disconnect-folder" hidden>個人用に戻る</button></div>
+        <label class="checkbox-label" id="publish-local-wrap"><input type="checkbox" id="publish-local">このブラウザの個人用タスクも共有先に追加する</label>
+        <p class="note" id="folder-support-note" hidden></p>
+        <div class="form-error" id="share-error" role="alert" hidden></div>
+      </section>
+    </details>
     <button class="button primary" id="add-button"><svg class="icon"><use href="#i-plus"/></svg><span class="button-label">タスク追加</span></button>
   </div>
 </header>
@@ -291,7 +292,6 @@ noscript {display:block;padding:20px;color:var(--danger)}
     </div>
   </div>
   <div class="toolbar-right">
-    <span class="drag-hint"><svg class="icon" aria-hidden="true"><use href="#i-grip"/></svg>ドラッグで状況を変更</span>
     <label class="search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input id="search-input" type="search" placeholder="タスク・担当を検索" aria-label="表示日のタスク・担当を検索"></label>
     <button class="button mine-filter" id="mine-filter" aria-pressed="false"><svg class="icon"><use href="#i-user"/></svg>自分が担当</button>
   </div>
@@ -310,27 +310,23 @@ noscript {display:block;padding:20px;color:var(--danger)}
   <section class="column pending" data-status="pending" aria-labelledby="heading-pending">
     <div class="column-head"><h2 class="column-title" id="heading-pending"><span class="status-dot"></span>未対応 <span class="column-count" id="count-pending">0</span></h2><button class="icon-button column-add" data-status="pending" aria-label="未対応タスクを追加"><svg class="icon"><use href="#i-plus"/></svg></button></div>
     <div class="card-list" id="list-pending"></div>
-    <div class="column-bottom"><span>TO DO</span><span>時刻の早い順</span></div>
   </section>
   <section class="column progress" data-status="progress" aria-labelledby="heading-progress">
     <div class="column-head"><h2 class="column-title" id="heading-progress"><span class="status-dot"></span>対応中 <span class="column-count" id="count-progress">0</span></h2><button class="icon-button column-add" data-status="progress" aria-label="対応中タスクを追加"><svg class="icon"><use href="#i-plus"/></svg></button></div>
     <div class="card-list" id="list-progress"></div>
-    <div class="column-bottom"><span>IN PROGRESS</span><span>時刻の早い順</span></div>
   </section>
   <section class="column done" data-status="done" aria-labelledby="heading-done">
     <div class="column-head"><h2 class="column-title" id="heading-done"><span class="status-dot"></span>完了 <span class="column-count" id="count-done">0</span></h2><button class="icon-button column-add" data-status="done" aria-label="完了タスクを追加"><svg class="icon"><use href="#i-plus"/></svg></button></div>
     <div class="card-list" id="list-done"></div>
-    <div class="column-bottom"><span>DONE</span><span>時刻の早い順</span></div>
   </section>
 </div>
 <footer class="footer">
-  <div class="save-state"><span class="save-dot" id="save-dot"></span><span id="save-label">このブラウザに保存</span></div>
-  <div class="footer-actions"><button class="button text" id="demo-button">サンプルを試す</button><button class="button text" id="help-button">使い方</button><span style="font-size:10px;opacity:.6;margin-left:6px">v1.0</span></div>
+  <div class="footer-actions"><button class="button text" id="demo-button">サンプルを試す</button><span style="font-size:10px;opacity:.6;margin-left:6px">v1.0</span></div>
 </footer>
 </main>
 <dialog id="task-dialog" aria-labelledby="task-dialog-title">
 <form id="task-form">
-  <div class="dialog-head"><div><h2 id="task-dialog-title">タスクを追加</h2><p>予定時刻を決めて、仕事を見える化。</p></div><button type="button" class="icon-button dialog-close" aria-label="閉じる"><svg class="icon"><use href="#i-close"/></svg></button></div>
+  <div class="dialog-head"><div><h2 id="task-dialog-title">タスクを追加</h2></div><button type="button" class="icon-button dialog-close" aria-label="閉じる"><svg class="icon"><use href="#i-close"/></svg></button></div>
   <div class="dialog-body">
     <div class="field-row">
       <div class="field"><label for="task-date">日付</label><input id="task-date" type="date" required></div>
@@ -358,37 +354,6 @@ noscript {display:block;padding:20px;color:var(--danger)}
   </div>
   <div class="dialog-foot"><button class="button dialog-close" id="profile-cancel" type="button">あとで</button><button class="button primary" id="profile-save" type="submit">登録する</button></div>
 </form>
-</dialog>
-<dialog id="share-dialog" aria-labelledby="share-dialog-title">
-  <div class="dialog-head"><div><h2 id="share-dialog-title">保存・共有</h2><p>同じフォルダにつなぐと、同じタスクを表示します。</p></div><button class="icon-button dialog-close" aria-label="閉じる"><svg class="icon"><use href="#i-close"/></svg></button></div>
-  <div class="dialog-body">
-    <div class="share-status" id="share-description">このブラウザに保存しています。</div>
-    <div class="share-buttons"><button class="button primary" id="connect-folder"><svg class="icon"><use href="#i-folder"/></svg>共有フォルダを選択</button><button class="button" id="reconnect-folder" hidden>再接続</button><button class="button" id="disconnect-folder" hidden>個人用に戻る</button></div>
-    <label class="checkbox-label" id="publish-local-wrap"><input type="checkbox" id="publish-local">このブラウザの個人用タスクも共有先に追加する</label>
-    <p class="note">各PCで同じ共有フォルダを選んでください。フォルダ内の「TaskBoard_Data」に保存し、画面を開いている間は約3秒ごとに更新します。HTMLを配るだけでは、タスクは共有されません。</p>
-    <p class="note" id="folder-support-note">共有フォルダの接続は、Windows版のEdge／Chromeで利用できます。再起動後に再接続が必要な場合は、上のボタンから許可してください。</p>
-    <div class="settings-section">
-      <h3>バックアップ</h3>
-      <div class="share-buttons"><button class="button small" id="export-button">バックアップを保存</button><button class="button small" id="import-button">バックアップから追加</button></div>
-      <input type="file" id="import-file" accept=".json,application/json" hidden>
-      <p class="note">すべての日付のタスクを保存します。復元時は現在のタスクを残し、コピーとして追加します。</p>
-    </div>
-    <div class="form-error" id="share-error" role="alert" hidden></div>
-  </div>
-  <div class="dialog-foot"><button class="button dialog-close">閉じる</button></div>
-</dialog>
-<dialog id="help-dialog" aria-labelledby="help-dialog-title">
-  <div class="dialog-head"><div><h2 id="help-dialog-title">使い方</h2><p>今日の仕事を、ひと目で。</p></div><button class="icon-button dialog-close" aria-label="閉じる"><svg class="icon"><use href="#i-close"/></svg></button></div>
-  <div class="dialog-body">
-    <div class="help-step"><span class="step-number">1</span><div><strong>タスクを追加</strong><p>「タスク追加」から時間・タスク・担当者①／②・備考を入力。担当者は2名まで設定できます。日付は表示中の日が入ります。</p></div></div>
-    <div class="help-step"><span class="step-number">2</span><div><strong>カードを動かす</strong><p>未対応 → 対応中 → 完了へドラッグ。カードの「…」からも移動でき、編集・削除も行えます。各列は時間順に並びます。</p></div></div>
-    <div class="help-step"><span class="step-number">3</span><div><strong>備考を見る</strong><p>カードは時間・タスク・担当者を横並びで表示します。右側の「＋」で備考を展開し、もう一度押すと閉じます。長い担当者名は名前にカーソルを重ねると全文が見られます。</p></div></div>
-    <div class="help-step"><span class="step-number">4</span><div><strong>時刻を過ぎたら赤くお知らせ</strong><p>未対応のカードだけが赤くなります。前日の未対応もお知らせに含みます。「確認」で該当日を表示します。リマインドはこの画面を開いている間に行います。</p></div></div>
-    <div class="help-step"><span class="step-number">5</span><div><strong>自分が担当のタスクを操作</strong><p>初回に名前を登録すると、追加・編集画面の各「自分が担当」で担当者①または②へ入力できます。検索欄の横の「自分が担当」は、①・②のどちらかに自分の名前があるタスクに絞り込みます。もう一度押すと解除し、キーワード検索との併用もできます。名前は画面右上から変更できます。</p></div></div>
-    <div class="help-step"><span class="step-number">6</span><div><strong>ほかの人と共有</strong><p>全員がこの2名対応版のHTMLを使用し、「共有設定」で同じ共有フォルダを選択すると、変更が約3秒で反映されます。共有先は読み書きできるフォルダを選んでください。</p></div></div>
-    <p class="note">配色はブラウザのライト／ダーク設定に追従します。個人用のデータはこのブラウザに保存されます。ブラウザのデータを消す前に、バックアップを保存してください。</p>
-  </div>
-  <div class="dialog-foot"><button class="button primary dialog-close">わかった</button></div>
 </dialog>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <script id="taskboard-core">
@@ -580,7 +545,7 @@ noscript {display:block;padding:20px;color:var(--danger)}
   function toast(message,error){clearTimeout(toastTimer);const el=$('toast');el.textContent=message;el.classList.toggle('error',!!error);el.hidden=false;toastTimer=setTimeout(function(){el.hidden=true;},error?6500:3200);}
   function showError(id,message){$(id).textContent=message;$(id).hidden=!message;}
   function errorText(error) {
-    if(error&&error.name==='NotAllowedError') return '共有フォルダのアクセス許可が必要です。「共有設定」から再接続してください。';
+    if(error&&error.name==='NotAllowedError') return '共有フォルダのアクセス許可が必要です。「設定」から再接続してください。';
     if(error&&error.name==='SecurityError') return 'この環境ではフォルダ接続が許可されていません。Edge／Chromeで開くか、社内のブラウザ設定を確認してください。';
     return error&&error.message?error.message:'保存できませんでした。共有フォルダの接続と書き込み権限を確認してください。';
   }
@@ -657,7 +622,7 @@ noscript {display:block;padding:20px;color:var(--danger)}
       state.writing++;updateSaveState();
       try {
         if(state.mode==='shared') {
-          if(!state.store)throw new Error('共有フォルダへの再接続が必要です。「共有設定」を開いてください。');
+          if(!state.store)throw new Error('共有フォルダへの再接続が必要です。「設定」を開いてください。');
           await syncShared(true);
         } else state.ops=readLocal();
         const history=Array.from(state.ops.values()).filter(function(op){return op.taskId===taskId;});
@@ -820,7 +785,7 @@ noscript {display:block;padding:20px;color:var(--danger)}
         el.title='予定時刻を過ぎています';
       }
     }
-    $('reminder').hidden=!overdue.length;
+    $('reminder').hidden=true;
     const reminderText=overdue.length?'予定時刻を過ぎた未対応タスクが '+overdue.length+' 件あります。':'';
     if($('reminder-text').textContent!==reminderText)$('reminder-text').textContent=reminderText;
     document.title=overdue.length?'('+overdue.length+'件超過) タスク管理':'タスク管理';
@@ -831,16 +796,6 @@ noscript {display:block;padding:20px;color:var(--danger)}
     state.previousOverdue=ids;
   }
   function updateSaveState() {
-    const shared=state.mode==='shared';
-    const problem=shared&&['error','paused','partial'].includes(state.syncState);
-    $('save-dot').className='save-dot'+(problem?' error':shared?' shared':'');
-    let text=shared?'共有中 · '+(state.config?state.config.parentName:'共有フォルダ'):'このブラウザに保存';
-    if(state.writing)text='保存しています…';
-    else if(shared&&state.syncState==='paused')text='共有：再接続が必要です';
-    else if(shared&&state.syncState==='error')text='共有：接続を確認してください';
-    else if(shared&&state.syncState==='partial')text='共有中 · 一部のデータを読み込み待ち';
-    else if(shared&&state.lastSync)text+=' · '+state.lastSync.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})+' 更新';
-    $('save-label').textContent=text;
     if($('share-dialog').open)updateShareDialog();
   }
   function openTask(id,status) {
@@ -925,7 +880,6 @@ noscript {display:block;padding:20px;color:var(--danger)}
   window.addEventListener('resize',function(){closeMenus(true);});
   document.querySelectorAll('.dialog-close').forEach(function(button){button.addEventListener('click',function(){if(!dialogBusy)button.closest('dialog').close();});});
   document.querySelectorAll('dialog').forEach(function(dialog){dialog.addEventListener('cancel',function(event){if(dialogBusy)event.preventDefault();});});
-  $('help-button').addEventListener('click',function(){$('help-dialog').showModal();});
   $('review-overdue').addEventListener('click',function(){
     const task=C.sortedTasks(state.tasks.filter(function(t){return C.isOverdue(t,Date.now());}))[0];
     if(!task)return;
@@ -935,7 +889,7 @@ noscript {display:block;padding:20px;color:var(--danger)}
   });
   function updateShareDialog() {
     const shared=state.mode==='shared';
-    $('share-description').textContent=shared?'共有先：'+(state.config?state.config.parentName:'共有フォルダ')+' / TaskBoard_Data\n'+(state.syncState==='ok'?'共有データを読み書きしています。':state.syncState==='paused'?'再接続してアクセスを許可してください。':state.syncState==='partial'?'一部のデータを再読み込みしています。':'接続や書き込み権限を確認してください。'):'個人用：このブラウザに保存しています。';
+    $('share-description').textContent=shared?'共有フォルダ：'+(state.config?state.config.parentName:'選択済み'):'個人用（このブラウザ）';
     $('share-description').style.whiteSpace='pre-line';
     $('reconnect-folder').hidden=!shared||!state.config;
     $('disconnect-folder').hidden=!shared;
@@ -944,9 +898,12 @@ noscript {display:block;padding:20px;color:var(--danger)}
     $('reconnect-folder').disabled=state.writing>0||dialogBusy;
     $('disconnect-folder').disabled=state.writing>0||dialogBusy;
     const supported='showDirectoryPicker' in window;
-    if(!supported)$('folder-support-note').textContent='このブラウザでは共有フォルダの接続を利用できません。Windows版Edge／ChromeでHTMLを開いてください。個人用とバックアップは引き続き使えます。';
+    $('folder-support-note').hidden=supported;
+    if(!supported)$('folder-support-note').textContent='共有フォルダの接続はWindows版Edge／Chromeで利用できます。このブラウザでは個人用をご利用ください。';
   }
-  $('share-button').addEventListener('click',function(){showError('share-error','');$('publish-local').checked=false;updateShareDialog();$('share-dialog').showModal();});
+  $('share-dialog').addEventListener('toggle',function(){if(this.open){showError('share-error','');$('publish-local').checked=false;updateShareDialog();}});
+  document.addEventListener('pointerdown',function(event){if($('share-dialog').open&&!$('share-dialog').contains(event.target))$('share-dialog').open=false;},true);
+  document.addEventListener('keydown',function(event){if(event.key==='Escape'&&$('share-dialog').open){$('share-dialog').open=false;$('share-button').focus({preventScroll:true});}});
   async function connectFolder() {
     if(state.writing||dialogBusy)return;
     if(!('showDirectoryPicker'in window)){showError('share-error','Windows版Edge／Chromeで開いてください。このブラウザはフォルダ接続に対応していません。');return;}
@@ -988,28 +945,6 @@ noscript {display:block;padding:20px;color:var(--danger)}
     catch(error){showError('share-error','接続先の記憶を消せませんでした。ブラウザを再起動すると共有の再接続が表示される場合があります。');}
     state.mode='local';state.store=null;state.config=null;state.syncState='local';state.lastSync=null;state.ops=readLocal();state.expanded.clear();showError('system-message','');rebuild();updateShareDialog();toast('このブラウザの個人用タスクに戻りました。');
   });
-  $('export-button').addEventListener('click',function(){
-    const payload={format:'tag-taskboard',version:1,exportedAt:new Date().toISOString(),tasks:C.sortedTasks(state.tasks)};
-    const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
-    const url=URL.createObjectURL(blob);const link=node('a');link.href=url;link.download='TaskBoard_Backup_'+today().replaceAll('-','')+'.json';document.body.append(link);link.click();link.remove();setTimeout(function(){URL.revokeObjectURL(url);},1000);toast('バックアップを保存しました。');
-  });
-  $('import-button').addEventListener('click',function(){if(!dialogBusy&&!state.writing)$('import-file').click();});
-  $('import-file').addEventListener('change',async function(){
-    const file=this.files&&this.files[0];this.value='';if(!file)return;
-    let added=0;
-    try {
-      if(file.size>8*1024*1024)throw new Error('バックアップは8MB以下のファイルを選択してください。');
-      const payload=JSON.parse(await file.text());
-      if(payload.format!=='tag-taskboard'||payload.version!==1||!Array.isArray(payload.tasks)||payload.tasks.length>1000)throw new Error('このタスク管理のバックアップではありません（1,000件以内）。');
-      const tasks=payload.tasks.map(C.backupTaskPatch);
-      if(!tasks.length){toast('追加するタスクはありません。');return;}
-      if(!confirm(tasks.length+' 件をコピーとして追加しますか？\n既存のタスクは残ります。'))return;
-      dialogBusy=true;updateShareDialog();$('import-button').disabled=true;
-      for(const task of tasks){await savePatch(uuid(),task);added++;}
-      showError('share-error','');toast(added+' 件のタスクを追加しました。');
-    }catch(error){showError('share-error',(added?added+'件追加後に中断しました。 ':'')+errorText(error));}
-    finally{dialogBusy=false;$('import-button').disabled=false;updateShareDialog();}
-  });
   $('demo-button').addEventListener('click',async function(){
     if(state.tasks.length||state.mode!=='local'||dialogBusy)return;
     $('demo-button').disabled=true;
@@ -1033,7 +968,7 @@ noscript {display:block;padding:20px;color:var(--danger)}
         state.config=config;state.mode='shared';state.ops=readCache(config);state.syncState='paused';rebuild();
         const permission=await config.handle.queryPermission({mode:'readwrite'});
         if(permission==='granted'){state.store=new C.FolderStore(config.handle);await syncShared(false);state.ops=state.store.operations;rebuild();}
-        else showError('system-message','前回の共有タスクを表示しています。編集する前に「共有設定」から再接続してください。');
+        else showError('system-message','前回の共有タスクを表示しています。編集する前に「設定」から再接続してください。');
       }
     } catch(_) {}
     state.booting=false;refreshReminders();updateSaveState();
