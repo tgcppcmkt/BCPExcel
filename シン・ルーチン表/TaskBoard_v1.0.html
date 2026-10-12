@@ -67,6 +67,13 @@ h1 {font-size:25px;line-height:1.4;letter-spacing:.02em;margin:0;font-weight:700
 .date-shell input {position:absolute;inset:0;width:100%;height:100%;opacity:0;margin:0;padding:0;border:0;cursor:pointer}
 .date-shell input::-webkit-calendar-picker-indicator {position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;cursor:pointer}
 .date-shell:focus-within {outline:3px solid var(--progress-dot);outline-offset:3px}
+.routine-date-button {position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;cursor:pointer}
+.routine-calendar {width:min(390px,calc(100vw - 32px))}
+.routine-calendar-nav {display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.routine-calendar-grid {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;text-align:center}
+.routine-calendar-weekdays {color:var(--muted);font-size:12px;margin-bottom:7px}
+.routine-calendar-grid .button {justify-content:center;min-width:0;padding:9px 0}
+.routine-calendar-grid .button[aria-pressed="true"] {background:var(--accent);color:var(--on-accent)}
 .date-display {min-width:142px;color:var(--ink);font-size:13px;font-weight:600;padding:2px 0}
 .date-shortcuts {display:flex;gap:4px}
 .date-shortcuts .button[aria-pressed="true"] {background:var(--accent);color:var(--on-accent);border-color:var(--accent-line)}
@@ -99,6 +106,11 @@ h1 {font-size:25px;line-height:1.4;letter-spacing:.02em;margin:0;font-weight:700
 .status-dot {width:8px;height:8px;border-radius:50%;background:var(--dot)}
 .column-count {padding:1px 8px;min-width:25px;line-height:1.6;border-radius:7px;background:var(--tone);color:var(--tone-ink);font-size:11px;font-weight:600}
 .column-head .icon-button {color:var(--muted);width:26px;height:26px}
+#board .pending .column-head {--status-color:#a83f4f}
+#board .progress .column-head {--status-color:#315aa7}
+#board .done .column-head {--status-color:#595d68}
+#board .column-head .status-dot,#board .column-head .column-count {background:var(--status-color)}
+#board .column-head .column-count {color:#fff;display:inline-flex;align-items:center;justify-content:center;height:20px;padding:0 8px;line-height:1;text-align:center;flex-shrink:0}
 .card-list {padding:0 14px 14px;flex:1;min-height:270px}
 .task-card {border:1px solid var(--tone-line);background:var(--tone);border-radius:10px;padding:10px 12px;position:relative;margin-bottom:8px;box-shadow:var(--shadow);cursor:grab;transition:box-shadow .15s,transform .15s,border-color .15s}
 .task-card:last-child {margin-bottom:0}
@@ -134,6 +146,9 @@ h1 {font-size:25px;line-height:1.4;letter-spacing:.02em;margin:0;font-weight:700
 .empty {min-height:245px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;padding:24px 16px}
 .empty-art {width:50px;height:58px;margin-bottom:10px;position:relative}
 .empty-art:before,.empty-art:after {content:"";position:absolute;width:35px;height:42px;border:1.5px solid var(--tone-line);border-radius:6px;background:var(--tone);top:6px;left:4px;transform:rotate(-9deg)}
+#board .pending .empty-art:before {background:#a83f4f;border-color:#bd5665}
+#board .progress .empty-art:before {background:#315aa7;border-color:#4c79cc}
+#board .done .empty-art:before {background:#595d68;border-color:#737884}
 .empty-art:after {top:10px;left:13px;transform:rotate(7deg);background:var(--surface)}
 .empty strong {font-size:12px;font-weight:550;color:var(--tone-ink)}
 .empty p {margin:0;font-size:11px;color:var(--muted)}
@@ -176,6 +191,51 @@ kbd {font-size:10px;background:var(--soft);border:1px solid var(--line);border-r
 .toast {position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:30;background:var(--accent);color:var(--on-accent);padding:12px 20px;border-radius:12px;box-shadow:0 8px 28px #0002;font-size:13px;max-width:min(560px,calc(100% - 30px));text-align:center}
 .toast.error {background:var(--danger-bg);color:var(--danger);border:1px solid var(--danger-line)}
 noscript {display:block;padding:20px;color:var(--danger)}
+/* 原本画面の配色 */
+body[data-view="routine"] {
+  --bg:#f3eee8; --surface:#fbf8f3; --line:#d9cbbc;
+  --accent:#edd4b8; --accent-hover:#e5c5a2; --on-accent:#62472d;
+  --accent-line:#c6a17b; --accent-ink:#805c37; --soft:#eee3d6;
+}
+body[data-view="routine"] #board-heading {color:var(--accent-ink)}
+body[data-view="routine"] .routine-column {--tone:var(--soft);--tone-line:var(--accent-line);--tone-ink:var(--accent-ink);--dot:var(--accent-ink)}
+body[data-view="routine"] .routine-column.floor-4 {--tone:#f2e5d4;--tone-line:#d4b58b;--tone-ink:#79552d;--dot:#a17c49}
+body[data-view="routine"] .routine-column.floor-9 {--tone:#ebe2ef;--tone-line:#cbb7d3;--tone-ink:#765785;--dot:#a084af}
+@media(prefers-color-scheme:dark) {
+  body[data-view="routine"] {
+    --bg:#171515; --surface:#252222; --line:#51463e;
+    --accent:#e0bd96; --accent-hover:#eccdab; --on-accent:#302318;
+    --accent-line:#a88562; --accent-ink:#e0bd96; --soft:#342d27;
+  }
+  body[data-view="routine"] .routine-column.floor-4 {--tone:#342c23;--tone-line:#65513a;--tone-ink:#e2c49a;--dot:#c6a270}
+  body[data-view="routine"] .routine-column.floor-9 {--tone:#302737;--tone-line:#5d4968;--tone-ink:#d1b7e1;--dot:#b092c1}
+}
+/* 原本画面の配色ここまで */
+.floor-tag {display:inline-block;margin-left:6px;padding:0 5px;border:1px solid var(--line);border-radius:5px;font-size:10px;font-weight:650;color:var(--accent-ink);white-space:nowrap;vertical-align:middle}
+.floor-filter {padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);font-size:12px;max-width:120px}
+.day-type {display:flex;gap:3px;margin-left:8px;border:1px solid var(--line);padding:3px;border-radius:10px;background:var(--surface)}
+.day-type .button {border:0;background:transparent}
+.day-type .button[aria-pressed="true"] {background:var(--accent);color:var(--on-accent)}
+.setup-panel {margin-bottom:18px;padding:16px 20px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.setup-panel-head {display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.setup-panel-head h2 {font-size:14px;margin:0}
+.setup-panel .field {margin-bottom:10px}
+.setup-panel textarea {min-height:115px;max-height:220px}
+.setup-actions {display:flex;align-items:center;justify-content:flex-end;gap:12px}
+.name-preview {display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;max-height:100px;overflow-y:auto;font-size:11px}
+.name-preview span {padding:2px 7px;border:1px solid var(--line);border-radius:6px;background:var(--soft)}
+.name-preview .invalid-name {color:var(--danger);background:var(--danger-bg);border-color:var(--danger-line)}
+.routine-column.floor-4 {--tone:var(--progress);--tone-line:var(--progress-line);--tone-ink:var(--progress-ink);--dot:var(--progress-dot)}
+.routine-column.floor-9 {--tone:var(--soft);--tone-line:var(--accent-line);--tone-ink:var(--accent-ink);--dot:var(--accent-ink)}
+.routine-assignee {width:100%;min-width:0;padding:2px 3px;border:1px solid var(--tone-line);border-radius:5px;background:var(--surface);color:var(--ink);font-size:11px}
+.routine-assignee.invalid {border-color:var(--danger-line);color:var(--danger)}
+.routine-card .card-row {grid-template-columns:64px minmax(0,1fr) minmax(90px,125px) 55px}
+.routine-card button,.routine-card select {cursor:pointer}
+.routine-card .card-assignees {gap:4px}
+.routine-card:active {transform:none}
+#routine-register:disabled {cursor:not-allowed}
+body[data-view="routine"] .date-shortcuts .button:disabled {opacity:.4;cursor:not-allowed}
+@media(max-width:1050px){.toolbar{flex-wrap:wrap}.toolbar-right{margin-left:auto;gap:8px}.routine-card .card-row{grid-template-columns:56px minmax(0,1fr) 55px}.routine-card .card-assignees{grid-column:2;grid-row:2}.routine-card .card-buttons{grid-column:3;grid-row:1 / span 2}.routine-card .card-time-block{grid-column:1;grid-row:1 / span 2;align-self:start}}
 @media(min-width:1100px) {
   .column {height:calc(100dvh - 292px);min-height:420px}
   .card-list {overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
@@ -263,10 +323,13 @@ noscript {display:block;padding:20px;color:var(--danger)}
 <header class="header">
   <div class="brand">
     <div class="brand-mark" aria-hidden="true"><svg class="icon"><use href="#i-task"/></svg></div>
-    <div><div class="eyebrow">TASKBOARD</div><h1>タスク管理</h1></div>
+    <div><div class="eyebrow">TASKBOARD</div><h1 id="board-heading">タスク管理</h1></div>
   </div>
   <div class="header-right">
-    <div class="clock"><time id="live-clock">--:--</time><small>現在の時刻</small></div>
+    <div class="clock" id="clock-wrap"><time id="live-clock">--:--</time><small>現在の時刻</small></div>
+    <button class="button" id="member-button" aria-expanded="false" aria-controls="member-panel" hidden>担当者マスタ</button>
+    <button class="button" id="routine-draft-save" hidden>一時保存</button>
+    <button class="button primary" id="routine-register" hidden>登録</button>
     <button class="button profile-button" id="profile-button"><svg class="icon"><use href="#i-user"/></svg><span class="button-label" id="profile-label">名前を登録</span></button>
     <details class="share-settings" id="share-dialog">
       <summary class="button" id="share-button" aria-controls="share-panel"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg><span class="button-label">設定</span><svg class="icon settings-chevron" aria-hidden="true"><use href="#i-right"/></svg></summary>
@@ -278,25 +341,39 @@ noscript {display:block;padding:20px;color:var(--danger)}
         <div class="form-error" id="share-error" role="alert" hidden></div>
       </section>
     </details>
-    <button class="button primary" id="add-button"><svg class="icon"><use href="#i-plus"/></svg><span class="button-label">タスク追加</span></button>
+    <button class="button primary" id="routine-tab" aria-controls="routine-board" aria-pressed="false"><svg class="icon"><use href="#i-task"/></svg><span class="button-label" id="routine-tab-label">原本</span></button>
+    <button class="button primary" id="add-button" hidden>タスク追加</button>
   </div>
 </header>
 <div class="toolbar">
   <div class="date-group">
     <button class="icon-button" id="previous-day" aria-label="前日を表示"><svg class="icon"><use href="#i-left"/></svg></button>
-    <label class="date-shell"><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><span class="date-display" id="date-display" aria-hidden="true"></span><input id="board-date" type="date" aria-label="表示する日付"></label>
+    <label class="date-shell"><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><span class="date-display" id="date-display" aria-hidden="true"></span><input id="board-date" type="date" aria-label="表示する日付"><button class="routine-date-button" id="routine-date-button" type="button" aria-label="登録する日付を選択" aria-haspopup="dialog" aria-controls="routine-calendar" hidden></button></label>
     <button class="icon-button" id="next-day" aria-label="翌日を表示"><svg class="icon"><use href="#i-right"/></svg></button>
     <div class="date-shortcuts" role="group" aria-label="今日を基準に日付を選択">
       <button class="button small" id="yesterday-button" aria-pressed="false">昨日</button>
       <button class="button small" id="today-button" aria-pressed="false">今日</button>
       <button class="button small" id="tomorrow-button" aria-pressed="false">明日</button>
     </div>
+    <div class="day-type" id="day-type" role="group" aria-label="原本の種類" hidden><button class="button small" id="weekday-button" aria-pressed="true">平日</button><button class="button small" id="weekend-button" aria-pressed="false">土日</button></div>
   </div>
   <div class="toolbar-right">
+    <select class="floor-filter" id="floor-filter" aria-label="フロアで絞り込む"><option value="">全フロア</option><option value="4F">4F</option><option value="9F">9F</option></select>
+    <button class="button" id="roster-button" aria-expanded="false" aria-controls="roster-panel" hidden>出社SV</button>
     <label class="search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input id="search-input" type="search" placeholder="タスク・担当を検索" aria-label="表示日のタスク・担当を検索"></label>
     <button class="button mine-filter" id="mine-filter" aria-pressed="false"><svg class="icon"><use href="#i-user"/></svg>自分が担当</button>
   </div>
 </div>
+<section class="setup-panel" id="member-panel" aria-labelledby="member-title" hidden>
+  <div class="setup-panel-head"><h2 id="member-title">担当者マスタ</h2><button class="icon-button" id="member-close" aria-label="担当者マスタを閉じる"><svg class="icon"><use href="#i-close"/></svg></button></div>
+  <div class="field"><label for="member-text">担当者名 <span>1行に1名。改行・タブ区切りで貼り付けできます。</span></label><textarea id="member-text" maxlength="60000" placeholder="田口&#10;田中&#10;佐藤"></textarea><div class="name-preview" id="member-preview" aria-live="polite"></div></div>
+  <div class="form-error" id="member-error" role="alert" hidden></div><div class="setup-actions"><button class="button primary small" id="member-save">マスタを保存</button></div>
+</section>
+<section class="setup-panel" id="roster-panel" aria-labelledby="roster-title" hidden>
+  <div class="setup-panel-head"><h2 id="roster-title">出社SV</h2><button class="icon-button" id="roster-close" aria-label="出社SVを閉じる"><svg class="icon"><use href="#i-close"/></svg></button></div>
+  <div class="field-row"><div class="field"><label for="roster-4">4F</label><textarea id="roster-4" maxlength="60000" placeholder="4Fの出社SVを1行に1名"></textarea><div class="name-preview" id="roster-preview-4" aria-live="polite"></div></div><div class="field"><label for="roster-9">9F</label><textarea id="roster-9" maxlength="60000" placeholder="9Fの出社SVを1行に1名"></textarea><div class="name-preview" id="roster-preview-9" aria-live="polite"></div></div></div>
+  <div class="form-error" id="roster-error" role="alert" hidden></div><div class="setup-actions"><button class="button primary small" id="roster-save">出社SVを保存</button></div>
+</section>
 <div class="summary">
   <div class="summary-title" id="summary-title">今日のタスク<span id="summary-count">0件のタスク</span></div>
   <div class="progress-group"><span id="completion-label">完了 0 / 0</span><div class="progress-track" role="progressbar" aria-label="表示日の完了率" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="completion-bar"><div class="progress-fill" id="completion-fill" style="width:0%"></div></div></div>
@@ -321,6 +398,11 @@ noscript {display:block;padding:20px;color:var(--danger)}
     <div class="card-list" id="list-done"></div>
   </section>
 </div>
+<div class="board" id="routine-board" role="region" aria-label="原本編集" hidden>
+  <section class="column pending routine-column" data-floor="" aria-labelledby="heading-original"><div class="column-head"><h2 class="column-title" id="heading-original"><span class="status-dot"></span>原本 <span class="column-count" id="routine-count-original">0</span></h2><button class="icon-button routine-add" aria-label="原本のタスクを追加"><svg class="icon"><use href="#i-plus"/></svg></button></div><div class="card-list" id="routine-list-original"></div></section>
+  <section class="column routine-column floor-4" data-floor="4F" aria-labelledby="heading-4"><div class="column-head"><h2 class="column-title" id="heading-4"><span class="status-dot"></span>4F <span class="column-count" id="routine-count-4">0</span></h2><button class="icon-button routine-add" aria-label="原本のタスクを追加"><svg class="icon"><use href="#i-plus"/></svg></button></div><div class="card-list" id="routine-list-4"></div></section>
+  <section class="column routine-column floor-9" data-floor="9F" aria-labelledby="heading-9"><div class="column-head"><h2 class="column-title" id="heading-9"><span class="status-dot"></span>9F <span class="column-count" id="routine-count-9">0</span></h2><button class="icon-button routine-add" aria-label="原本のタスクを追加"><svg class="icon"><use href="#i-plus"/></svg></button></div><div class="card-list" id="routine-list-9"></div></section>
+</div>
 <footer class="footer">
   <div class="footer-actions"><button class="button text" id="demo-button">サンプルを試す</button><span style="font-size:10px;opacity:.6;margin-left:6px">v1.0</span></div>
 </footer>
@@ -330,15 +412,16 @@ noscript {display:block;padding:20px;color:var(--danger)}
   <div class="dialog-head"><div><h2 id="task-dialog-title">タスクを追加</h2></div><button type="button" class="icon-button dialog-close" aria-label="閉じる"><svg class="icon"><use href="#i-close"/></svg></button></div>
   <div class="dialog-body">
     <div class="field-row">
-      <div class="field"><label for="task-date">日付</label><input id="task-date" type="date" required></div>
+      <div class="field" id="task-date-field"><label for="task-date">日付</label><input id="task-date" type="date" required></div>
       <div class="field"><label for="task-time">時間 <span>必須</span></label><input id="task-time" type="time" step="60" required></div>
     </div>
     <div class="field"><label for="task-title">タスク <span>必須</span></label><input id="task-title" type="text" maxlength="200" placeholder="例：日程調整の進捗を確認" required></div>
     <div class="field-row assignee-fields">
-      <div class="field"><div class="field-label-row"><label for="task-assignee">担当者①</label><button class="button text" id="assign-me" type="button" aria-label="担当者①に自分を設定"><svg class="icon"><use href="#i-user"/></svg>自分が担当</button></div><input id="task-assignee" type="text" maxlength="100" placeholder="例：田中"></div>
-      <div class="field"><div class="field-label-row"><label for="task-assignee2">担当者②</label><button class="button text" id="assign-me2" type="button" aria-label="担当者②に自分を設定"><svg class="icon"><use href="#i-user"/></svg>自分が担当</button></div><input id="task-assignee2" type="text" maxlength="100" placeholder="2人目（任意）"></div>
+      <div class="field"><div class="field-label-row"><label for="task-assignee">担当者①</label><button class="button text" id="assign-me" type="button" aria-label="担当者①に自分を設定"><svg class="icon"><use href="#i-user"/></svg>自分が担当</button></div><select id="task-assignee"><option value="">担当者を選択</option></select></div>
+      <div class="field"><div class="field-label-row"><label for="task-assignee2">担当者②</label><button class="button text" id="assign-me2" type="button" aria-label="担当者②に自分を設定"><svg class="icon"><use href="#i-user"/></svg>自分が担当</button></div><select id="task-assignee2"><option value="">2人目（任意）</option></select></div>
     </div>
-    <div class="field"><label for="task-status">対応状況</label><select id="task-status"><option value="pending">未対応</option><option value="progress">対応中</option><option value="done">完了</option></select></div>
+    <div class="field" id="task-status-field"><label for="task-status">対応状況</label><select id="task-status"><option value="pending">未対応</option><option value="progress">対応中</option><option value="done">完了</option></select></div>
+    <div class="field"><label for="task-floor">フロアタグ</label><select id="task-floor"><option value="">未設定</option><option value="4F">4F</option><option value="9F">9F</option></select></div>
     <div class="field"><label for="task-notes">備考 <span>カードの＋で表示</span></label><textarea id="task-notes" maxlength="6000" placeholder="確認事項や引き継ぎのメモ"></textarea></div>
     <div class="form-error" id="task-error" role="alert" hidden></div>
   </div>
@@ -349,12 +432,26 @@ noscript {display:block;padding:20px;color:var(--danger)}
 <form id="profile-form">
   <div class="dialog-head"><div><h2 id="profile-dialog-title">自分の名前を登録</h2><p>次回から「自分が担当」で入力できます。</p></div><button type="button" class="icon-button dialog-close" aria-label="閉じる"><svg class="icon"><use href="#i-close"/></svg></button></div>
   <div class="dialog-body">
-    <div class="field"><label for="profile-name">名前 <span>担当欄に使う表記</span></label><input id="profile-name" type="text" maxlength="100" placeholder="例：田口" autocomplete="name" required></div>
+    <div class="field"><label for="profile-name">名前</label><select id="profile-name" required><option value="">担当者マスタから選択</option></select></div>
+    <button class="button small" id="profile-master" type="button">担当者マスタを開く</button>
     <p class="note">名前はこのブラウザに記憶します。画面右上の名前ボタンから、あとで変更できます。</p>
     <div class="form-error" id="profile-error" role="alert" hidden></div>
   </div>
   <div class="dialog-foot"><button class="button dialog-close" id="profile-cancel" type="button">あとで</button><button class="button primary" id="profile-save" type="submit">登録する</button></div>
 </form>
+</dialog>
+<dialog class="routine-calendar" id="routine-calendar" aria-labelledby="routine-calendar-title">
+  <div class="dialog-head"><h2>登録する日付</h2><button class="icon-button dialog-close" type="button" aria-label="閉じる"><svg class="icon"><use href="#i-close"/></svg></button></div>
+  <div class="dialog-body">
+    <div class="routine-calendar-nav"><button class="icon-button" id="routine-calendar-previous" type="button" aria-label="前月"><svg class="icon"><use href="#i-left"/></svg></button><h3 id="routine-calendar-title"></h3><button class="icon-button" id="routine-calendar-next" type="button" aria-label="翌月"><svg class="icon"><use href="#i-right"/></svg></button></div>
+    <div class="routine-calendar-grid routine-calendar-weekdays" aria-hidden="true"><span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span></div>
+    <div class="routine-calendar-grid" id="routine-calendar-days"></div>
+  </div>
+</dialog>
+<dialog id="routine-confirm" aria-labelledby="routine-confirm-title">
+  <div class="dialog-head"><h2 id="routine-confirm-title">登録しますか？</h2><button class="icon-button" id="routine-confirm-close" aria-label="閉じる"><svg class="icon"><use href="#i-close"/></svg></button></div>
+  <div class="dialog-body"><p id="routine-confirm-text"></p></div>
+  <div class="dialog-foot"><button class="button" id="routine-confirm-no" type="button">いいえ</button><button class="button primary" id="routine-confirm-yes" type="button">はい</button></div>
 </dialog>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <script id="taskboard-core">
@@ -362,7 +459,7 @@ noscript {display:block;padding:20px;color:var(--danger)}
 (function(global) {
   const STATUSES = ['pending','progress','done'];
   const REQUIRED_FIELDS = ['date','time','title','assignee','notes','status'];
-  const FIELDS = [...REQUIRED_FIELDS,'assignee2','deleted','demo'];
+  const FIELDS = [...REQUIRED_FIELDS,'assignee2','deleted','demo','floor'];
   const validDate = function(value) {
     if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
     const [y,m,d] = value.split('-').map(Number);
@@ -380,13 +477,14 @@ noscript {display:block;padding:20px;color:var(--danger)}
   function filterTasks(tasks,query,name,onlyMine) {
     const text=String(query||'').trim().toLocaleLowerCase();
     return tasks.filter(function(task){
-      return (!onlyMine || isAssignedToMe(task,name)) && (!text || (task.title+' '+task.assignee+' '+(task.assignee2||'')+' '+task.notes).toLocaleLowerCase().includes(text));
+      return (!onlyMine || isAssignedToMe(task,name)) && (!text || (task.title+' '+task.assignee+' '+(task.assignee2||'')+' '+task.notes+' '+(task.floor||'')).toLocaleLowerCase().includes(text));
     });
   }
   function validField(key,value) {
     if(key === 'date') return validDate(value);
     if(key === 'time') return validTime(value);
     if(key === 'status') return STATUSES.includes(value);
+    if(key === 'floor') return ['','4F','9F'].includes(value);
     if(key === 'deleted' || key === 'demo') return typeof value === 'boolean';
     if(key === 'title') return typeof value === 'string' && value.trim().length > 0 && value.length <= 200;
     if(key === 'assignee' || key === 'assignee2') return typeof value === 'string' && value.length <= 100;
@@ -448,7 +546,14 @@ noscript {display:block;padding:20px;color:var(--danger)}
     }
     async _refresh() {
       const unknown=[];
-      for await(const [name,handle] of this.handle.entries()) {
+      const roots=[this.handle];
+      try{roots.push(await this.handle.getDirectoryHandle('TaskBoard_Data'));}catch(error){if(error.name!=='NotFoundError')throw error;}
+      const directories=roots.slice();
+      for(const root of roots)try {
+        const logs=await root.getDirectoryHandle('ログ');
+        for await(const [name,handle] of logs.entries())if(handle.kind==='directory'&&/^\d{6}$/.test(name))directories.push(handle);
+      } catch(error) {if(error.name!=='NotFoundError')throw error;}
+      for(const directory of directories)for await(const [name,handle] of directory.entries()) {
         if(handle.kind==='file' && /^op-[a-zA-Z0-9-]{8,80}\.json$/.test(name) && !this.operations.has(name.slice(3,-5))) unknown.push([name,handle]);
       }
       let changed=0,unread=0;
@@ -469,26 +574,238 @@ noscript {display:block;padding:20px;color:var(--danger)}
     }
     async append(op) {
       if(!validOperation(op)) throw new Error('保存するタスクの形式が正しくありません。');
-      const file=await this.handle.getFileHandle('op-'+op.id+'.json',{create:true});
+      const now=new Date(),day=String(now.getFullYear()).slice(-2)+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0');
+      const logs=await this.handle.getDirectoryHandle('ログ',{create:true});
+      const directory=await logs.getDirectoryHandle(day,{create:true});
+      const file=await directory.getFileHandle('op-'+op.id+'.json',{create:true});
       const writer=await file.createWritable();
       try {await writer.write(JSON.stringify(op));await writer.close();}
-      catch(error) {try {await writer.abort();}catch(_){}throw error;}
+      catch(error) {try {await writer.abort();}catch(_){}try{if((await file.getFile()).size===0)await directory.removeEntry('op-'+op.id+'.json');}catch(_){}throw error;}
       this.operations.set(op.id,op);
     }
   }
   global.TaskBoardCore={STATUSES,REQUIRED_FIELDS,FIELDS,validDate,validTime,validPersonalName,isAssignedToMe,filterTasks,validField,backupTaskPatch,validOperation,reduceOperations,sortedTasks,dueTime,isOverdue,nextSequence,FolderStore};
 })(typeof window!=='undefined'?window:globalThis);
 </script>
+<script id="taskboard-routine-core">
+'use strict';
+(function(global){
+  const C=global.TaskBoardCore;
+  const FLOORS=['4F','9F'],TYPES=['weekday','weekend'];
+  const ID=/^[a-zA-Z0-9-]{8,80}$/;
+  const validId=function(value){return typeof value==='string'&&ID.test(value);};
+  const validStamp=function(value){return typeof value==='string'&&Number.isFinite(Date.parse(value))&&new Date(value).toISOString()===value;};
+  const normalize=function(name){return String(name).normalize('NFKC').replace(/\s+/g,'').toLocaleLowerCase();};
+  const dayFolder=function(date){return date.slice(2).replaceAll('-','');};
+  const localDay=function(){const d=new Date();return String(d.getFullYear()).padStart(4,'0')+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+  function parseNames(text){
+    const names=[],invalid=[],duplicates=[],seen=new Set();
+    for(const raw of String(text).split(/[\r\n\t,、]+/)){
+      const name=raw.trim();if(!name)continue;
+      if(!C.validPersonalName(name)||/[\u0000-\u001f\u007f]/.test(name)){invalid.push(name);continue;}
+      const key=normalize(name);
+      if(seen.has(key)){duplicates.push(name);continue;}
+      seen.add(key);names.push(name);
+    }
+    if(names.length>500)invalid.push('担当者は500名までです。');
+    return {names,invalid,duplicates};
+  }
+  function canonicalName(name,members){return members.find(function(member){return normalize(member)===normalize(name);})||'';}
+  function parseRoster(text4,text9,members){
+    const value={'4F':[],'9F':[]},rows=[],seen=new Set();
+    for(const [floor,text] of [['4F',text4],['9F',text9]]){
+      for(const raw of String(text).split(/[\r\n\t,、]+/)){
+        const input=raw.trim();if(!input)continue;
+        const name=canonicalName(input,members),key=normalize(input);
+        const error=!name?'マスタ未登録':seen.has(key)?'重複':'';
+        rows.push({floor,input,name,error});seen.add(key);
+        if(!error)value[floor].push(name);
+      }
+    }
+    return {value,rows,valid:rows.every(function(row){return !row.error;})};
+  }
+  function validNames(names){return Array.isArray(names)&&names.length<=500&&names.every(function(name){return C.validPersonalName(name)&&name===name.trim()&&name.length<=100&&!/[\u0000-\u001f\u007f]/.test(name);})&&new Set(names.map(normalize)).size===names.length;}
+  function validRoster(value){return !!value&&!Array.isArray(value)&&FLOORS.every(function(floor){return validNames(value[floor]);})&&new Set(value['4F'].concat(value['9F']).map(normalize)).size===value['4F'].length+value['9F'].length;}
+  function floorFor(name,roster){return FLOORS.find(function(floor){return roster[floor].some(function(member){return normalize(member)===normalize(name);});})||'';}
+  function validMeta(op){
+    if(!op||op.v!==1||!validId(op.id)||!Number.isSafeInteger(op.seq)||op.seq<1||typeof op.key!=='string'||!validStamp(op.at))return false;
+    if(op.fields!==undefined){const allowed=op.kind==='template'?['time','title','notes','floor','deleted']:op.kind==='assignment'?['assignee','assignee2']:[];if(!Array.isArray(op.fields)||!op.fields.length||new Set(op.fields).size!==op.fields.length||!op.fields.every(function(field){return allowed.includes(field);}))return false;}
+    const value=op.value;
+    if(op.kind==='members')return op.key==='members'&&validNames(value);
+    if(op.kind==='roster')return C.validDate(op.key)&&validRoster(value);
+    if(op.kind==='template')return !!value&&validId(value.id)&&TYPES.includes(value.dayType)&&op.key===value.dayType+':'+value.id&&C.validField('time',value.time)&&C.validField('title',value.title)&&C.validField('notes',value.notes)&&(value.floor===undefined?(!op.fields||!op.fields.includes('floor')):C.validField('floor',value.floor))&&typeof value.deleted==='boolean';
+    if(op.kind==='assignment')return !!value&&C.validDate(value.date)&&validId(value.templateId)&&TYPES.includes(value.dayType)&&op.key===value.date+':'+value.dayType+':'+value.templateId&&C.validField('assignee',value.assignee)&&C.validField('assignee2',value.assignee2)&&C.validField('floor',value.floor);
+    return false;
+  }
+  function latestValues(ops){
+    const result=new Map();
+    for(const op of ops){
+      if(!validMeta(op))continue;
+      const key=op.kind+':'+op.key,old=result.get(key);
+      if(op.kind==='template'||op.kind==='assignment'){
+        const defaults=op.kind==='template'?{id:op.value.id,dayType:op.value.dayType,time:'',title:'',notes:'',deleted:false}:{date:op.value.date,dayType:op.value.dayType,templateId:op.value.templateId,assignee:'',assignee2:'',floor:''};
+        const current=old||{value:defaults,clocks:{},deleted:false};
+        const fields=op.fields||(op.kind==='template'?['time','title','notes','deleted'].concat(op.value.floor===undefined?[]:['floor']):['assignee','assignee2']);
+        for(const field of fields){const clock=current.clocks[field];if(!clock||op.seq>clock[0]||(op.seq===clock[0]&&op.id>clock[1])){current.value[field]=op.value[field];current.clocks[field]=[op.seq,op.id];}if(field==='deleted'&&op.value.deleted)current.deleted=true;}
+        if(current.deleted)current.value.deleted=true;
+        current.kind=op.kind;current.key=op.key;result.set(key,current);
+      }else if(!old||op.seq>old.seq||(op.seq===old.seq&&op.id>old.id))result.set(key,op);
+    }
+    return result;
+  }
+  function model(ops,date,dayType){
+    const values=latestValues(ops),memberOp=values.get('members:members'),rosterOp=values.get('roster:'+date);
+    const members=memberOp?memberOp.value.slice():[],roster=rosterOp?rosterOp.value:{'4F':[],'9F':[]},templates=[];
+    for(const op of values.values())if(op.kind==='template'&&op.value.dayType===dayType&&!op.value.deleted&&['time','title','notes'].every(function(key){return C.validField(key,op.value[key]);})){
+      const item=Object.assign({},op.value),assignment=values.get('assignment:'+date+':'+dayType+':'+item.id);
+      item.assignee=assignment?assignment.value.assignee:'';item.assignee2=assignment?assignment.value.assignee2:'';
+      if(item.floor===undefined)item.floor=floorFor(item.assignee,roster);templates.push(item);
+    }
+    templates.sort(function(a,b){return a.time.localeCompare(b.time)||a.id.localeCompare(b.id,'en');});
+    return {members,roster,templates};
+  }
+  function validRegistration(record){
+    if(!record||record.v!==1||!validId(record.id)||!C.validDate(record.date)||!TYPES.includes(record.dayType)||!validStamp(record.at)||!validNames(record.members)||!validRoster(record.roster)||!Array.isArray(record.operations)||record.operations.length<1||record.operations.length>500)return false;
+    if(!FLOORS.every(function(floor){return record.roster[floor].every(function(name){return record.members.includes(name);});}))return false;
+    const taskIds=new Set(),opIds=new Set();
+    return record.operations.every(function(op){
+      const patch=op&&op.patch;
+      if(!C.validOperation(op)||!C.REQUIRED_FIELDS.every(function(key){return C.validField(key,patch[key]);})||patch.date!==record.date||patch.status!=='pending'||!FLOORS.includes(patch.floor)||!record.members.includes(patch.assignee)||floorFor(patch.assignee,record.roster)!==patch.floor||(patch.assignee2&&!record.members.includes(patch.assignee2))||(patch.assignee2&&!floorFor(patch.assignee2,record.roster))||taskIds.has(op.taskId)||opIds.has(op.id))return false;
+      taskIds.add(op.taskId);opIds.add(op.id);return true;
+    });
+  }
+  function registrationWinners(records){
+    const winners=new Map();
+    for(const record of records){
+      if(!validRegistration(record))continue;
+      const old=winners.get(record.date);
+      if(!old||record.at<old.at||(record.at===old.at&&record.id<old.id))winners.set(record.date,record);
+    }
+    return winners;
+  }
+  function draftOperations(ops,registrations){
+    const all=Array.from(ops).filter(validMeta),keep=new Set(),day=localDay();
+    for(const value of latestValues(all).values()){
+      const date=value.kind==='roster'?value.key:value.kind==='assignment'?value.value.date:'';
+      if(date&&(date<=day||registrations.has(date)))continue;
+      if(value.clocks)for(const clock of Object.values(value.clocks))keep.add(clock[1]);
+      else keep.add(value.id);
+    }
+    for(const op of all)if(op.kind==='template'&&op.value.deleted)keep.add(op.id);
+    return all.filter(function(op){return keep.has(op.id);}).sort(function(a,b){return a.seq-b.seq||a.id.localeCompare(b.id,'en');});
+  }
+  function validDraft(record){
+    return !!record&&record.v===1&&validId(record.id)&&validStamp(record.at)&&Array.isArray(record.operations)&&record.operations.length<=50000&&record.operations.every(validMeta)&&new Set(record.operations.map(function(op){return op.id;})).size===record.operations.length;
+  }
+  async function readJSON(handle,maxSize){
+    const file=await handle.getFile();if(file.size>maxSize)return null;
+    try{return JSON.parse(await file.text());}catch(_){return null;}
+  }
+  async function writeJSON(directory,name,value){
+    let existing;
+    try{existing=await directory.getFileHandle(name);}catch(error){if(error.name!=='NotFoundError')throw error;}
+    if(existing)throw new Error('保存先に同じ記録が存在します。上書きは行いません。');
+    const file=await directory.getFileHandle(name,{create:true}),writer=await file.createWritable();
+    try{await writer.write(JSON.stringify(value));await writer.close();}
+    catch(error){try{await writer.abort();}catch(_){}try{if((await file.getFile()).size===0)await directory.removeEntry(name);}catch(_){}throw error;}
+  }
+  class Store {
+    constructor(handle,storage,prefix){this.handle=handle;this.storage=storage;this.prefix=prefix;this.operations=new Map();this.records=new Map();this.registrations=new Map();this.drafts=new Set();this.unread=0;this.refreshing=null;}
+    refresh(){if(this.refreshing)return this.refreshing;this.refreshing=this._refresh().finally(()=>{this.refreshing=null;});return this.refreshing;}
+    async _refresh(){
+      let changed=0,unread=0;
+      if(!this.handle){
+        const operations=new Map(),records=new Map();
+        for(let i=0;i<this.storage.length;i++){
+          const key=this.storage.key(i);if(!key||!key.startsWith(this.prefix))continue;
+          let value;try{value=JSON.parse(this.storage.getItem(key));}catch(_){unread++;continue;}
+          if(key===this.prefix+'meta:'+value?.id&&validMeta(value))operations.set(value.id,value);
+          else if(key===this.prefix+'registration:'+value?.id&&validRegistration(value))records.set(value.id,value);
+          else if(key===this.prefix+'draft:'+value?.id&&validDraft(value))for(const op of value.operations)operations.set(op.id,op);
+          else unread++;
+        }
+        for(const id of operations.keys())if(!this.operations.has(id))changed++;
+        for(const id of records.keys())if(!this.records.has(id))changed++;
+        if(operations.size!==this.operations.size||records.size!==this.records.size)changed++;
+        this.operations=operations;this.records=records;
+      }else{
+        const roots=[this.handle];
+        try{roots.push(await this.handle.getDirectoryHandle('TaskBoard_Data'));}catch(error){if(error.name!=='NotFoundError')throw error;}
+        for(const base of roots){
+        let logs;
+        try{logs=await base.getDirectoryHandle('ログ');}catch(error){if(error.name!=='NotFoundError')throw error;}
+        if(logs)for await(const [day,directory] of logs.entries())if(directory.kind==='directory'&&/^\d{6}$/.test(day)){
+          for await(const [name,file] of directory.entries())if(file.kind==='file'&&/^meta-[a-zA-Z0-9-]{8,80}\.json$/.test(name)&&!this.operations.has(name.slice(5,-5))){
+            const value=await readJSON(file,250000);
+            if(validMeta(value)&&value.id===name.slice(5,-5)){this.operations.set(value.id,value);changed++;}else unread++;
+          }
+        }
+        let drafts;
+        try{drafts=await base.getDirectoryHandle('ルーチン一時保存');}catch(error){if(error.name!=='NotFoundError')throw error;}
+        if(drafts)for await(const [name,file] of drafts.entries())if(file.kind==='file'&&/^draft-[a-zA-Z0-9-]{8,80}\.json$/.test(name)&&!this.drafts.has(name.slice(6,-5))){
+          const value=await readJSON(file,10*1024*1024);
+          if(validDraft(value)&&value.id===name.slice(6,-5)){
+            for(const op of value.operations)if(!this.operations.has(op.id)){this.operations.set(op.id,op);changed++;}
+            this.drafts.add(value.id);
+          }else unread++;
+        }
+        let root;
+        try{root=await base.getDirectoryHandle('ルーチン登録');}catch(error){if(error.name!=='NotFoundError')throw error;}
+        if(root)for await(const [day,directory] of root.entries())if(directory.kind==='directory'&&/^\d{6}$/.test(day)){
+          for await(const [name,file] of directory.entries())if(file.kind==='file'&&/^registration-[a-zA-Z0-9-]{8,80}\.json$/.test(name)&&!this.records.has(name.slice(13,-5))){
+            const value=await readJSON(file,10*1024*1024);
+            if(validRegistration(value)&&value.id===name.slice(13,-5)&&dayFolder(value.date)===day){this.records.set(value.id,value);changed++;}else unread++;
+          }
+        }
+        }
+      }
+      this.registrations=registrationWinners(this.records.values());this.unread=unread;return changed;
+    }
+    async append(op){
+      if(!validMeta(op))throw new Error('原本・担当者データの形式を確認してください。');
+      if(this.handle){const logs=await this.handle.getDirectoryHandle('ログ',{create:true}),directory=await logs.getDirectoryHandle(dayFolder(localDay()),{create:true});await writeJSON(directory,'meta-'+op.id+'.json',op);}
+      else{if(this.storage.getItem(this.prefix+'meta:'+op.id)!==null)throw new Error('同じ記録が存在します。');this.storage.setItem(this.prefix+'meta:'+op.id,JSON.stringify(op));}
+      this.operations.set(op.id,op);
+    }
+    async saveDraft(record){
+      if(!validDraft(record))throw new Error('一時保存する原本の形式を確認してください。');
+      if(JSON.stringify(record).length>3*1024*1024)throw new Error('原本の一時保存データが大きすぎます。');
+      if(this.unread)throw new Error('読み込み待ちの共有データがあります。完了してから一時保存してください。');
+      if(this.handle){const directory=await this.handle.getDirectoryHandle('ルーチン一時保存',{create:true});await writeJSON(directory,'draft-'+record.id+'.json',record);}
+      else{if(this.storage.getItem(this.prefix+'draft:'+record.id)!==null)throw new Error('同じ一時保存が存在します。');this.storage.setItem(this.prefix+'draft:'+record.id,JSON.stringify(record));}
+      for(const op of record.operations)this.operations.set(op.id,op);
+      this.drafts.add(record.id);
+    }
+    async register(record){
+      if(!validRegistration(record))throw new Error('担当者・フロア・タスクの入力内容を確認してください。');
+      await this.refresh();
+      if(record.date<=localDay())throw new Error('原本の登録日は明日以降を選択してください。');
+      if(this.unread)throw new Error('読み込み待ちの共有データがあります。完了してから登録してください。');
+      if(this.registrations.has(record.date))throw new Error('この日は登録済みです。上書き登録はできません。');
+      if(this.handle){const root=await this.handle.getDirectoryHandle('ルーチン登録',{create:true}),directory=await root.getDirectoryHandle(dayFolder(record.date),{create:true});await writeJSON(directory,'registration-'+record.id+'.json',record);}
+      else{if(this.storage.getItem(this.prefix+'registration:'+record.id)!==null)throw new Error('同じ登録記録が存在します。');this.storage.setItem(this.prefix+'registration:'+record.id,JSON.stringify(record));}
+      this.records.set(record.id,record);
+      await this.refresh();
+      const winner=this.registrations.get(record.date);
+      if(!winner||winner.id!==record.id)throw new Error('同じ日の登録が重なりました。採用された登録をタスクボードで確認してください。');
+      return winner;
+    }
+  }
+  global.TaskBoardRoutine={FLOORS,TYPES,normalize,dayFolder,localDay,parseNames,canonicalName,parseRoster,validNames,validRoster,floorFor,validMeta,latestValues,model,validRegistration,registrationWinners,draftOperations,validDraft,Store};
+})(typeof window!=='undefined'?window:globalThis);
+</script>
 <script id="taskboard-app">
 'use strict';
 (function() {
   const C=window.TaskBoardCore;
+  const R=window.TaskBoardRoutine;
   const $=function(id){return document.getElementById(id);};
   const labels={pending:'未対応',progress:'対応中',done:'完了'};
   const PREFIX='tag-taskboard-v1:';
   const LOCAL_PREFIX=PREFIX+'local-op:';
   const PROFILE_KEY=PREFIX+'my-name';
   const state={mode:'local',ops:new Map(),tasks:[],selectedDate:today(),expanded:new Set(),store:null,config:null,syncState:'local',lastSync:null,dragging:null,renderPending:false,writing:0,queue:Promise.resolve(),editing:null,previousOverdue:null,booting:true,myName:readMyName(),onlyMine:false};
+  Object.assign(state,{view:'board',dayType:'weekday',floorFilter:'',routineOps:new Map(),registrations:new Map(),routineStore:null,routineOwner:null,routineMode:null,rosterDrafts:new Map(),templateEditing:null,registering:false,savingDraft:false,memberDraftBase:null});
   let toastTimer,dbPromise,dragInteractive=false,dialogBusy=false,profileAction=null,activeMenu=null;
   const uuid=function(){return globalThis.crypto&&crypto.randomUUID?crypto.randomUUID():'tb-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+'-'+Math.random().toString(36).slice(2);};
   function today(){return localDate(new Date());}
@@ -503,11 +820,14 @@ noscript {display:block;padding:20px;color:var(--danger)}
     $('mine-filter').title=state.myName?'担当者①・②のどちらかが「'+state.myName+'」のタスクに絞り込みます':'名前を登録して自分のタスクに絞り込みます';
     $('assign-me').title=state.myName?'担当者①に「'+state.myName+'」を入力します':'名前を登録して担当者①に入力します';
     $('assign-me2').title=state.myName?'担当者②に「'+state.myName+'」を入力します':'名前を登録して担当者②に入力します';
+    updateMemberPickers();
   }
   function openProfile(action) {
     if(dialogBusy||state.booting)return;
     profileAction=action||null;
     $('profile-dialog-title').textContent=state.myName?'自分の名前を変更':'自分の名前を登録';
+    $('profile-master').hidden=$('task-dialog').open;
+    fillMemberSelect($('profile-name'),members(),state.myName,'担当者マスタから選択');
     $('profile-name').value=state.myName;
     $('profile-save').textContent=state.myName?'保存する':'登録する';
     $('profile-cancel').textContent=state.myName?'キャンセル':'あとで';
@@ -516,7 +836,8 @@ noscript {display:block;padding:20px;color:var(--danger)}
   }
   function assignMe(field) {
     if(dialogBusy)return;
-    if(!state.myName){openProfile(field);return;}
+    if(!state.myName||!members().includes(state.myName)){openProfile(field);return;}
+    if(!Array.from($(field).options).some(function(option){return option.value===state.myName&&!option.disabled;})){showError('task-error',state.templateEditing?'選択したフロアの出社SVに自分の名前がありません。フロアタグと出社SVを確認してください。':'自分の名前を、この日の出社SVに登録してください。');return;}
     $(field).value=state.myName;$(field).focus();
   }
   $('profile-button').addEventListener('click',function(){openProfile();});
@@ -530,7 +851,7 @@ noscript {display:block;padding:20px;color:var(--danger)}
   $('profile-form').addEventListener('submit',function(event){
     event.preventDefault();if(dialogBusy)return;
     const name=$('profile-name').value.trim();
-    if(!C.validPersonalName(name)){showError('profile-error','名前を1〜100文字で入力してください。');return;}
+    if(!members().includes(name)){showError('profile-error','担当者マスタから自分の名前を選択してください。');return;}
     try{localStorage.setItem(PROFILE_KEY,name);}
     catch(_){showError('profile-error','このブラウザに名前を記憶できません。ブラウザの保存設定を確認してください。');return;}
     const action=profileAction;
@@ -541,6 +862,381 @@ noscript {display:block;padding:20px;color:var(--danger)}
     toast('自分の名前を登録しました。');
   });
   $('profile-dialog').addEventListener('close',function(){profileAction=null;});
+  const ROUTINE_PREFIX=PREFIX+'routine:';
+  let routineConfirmation=null;
+  function askRoutineRegistration(date,count){
+    $('routine-confirm-text').textContent=date.replaceAll('-','/')+'：'+count+'件のタスク';
+    return new Promise(function(resolve){routineConfirmation=resolve;$('routine-confirm').showModal();$('routine-confirm-no').focus();});
+  }
+  function answerRoutineRegistration(answer){const resolve=routineConfirmation;routineConfirmation=null;$('routine-confirm').close();if(resolve)resolve(answer);}
+  function routineModel(){
+    const data=R.model(state.routineOps.values(),state.selectedDate,state.dayType),draft=state.rosterDrafts.get(state.selectedDate);
+    if(draft&&draft.dirty){
+      const parsed=R.parseRoster(draft.text4,draft.text9,data.members);data.roster=parsed.value;
+      const definitions=R.latestValues(state.routineOps.values());
+      for(const task of data.templates)if(definitions.get('template:'+state.dayType+':'+task.id).value.floor===undefined)task.floor=R.floorFor(task.assignee,data.roster);
+    }
+    return data;
+  }
+  function members(){return R.model(state.routineOps.values(),state.selectedDate,state.dayType).members;}
+  function routineChoices(data,floor){return R.FLOORS.includes(floor)?data.roster[floor].filter(function(name){return data.members.includes(name);}):[];}
+  function updateRoutineFormPickers(clear){
+    if(!state.templateEditing)return;
+    const floor=$('task-floor').value,choices=routineChoices(routineModel(),floor);
+    for(const slot of ['assignee','assignee2']){
+      const select=$('task-'+slot),value=clear&&!choices.includes(select.value)?'':select.value;
+      fillMemberSelect(select,choices,value,floor?(slot==='assignee'?'担当者①を選択':'2人目（任意）'):'フロアタグを選択');
+    }
+  }
+  function fillMemberSelect(select,names,value,placeholder){
+    select.replaceChildren();const empty=node('option','',placeholder||'担当者を選択');empty.value='';select.append(empty);
+    for(const name of names){const option=node('option','',name);option.value=name;select.append(option);}
+    if(value&&!names.includes(value)){const old=node('option','',value+'（選択対象外）');old.value=value;old.disabled=true;select.append(old);}
+    select.value=value||'';
+  }
+  function updateMemberPickers(){
+    const names=members();
+    $('assign-me').disabled=dialogBusy||!names.length;$('assign-me2').disabled=dialogBusy||!names.length;
+    fillMemberSelect($('profile-name'),names,$('profile-name').value||state.myName,'担当者マスタから選択');
+    $('profile-save').disabled=!names.length;
+    if(!$('task-dialog').open){fillMemberSelect($('task-assignee'),names,'');fillMemberSelect($('task-assignee2'),names,'','2人目（任意）');}
+  }
+  async function refreshRoutineData(){
+    const owner=state.mode==='shared'?state.store:null;
+    if(state.mode==='shared'&&!owner)return 0;
+    if(!state.routineStore||state.routineOwner!==owner||state.routineMode!==state.mode){
+      state.routineStore=new R.Store(owner?owner.handle:null,owner?null:window.localStorage,ROUTINE_PREFIX);state.routineOwner=owner;state.routineMode=state.mode;
+    }
+    const store=state.routineStore,changed=await store.refresh();
+    if(state.routineStore!==store)return 0;
+    state.routineOps=store.operations;state.registrations=store.registrations;
+    for(const date of state.rosterDrafts.keys())if(date<=today()||state.registrations.has(date))state.rosterDrafts.delete(date);
+    return changed;
+  }
+  function mergeRoutineTasks(){
+    for(const [id] of state.ops)if(id.startsWith('seed-routine-'))state.ops.delete(id);
+    for(const record of state.registrations.values())for(const op of record.operations)state.ops.set(op.id,op);
+  }
+  function cacheRoutine(){
+    if(!state.config)return;
+    try{localStorage.setItem(PREFIX+'routine-cache:'+state.config.cacheId,JSON.stringify({operations:Array.from(state.routineOps.values()),registrations:Array.from(state.registrations.values())}));}catch(_){}
+  }
+  function readRoutineCache(config){
+    state.routineOps=new Map();state.registrations=new Map();
+    try{const value=JSON.parse(localStorage.getItem(PREFIX+'routine-cache:'+config.cacheId)||'null');
+      if(value&&Array.isArray(value.operations))for(const op of value.operations)if(R.validMeta(op))state.routineOps.set(op.id,op);
+      if(value&&Array.isArray(value.registrations))state.registrations=R.registrationWinners(value.registrations);
+    }catch(_){}
+  }
+  function checkRoutineDate(date){
+    if(!C.validDate(date)||date<=today())throw new Error('原本の登録日は明日以降を選択してください。');
+    if(state.registrations.has(date))throw new Error('この日は登録済みです。上書き登録はできません。');
+  }
+  function nextRoutineDate(value,direction){
+    const minimum=relativeDate(1),date=new Date((value<minimum?minimum:value)+'T12:00:00'),step=direction||1;
+    for(let i=0;i<36600;i++){
+      const text=localDate(date);if(text<minimum||!C.validDate(text))return '';
+      if(!state.registrations.has(text))return text;
+      date.setDate(date.getDate()+step);
+    }
+    return '';
+  }
+  function showView(){
+    const routine=state.view==='routine';
+    document.body.dataset.view=state.view;
+    $('board').hidden=routine;$('routine-board').hidden=!routine;
+    $('clock-wrap').hidden=routine;$('profile-button').hidden=routine;
+    $('member-button').hidden=!routine;$('routine-draft-save').hidden=!routine;$('routine-register').hidden=!routine;$('roster-button').hidden=!routine;$('day-type').hidden=!routine;
+    $('search-input').closest('.search').hidden=routine;$('mine-filter').hidden=routine;
+    $('completion-label').parentElement.hidden=routine;$('demo-button').hidden=routine||state.mode!=='local'||state.tasks.length>0;
+    $('routine-tab-label').textContent=routine?'タスクボード':'原本';$('routine-tab').setAttribute('aria-pressed',String(routine));
+    $('board-heading').textContent=routine?'原本':'タスク管理';
+    if(!routine){$('member-panel').hidden=true;$('roster-panel').hidden=true;$('member-button').setAttribute('aria-expanded','false');$('roster-button').setAttribute('aria-expanded','false');}
+    $('board-date').min=routine?relativeDate(1):'';
+    $('board-date').hidden=routine;$('routine-date-button').hidden=!routine;
+  }
+  function openRoutine(){
+    if(dialogBusy||state.booting)return;
+    closeMenus();state.view='routine';
+    const value=nextRoutineDate(state.selectedDate>today()?state.selectedDate:relativeDate(1));
+    if(value)state.selectedDate=value;
+    state.dayType=[0,6].includes(new Date(state.selectedDate+'T12:00:00').getDay())?'weekend':'weekday';
+    showView();render();
+  }
+  function displayRoutineDate(){
+    const date=state.selectedDate;
+    $('board-date').value=date;$('board-date').min=relativeDate(1);
+    $('date-display').textContent=date.replaceAll('-','/')+'('+new Date(date+'T12:00:00').toLocaleDateString('ja-JP',{weekday:'short'})+')';
+    $('routine-date-button').setAttribute('aria-label',$('date-display').textContent+'：登録する日付を選択');
+    if($('routine-calendar').open)renderRoutineCalendar();
+    for(const [id,offset] of [['yesterday-button',-1],['today-button',0],['tomorrow-button',1]]){
+      const target=relativeDate(offset);$(id).setAttribute('aria-pressed',String(date===target));$(id).disabled=target<=today()||state.registrations.has(target);
+    }
+    const previous=new Date(date+'T12:00:00');previous.setDate(previous.getDate()-1);
+    $('previous-day').disabled=!nextRoutineDate(localDate(previous),-1)||date===relativeDate(1);
+    $('next-day').disabled=false;
+    $('weekday-button').setAttribute('aria-pressed',String(state.dayType==='weekday'));
+    $('weekend-button').setAttribute('aria-pressed',String(state.dayType==='weekend'));
+  }
+  let routineCalendarMonth='';
+  function renderRoutineCalendar(){
+    const first=new Date(routineCalendarMonth+'-01T12:00:00'),count=new Date(first.getFullYear(),first.getMonth()+1,0).getDate(),list=$('routine-calendar-days'),active=document.activeElement&&document.activeElement.dataset.date;
+    $('routine-calendar-title').textContent=first.getFullYear()+'年'+(first.getMonth()+1)+'月';
+    $('routine-calendar-previous').disabled=routineCalendarMonth<=relativeDate(1).slice(0,7);
+    list.replaceChildren();
+    for(let i=0;i<first.getDay();i++)list.append(node('span',''));
+    for(let day=1;day<=count;day++){
+      const date=routineCalendarMonth+'-'+String(day).padStart(2,'0'),registered=state.registrations.has(date),button=node('button','button small',String(day));
+      button.type='button';button.dataset.date=date;button.disabled=date<=today()||registered;
+      button.setAttribute('aria-label',date.replaceAll('-','/')+(registered?'：登録済み':''));button.setAttribute('aria-pressed',String(date===state.selectedDate));
+      button.title=registered?'登録済み':date<=today()?'明日以降を選択してください。':'';
+      button.addEventListener('click',function(){selectDate(date);$('routine-calendar').close();});list.append(button);
+    }
+    if(active){const button=Array.from(list.children).find(function(item){return item.dataset.date===active&&!item.disabled;});if(button)button.focus({preventScroll:true});}
+  }
+  $('routine-date-button').addEventListener('click',function(){if(dialogBusy||state.booting||state.writing)return;routineCalendarMonth=state.selectedDate.slice(0,7);renderRoutineCalendar();$('routine-calendar').showModal();const selected=Array.from($('routine-calendar-days').children).find(function(button){return button.dataset.date===state.selectedDate&&!button.disabled;});if(selected)selected.focus();});
+  for(const [id,amount] of [['routine-calendar-previous',-1],['routine-calendar-next',1]])$(id).addEventListener('click',function(){const date=new Date(routineCalendarMonth+'-01T12:00:00');date.setMonth(date.getMonth()+amount);routineCalendarMonth=localDate(date).slice(0,7);renderRoutineCalendar();});
+  $('routine-calendar').addEventListener('close',function(){$('routine-date-button').focus({preventScroll:true});});
+  function routineReady(data,date){
+    const errors=[];
+    if(!data.templates.length)errors.push('原本にタスクを追加してください。');
+    if(data.templates.length>500)errors.push('一日分のタスクは500件までです。');
+    const draft=state.rosterDrafts.get(date||state.selectedDate);
+    if(draft&&draft.dirty&&!R.parseRoster(draft.text4,draft.text9,data.members).valid)errors.push('出社SVにマスタ未登録・重複の名前があります。');
+    for(const task of data.templates){
+      if(!R.FLOORS.includes(task.floor))errors.push('「'+task.title+'」のフロアタグを選択してください。');
+      if(!task.assignee)errors.push('「'+task.title+'」の担当者①を選択してください。');
+      else if(!routineChoices(data,task.floor).includes(task.assignee))errors.push('「'+task.title+'」の担当者①を'+(task.floor||'該当フロア')+'の出社SVから選択してください。');
+      if(task.assignee2&&!routineChoices(data,task.floor).includes(task.assignee2))errors.push('「'+task.title+'」の担当者②を'+(task.floor||'該当フロア')+'の出社SVから選択してください。');
+    }
+    return errors;
+  }
+  function renderRoutine(){
+    if(state.selectedDate<=today()||state.registrations.has(state.selectedDate)){
+      const date=nextRoutineDate(state.selectedDate);if(date&&date!==state.selectedDate){state.selectedDate=date;if(!$('roster-panel').hidden)showRosterPanel(false);}
+    }
+    showView();displayRoutineDate();
+    const data=routineModel(),active=document.activeElement,focused=active&&active.closest('.routine-card'),focusId=focused&&focused.dataset.id,focusSlot=active&&active.dataset.slot;
+    const filtered=data.templates.filter(function(task){return !task.floor||!state.floorFilter||task.floor===state.floorFilter;});
+    for(const [floor,suffix] of [['','original'],['4F','4'],['9F','9']]){
+      const list=$('routine-list-'+suffix),scroll=list.scrollTop;list.replaceChildren();
+      const tasks=filtered.filter(function(task){return task.floor===floor;});
+      $('routine-count-'+suffix).textContent=String(tasks.length);
+      if(!tasks.length){const empty=node('div','empty');empty.append(node('strong','',floor?'フロアタグを選ぶとここに表示されます':'＋から原本のタスクを追加'));list.append(empty);}
+      for(const task of tasks){
+        const card=taskCard(Object.assign({date:state.selectedDate,status:'pending'},task),true);card.classList.add('routine-card');card.draggable=false;card.style.cursor='default';
+        card.setAttribute('aria-label',task.time+' '+task.title+' '+(task.floor||'原本'));
+        const assignees=card.querySelector('.card-assignees');assignees.replaceChildren();
+        const choices=routineChoices(data,task.floor);
+        for(const slot of ['assignee','assignee2']){
+          const select=node('select','routine-assignee');select.dataset.slot=slot;select.setAttribute('aria-label',task.title+' 担当者'+(slot==='assignee'?'①':'②'));
+          select.disabled=state.writing>0||dialogBusy||state.booting||state.registering;
+          fillMemberSelect(select,choices,task[slot],task.floor?(slot==='assignee'?'担当者①を選択':'担当者②（任意）'):'フロアタグを選択');
+          select.classList.toggle('invalid',!!task[slot]&&!choices.includes(task[slot]));
+          select.addEventListener('change',function(){const value={assignee:task.assignee,assignee2:task.assignee2};value[slot]=select.value;saveRoutineAssignment(task.id,value,slot).catch(function(error){toast(errorText(error),true);render();});});
+          assignees.append(select);
+        }
+        list.append(card);
+      }
+      list.scrollTop=scroll;
+    }
+    $('summary-title').firstChild.textContent=state.dayType==='weekday'?'平日の原本':'土日の原本';
+    const unassigned=data.templates.filter(function(task){return !task.assignee||!task.floor;}).length;
+    $('summary-count').textContent=data.templates.length+'件'+(unassigned?' · 未割当 '+unassigned+'件':'');
+    const errors=routineReady(data),blocked=state.selectedDate<=today()||state.registrations.has(state.selectedDate);
+    $('routine-register').disabled=blocked||!data.templates.length||errors.length>0||state.writing>0||dialogBusy||state.booting||state.registering;
+    $('routine-register').title=blocked?'この日は登録できません。':errors[0]||'一日分をタスクボードに登録';
+    document.querySelectorAll('.routine-add').forEach(function(button){button.disabled=blocked||state.writing>0||dialogBusy;});
+    if(focusId&&focusSlot){const card=Array.from(document.querySelectorAll('#routine-board .routine-card')).find(function(el){return el.dataset.id===focusId;});const target=card&&card.querySelector('[data-slot="'+focusSlot+'"]');if(target)target.focus({preventScroll:true});}
+    if(!$('roster-panel').hidden)validateRosterInput();
+    updatePersonalUI();refreshReminders();updateSaveState();
+  }
+  function showMemberPanel(){
+    $('member-panel').hidden=false;$('member-button').setAttribute('aria-expanded','true');
+    state.memberDraftBase=members();$('member-text').value=state.memberDraftBase.join('\n');showError('member-error','');validateMemberInput();$('member-text').focus();
+  }
+  function validateMemberInput(){
+    const parsed=R.parseNames($('member-text').value),preview=$('member-preview');preview.replaceChildren();
+    for(const name of parsed.names)preview.append(node('span','',name));
+    for(const name of parsed.invalid.concat(parsed.duplicates))preview.append(node('span','invalid-name',name));
+    $('member-save').disabled=!parsed.names.length||!!parsed.invalid.length||!!parsed.duplicates.length||state.writing>0;
+    return parsed;
+  }
+  function rosterInput(){return R.parseRoster($('roster-4').value,$('roster-9').value,members());}
+  function validateRosterInput(){
+    const parsed=rosterInput();
+    for(const [floor,suffix] of [['4F','4'],['9F','9']]){
+      const preview=$('roster-preview-'+suffix);preview.replaceChildren();
+      for(const row of parsed.rows.filter(function(row){return row.floor===floor;})){const chip=node('span',row.error?'invalid-name':'',row.input);chip.title=row.error||row.floor;preview.append(chip);}
+      $('roster-'+suffix).setAttribute('aria-invalid',String(parsed.rows.some(function(row){return row.floor===floor&&!!row.error;})));
+    }
+    $('roster-save').disabled=!parsed.valid||state.writing>0;return parsed;
+  }
+  function showRosterPanel(focus){
+    const data=R.model(state.routineOps.values(),state.selectedDate,state.dayType),draft=state.rosterDrafts.get(state.selectedDate);
+    $('roster-4').value=draft?draft.text4:data.roster['4F'].join('\n');$('roster-9').value=draft?draft.text9:data.roster['9F'].join('\n');
+    $('roster-panel').hidden=false;$('roster-button').setAttribute('aria-expanded','true');showError('roster-error','');validateRosterInput();if(focus!==false)$('roster-4').focus();
+  }
+  function rosterAction(date){
+    const draft=state.rosterDrafts.get(date);if(!draft||!draft.dirty)return null;
+    const parsed=R.parseRoster(draft.text4,draft.text9,members());
+    if(!parsed.valid)throw new Error('出社SVの赤い名前を修正してください。');
+    return {kind:'roster',key:date,value:parsed.value};
+  }
+  async function saveRoutineRecords(actions,date){
+    return enqueue(async function(){
+      state.writing++;updateSaveState();
+      try{
+        if(state.mode==='shared'){
+          if(!state.store)throw new Error('共有フォルダへの再接続が必要です。');
+          await syncShared(true);
+        }else await refreshRoutineData();
+        if(date)checkRoutineDate(date);
+        for(const action of actions){
+          const currentMembers=members();
+          if(action.kind==='roster'&&!R.FLOORS.every(function(floor){return action.value[floor].every(function(name){return currentMembers.includes(name);});}))throw new Error('出社SVに担当者マスタと一致しない名前があります。');
+          if(action.kind==='assignment'&&[action.value.assignee,action.value.assignee2].some(function(name){return name&&!currentMembers.includes(name);}))throw new Error('担当者をマスタから選択してください。');
+          if(action.kind==='template'&&!action.value.deleted){const current=R.latestValues(state.routineOps.values()).get('template:'+action.key);if(current&&current.value.deleted)throw new Error('この原本のタスクは削除されています。');}
+          if(action.kind==='assignment'){
+            const data=R.model(state.routineOps.values(),action.value.date,action.value.dayType),task=data.templates.find(function(item){return item.id===action.value.templateId;});
+            if(!task)throw new Error('この原本のタスクは削除されています。');
+            if(action.value.floor!==task.floor||(action.fields||['assignee','assignee2']).some(function(slot){const name=action.value[slot];return name&&!routineChoices(data,task.floor).includes(name);}))throw new Error('フロアタグまたは出社SVが更新されています。該当フロアのリストから担当者を選び直してください。');
+          }
+          const seq=Math.max(C.nextSequence(state.ops.values()),C.nextSequence(state.routineOps.values()));
+          const op={v:1,id:uuid(),seq,at:new Date().toISOString(),kind:action.kind,key:action.key,value:action.value};
+          if(action.fields)op.fields=action.fields.slice();
+          await state.routineStore.append(op);state.routineOps=state.routineStore.operations;
+          if(action.kind==='roster'){const draft=state.rosterDrafts.get(action.key);if(draft)draft.dirty=false;}
+        }
+        cacheRoutine();updateMemberPickers();rebuild();
+      }finally{state.writing--;updateSaveState();if(state.view==='routine')renderRoutine();}
+    });
+  }
+  async function saveRoutineAssignment(templateId,assignment,slot){
+    const date=state.selectedDate,dayType=state.dayType,data=routineModel();checkRoutineDate(date);
+    const task=data.templates.find(function(item){return item.id===templateId;});if(!task)throw new Error('この原本のタスクは削除されています。');
+    for(const name of [assignment.assignee,assignment.assignee2])if(name&&!routineChoices(data,task.floor).includes(name))throw new Error('担当者を該当フロアの出社SVのリストから選択してください。');
+    const actions=[],roster=rosterAction(date);if(roster)actions.push(roster);
+    actions.push({kind:'assignment',key:date+':'+dayType+':'+templateId,fields:slot?[slot]:['assignee','assignee2'],value:{date,dayType,templateId,assignee:assignment.assignee,assignee2:assignment.assignee2,floor:task.floor}});
+    await saveRoutineRecords(actions,date);
+  }
+  async function saveRoutineDraft(){
+    if(dialogBusy||state.writing||state.booting||state.registering||state.savingDraft)return;
+    state.savingDraft=true;
+    const memberText=$('member-text').value,memberBase=state.memberDraftBase,memberChanged=memberBase!==null&&memberText!==memberBase.join('\n');
+    const drafts=Array.from(state.rosterDrafts.entries()).filter(function(entry){return entry[1].dirty;}).map(function(entry){return [entry[0],Object.assign({},entry[1])];});
+    try{
+      await enqueue(async function(){
+        state.writing++;updateSaveState();
+        try{
+          if(state.mode==='shared'){if(!state.store)throw new Error('共有フォルダへの再接続が必要です。');await syncShared(true);}else await refreshRoutineData();
+          const actions=[],currentMembers=members();let selectedMembers=currentMembers;
+          if(memberChanged){
+            const parsed=R.parseNames(memberText);
+            if(!parsed.names.length||parsed.invalid.length||parsed.duplicates.length)throw new Error('担当者マスタの重複・赤い名前を修正してください。');
+            if(JSON.stringify(currentMembers)!==JSON.stringify(memberBase))throw new Error('担当者マスタが他の人に更新されています。開き直して確認してください。');
+            selectedMembers=parsed.names;actions.push({kind:'members',key:'members',value:selectedMembers});
+          }
+          for(const [date,draft] of drafts){
+            if(date<=today()||state.registrations.has(date))continue;
+            const parsed=R.parseRoster(draft.text4,draft.text9,selectedMembers);
+            if(!parsed.valid)throw new Error(date.replaceAll('-','/')+'の出社SVに未登録・重複の名前があります。修正してから一時保存してください。');
+            const current=R.model(state.routineOps.values(),date,state.dayType).roster;
+            if(draft.base&&JSON.stringify(current)!==draft.base&&JSON.stringify(current)!==JSON.stringify(parsed.value))throw new Error(date.replaceAll('-','/')+'の出社SVが他の人に更新されています。確認してから一時保存してください。');
+            actions.push({kind:'roster',key:date,value:parsed.value});
+          }
+          const operations=R.draftOperations(state.routineOps.values(),state.registrations),newOps=[];
+          let seq=Math.max(C.nextSequence(state.ops.values()),C.nextSequence(state.routineOps.values()));
+          for(const action of actions){const op={v:1,id:uuid(),seq:seq++,at:new Date().toISOString(),kind:action.kind,key:action.key,value:action.value};operations.push(op);newOps.push(op);}
+          await state.routineStore.saveDraft({v:1,id:uuid(),at:new Date().toISOString(),operations});
+          state.routineOps=state.routineStore.operations;
+          for(const [date,draft] of drafts){const live=state.rosterDrafts.get(date);if(live){live.base=JSON.stringify(R.model(state.routineOps.values(),date,state.dayType).roster);if(live.text4===draft.text4&&live.text9===draft.text9)live.dirty=false;}}
+          if(memberChanged)state.memberDraftBase=selectedMembers.slice();
+          await refreshRoutineData();cacheRoutine();rebuild();
+          const values=R.latestValues(state.routineOps.values());
+          if(newOps.some(function(op){return values.get(op.kind+':'+op.key)?.id!==op.id;}))throw new Error('一時保存が他の人の更新と重なりました。共有された内容を確認してください。');
+          toast(state.mode==='shared'?'原本全体を一時保存しました。別の人も続きから編集できます。':'原本全体をこのブラウザに一時保存しました。');
+        }finally{state.writing--;updateSaveState();}
+      });
+    }catch(error){toast(errorText(error),true);}
+    finally{state.savingDraft=false;updateSaveState();}
+  }
+  function openRoutineTask(id,floor){
+    if(dialogBusy||state.booting)return;
+    try{checkRoutineDate(state.selectedDate);}catch(error){toast(errorText(error),true);return;}
+    const data=routineModel(),task=id?data.templates.find(function(item){return item.id===id;}):null;
+    if(id&&!task){toast('この原本のタスクは削除されています。',true);return;}
+    state.templateEditing={id:task?task.id:uuid(),dayType:state.dayType,date:state.selectedDate,new:!task,original:task?Object.assign({},task):null};state.editing=task;
+    $('task-dialog-title').textContent=task?'原本のタスクを編集':'原本にタスクを追加';$('task-save').textContent=task?'保存する':'追加する';
+    $('task-date-field').hidden=true;$('task-status-field').hidden=true;$('task-date').value=state.selectedDate;$('task-date').min=relativeDate(1);
+    $('task-time').value=task?task.time:'09:00';$('task-title').value=task?task.title:'';$('task-notes').value=task?task.notes:'';$('task-status').value='pending';
+    const selectedFloor=task?task.floor:R.FLOORS.includes(floor)?floor:state.floorFilter,choices=routineChoices(data,selectedFloor);
+    fillMemberSelect($('task-assignee'),choices,task?task.assignee:'');fillMemberSelect($('task-assignee2'),choices,task?task.assignee2:'','2人目（任意）');
+    $('task-floor').value=selectedFloor;$('task-floor').disabled=false;updateRoutineFormPickers(false);
+    showError('task-error','');$('task-dialog').showModal();$('task-title').focus();
+  }
+  async function saveRoutineForm(patch){
+    const editor=state.templateEditing,data=routineModel();checkRoutineDate(editor.date);
+    for(const name of [patch.assignee,patch.assignee2])if(name&&!routineChoices(data,patch.floor).includes(name))throw new Error('担当者を該当フロアの出社SVのリストから選択してください。');
+    const actions=[],roster=rosterAction(editor.date);if(roster)actions.push(roster);
+    const templateFields=['time','title','notes','floor'].filter(function(key){return editor.new||patch[key]!==editor.original[key];});
+    const assignmentFields=['assignee','assignee2'].filter(function(key){return editor.new?!!patch[key]:patch[key]!==editor.original[key];});
+    if(templateFields.length)actions.push({kind:'template',key:editor.dayType+':'+editor.id,fields:templateFields,value:{id:editor.id,dayType:editor.dayType,time:patch.time,title:patch.title,notes:patch.notes,floor:patch.floor,deleted:false}});
+    if(assignmentFields.length)actions.push({kind:'assignment',key:editor.date+':'+editor.dayType+':'+editor.id,fields:assignmentFields,value:{date:editor.date,dayType:editor.dayType,templateId:editor.id,assignee:patch.assignee,assignee2:patch.assignee2,floor:patch.floor}});
+    formBusy(true);
+    try{await saveRoutineRecords(actions,editor.date);$('task-dialog').close();toast('原本を保存しました。');}
+    finally{formBusy(false);}
+  }
+  async function deleteRoutineTask(id){
+    const task=routineModel().templates.find(function(item){return item.id===id;});if(!task)return;
+    if(!confirm('「'+task.title+'」を原本から削除しますか？\nこれから登録する同じ種類の原本に反映されます。'))return;
+    try{await saveRoutineRecords([{kind:'template',key:state.dayType+':'+id,fields:['deleted'],value:{id,dayType:state.dayType,time:task.time,title:task.title,notes:task.notes,deleted:true}}],state.selectedDate);toast('原本から削除しました。');}catch(error){toast(errorText(error),true);}
+  }
+  async function registerRoutine(){
+    if(dialogBusy||state.writing||state.booting||state.registering)return;
+    state.registering=true;
+    const date=state.selectedDate,dayType=state.dayType;
+    try{
+      checkRoutineDate(date);const errors=routineReady(routineModel());if(errors.length)throw new Error(errors[0]);
+      if(!await askRoutineRegistration(date,routineModel().templates.length))return;
+      const roster=rosterAction(date);if(roster)await saveRoutineRecords([roster],date);
+      await enqueue(async function(){
+        dialogBusy=true;state.writing++;updateSaveState();
+        try{
+          if(state.mode==='shared'){if(!state.store)throw new Error('共有フォルダへの再接続が必要です。');await syncShared(true);}else await refreshRoutineData();
+          checkRoutineDate(date);const data=R.model(state.routineOps.values(),date,dayType),errors=routineReady(data,date);if(errors.length)throw new Error(errors[0]);
+          const id=uuid(),at=new Date().toISOString();
+          const operations=data.templates.map(function(task){const taskId='routine-'+date.replaceAll('-','')+'-'+task.id;return {v:1,id:'seed-'+taskId,taskId,seq:1,at,patch:{date,time:task.time,title:task.title,assignee:task.assignee,assignee2:task.assignee2,notes:task.notes,status:'pending',floor:task.floor}};});
+          await state.routineStore.register({v:1,id,date,dayType,at,members:data.members,roster:data.roster,operations});
+          state.registrations=state.routineStore.registrations;state.view='board';state.selectedDate=date;showView();mergeRoutineTasks();cacheShared();cacheRoutine();rebuild();toast(operations.length+'件のタスクを登録しました。');
+        }finally{state.writing--;dialogBusy=false;updateSaveState();if(state.view==='routine')renderRoutine();}
+      });
+    }catch(error){toast(errorText(error),true);if(state.routineStore){state.registrations=state.routineStore.registrations;rebuild();}}
+    finally{state.registering=false;updateSaveState();}
+  }
+  $('routine-tab').addEventListener('click',function(){if(dialogBusy||state.booting)return;if(state.view==='routine'){closeMenus();state.view='board';showView();render();}else openRoutine();});
+  $('member-button').addEventListener('click',function(){if($('member-panel').hidden)showMemberPanel();else{$('member-panel').hidden=true;this.setAttribute('aria-expanded','false');}});
+  $('member-close').addEventListener('click',function(){$('member-panel').hidden=true;$('member-button').setAttribute('aria-expanded','false');});
+  $('member-text').addEventListener('input',validateMemberInput);
+  $('member-save').addEventListener('click',async function(){const parsed=validateMemberInput();if(!parsed.names.length||parsed.invalid.length||parsed.duplicates.length){showError('member-error','名前の重複・文字数を確認してください。');return;}try{await saveRoutineRecords([{kind:'members',key:'members',value:parsed.names}]);state.memberDraftBase=parsed.names.slice();showError('member-error','');toast('担当者マスタを保存しました。');}catch(error){showError('member-error',errorText(error));}});
+  $('roster-button').addEventListener('click',function(){if($('roster-panel').hidden)showRosterPanel();else{$('roster-panel').hidden=true;this.setAttribute('aria-expanded','false');}});
+  $('roster-close').addEventListener('click',function(){$('roster-panel').hidden=true;$('roster-button').setAttribute('aria-expanded','false');});
+  for(const id of ['roster-4','roster-9'])$(id).addEventListener('input',function(){const old=state.rosterDrafts.get(state.selectedDate),base=old&&old.dirty?old.base:JSON.stringify(R.model(state.routineOps.values(),state.selectedDate,state.dayType).roster);state.rosterDrafts.set(state.selectedDate,{text4:$('roster-4').value,text9:$('roster-9').value,dirty:true,base});validateRosterInput();renderRoutine();});
+  $('roster-save').addEventListener('click',async function(){try{const parsed=validateRosterInput();if(!parsed.valid)throw new Error('赤く表示された名前を修正してください。');await saveRoutineRecords([{kind:'roster',key:state.selectedDate,value:parsed.value}],state.selectedDate);showError('roster-error','');toast('出社SVを保存しました。');}catch(error){showError('roster-error',errorText(error));}});
+  $('profile-master').addEventListener('click',function(){$('profile-dialog').close();openRoutine();showMemberPanel();});
+  $('weekday-button').addEventListener('click',function(){if(dialogBusy)return;closeMenus();state.dayType='weekday';render();});
+  $('weekend-button').addEventListener('click',function(){if(dialogBusy)return;closeMenus();state.dayType='weekend';render();});
+  $('floor-filter').addEventListener('change',function(){state.floorFilter=R.FLOORS.includes(this.value)?this.value:'';render();});
+  $('routine-register').addEventListener('click',registerRoutine);
+  $('routine-draft-save').addEventListener('click',saveRoutineDraft);
+  $('routine-confirm-yes').addEventListener('click',function(){answerRoutineRegistration(true);});
+  for(const id of ['routine-confirm-no','routine-confirm-close'])$(id).addEventListener('click',function(){answerRoutineRegistration(false);});
+  $('routine-confirm').addEventListener('cancel',function(event){event.preventDefault();answerRoutineRegistration(false);});
+  $('routine-confirm').addEventListener('close',function(){const resolve=routineConfirmation;routineConfirmation=null;if(resolve)resolve(false);});
+  document.querySelectorAll('.routine-add').forEach(function(button){button.addEventListener('click',function(){openRoutineTask(null,button.closest('.routine-column').dataset.floor);});});
+  $('task-floor').addEventListener('change',function(){if(state.templateEditing)updateRoutineFormPickers(true);});
+  $('task-dialog').addEventListener('close',function(){state.templateEditing=null;$('task-date-field').hidden=false;$('task-status-field').hidden=false;$('task-floor').disabled=false;});
+
   function icon(name){const el=document.createElementNS('http://www.w3.org/2000/svg','svg');el.classList.add('icon');el.setAttribute('aria-hidden','true');const use=document.createElementNS('http://www.w3.org/2000/svg','use');use.setAttribute('href','#i-'+name);el.append(use);return el;}
   function node(tag,cls,text){const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el;}
   function toast(message,error){clearTimeout(toastTimer);const el=$('toast');el.textContent=message;el.classList.toggle('error',!!error);el.hidden=false;toastTimer=setTimeout(function(){el.hidden=true;},error?6500:3200);}
@@ -561,7 +1257,7 @@ noscript {display:block;padding:20px;color:var(--danger)}
     } catch(error) {showError('system-message','ブラウザの保存領域を利用できません。共有フォルダを接続して保存してください。');}
     return ops;
   }
-  function rebuild(){state.tasks=C.reduceOperations(state.ops.values());if(state.dragging)state.renderPending=true;else render();}
+  function rebuild(){mergeRoutineTasks();state.tasks=C.reduceOperations(state.ops.values());if(state.dragging)state.renderPending=true;else render();}
   function cacheShared() {
     if(!state.config)return;
     try{localStorage.setItem(PREFIX+'cache:'+state.config.cacheId,JSON.stringify(Array.from(state.ops.values())));}catch(_){}
@@ -597,14 +1293,18 @@ noscript {display:block;padding:20px;color:var(--danger)}
     const store=state.store;
     try {
       const changed=await store.refresh();
+      const routineChanged=await refreshRoutineData();
       if(state.store!==store)return;
       state.ops=store.operations;
-      state.syncState=store.unread?'partial':'ok';
+      mergeRoutineTasks();
+      const unread=store.unread+(state.routineStore?state.routineStore.unread:0);
+      state.syncState=unread?'partial':'ok';
       state.lastSync=new Date();
       cacheShared();
-      if(changed)rebuild();else refreshReminders();
-      if(!store.unread)showError('system-message','');
-      else showError('system-message','共有データ '+store.unread+' 件を読み込み待ちです。書き込み中のデータは次の更新で再確認します。');
+      cacheRoutine();
+      if(changed||routineChanged)rebuild();else refreshReminders();
+      if(!unread)showError('system-message','');
+      else showError('system-message','共有データ '+unread+' 件を読み込み待ちです。書き込み中のデータは次の更新で再確認します。');
       updateSaveState();
     } catch(error) {
       if(state.store!==store)return;
@@ -618,16 +1318,17 @@ noscript {display:block;padding:20px;color:var(--danger)}
     state.queue=run.catch(function(){});
     return run;
   }
-  async function savePatch(taskId,patch) {
+  async function savePatch(taskId,patch,enforceMembers) {
     return enqueue(async function(){
       state.writing++;updateSaveState();
       try {
         if(state.mode==='shared') {
           if(!state.store)throw new Error('共有フォルダへの再接続が必要です。「設定」を開いてください。');
           await syncShared(true);
-        } else state.ops=readLocal();
+        } else {await refreshRoutineData();state.ops=readLocal();mergeRoutineTasks();}
         const history=Array.from(state.ops.values()).filter(function(op){return op.taskId===taskId;});
         const current=C.reduceOperations(history)[0];
+        if(enforceMembers&&['assignee','assignee2'].some(function(key){const name=patch[key]===undefined?(current&&current[key]):patch[key];return name&&!members().includes(name);})){throw new Error('担当者マスタが更新されています。担当者をリストから選び直してください。');}
         if((history.length&&!current)||(!history.length&&!C.REQUIRED_FIELDS.every(function(k){return C.validField(k,patch[k]);})))throw new Error('このタスクは削除されたか、読み込めていません。入力内容をコピーし、新しいタスクとして追加してください。');
         const op={v:1,id:uuid(),taskId:taskId,seq:C.nextSequence(state.ops.values()),at:new Date().toISOString(),patch:patch};
         if(!C.validOperation(op))throw new Error('入力内容を確認してください。時間とタスクは必須です。');
@@ -646,11 +1347,15 @@ noscript {display:block;padding:20px;color:var(--danger)}
   }
   function render() {
     if(activeMenu)closeMenus(activeMenu.menu.contains(document.activeElement));
+    showView();
+    if(state.view==='routine'){renderRoutine();return;}
+    $('previous-day').disabled=false;$('next-day').disabled=false;
+    $('yesterday-button').disabled=false;$('tomorrow-button').disabled=false;
     state.renderPending=false;
     const dayTasks=C.sortedTasks(state.tasks.filter(function(t){return t.date===state.selectedDate;}));
     const query=$('search-input').value.trim().toLocaleLowerCase();
-    const filtering=!!query||state.onlyMine;
-    const filtered=C.filterTasks(dayTasks,query,state.myName,state.onlyMine);
+    const filtering=!!query||state.onlyMine||!!state.floorFilter;
+    const filtered=C.filterTasks(dayTasks,query,state.myName,state.onlyMine).filter(function(task){return !state.floorFilter||task.floor===state.floorFilter;});
     const active=document.activeElement;
     const focusCard=active&&active.closest?active.closest('.task-card'):null;
     const focusId=focusCard&&focusCard.dataset.id;
@@ -691,7 +1396,7 @@ noscript {display:block;padding:20px;color:var(--danger)}
     updateTaskAddUI();
     updatePersonalUI();refreshReminders();updateSaveState();
   }
-  function taskCard(task) {
+  function taskCard(task,routine) {
     const card=node('article','task-card');card.dataset.id=task.id;card.dataset.time=task.time;card.draggable=true;card.tabIndex=0;
     card.setAttribute('aria-label',task.time+' '+task.title+' 担当者① '+(task.assignee||'未割当')+' 担当者② '+(task.assignee2||'未割当')+' '+labels[task.status]);
     const row=node('div','card-row');
@@ -717,16 +1422,18 @@ noscript {display:block;padding:20px;color:var(--danger)}
       card.querySelector('.card-notes').hidden=!open;expand.setAttribute('aria-expanded',String(open));expand.setAttribute('aria-label',open?'備考を閉じる':'備考を表示');
     });
     const more=node('button','icon-button');more.type='button';more.dataset.action='menu';more.setAttribute('aria-label','タスクのメニュー');more.setAttribute('aria-haspopup','menu');more.setAttribute('aria-expanded','false');more.append(icon('more'));
-    buttons.append(expand,more);row.append(timeBlock,node('h3','task-title',task.title),assignees,buttons);card.append(row);
+    const title=node('h3','task-title',task.title);if(task.floor)title.append(node('span','floor-tag',task.floor));
+    buttons.append(expand,more);row.append(timeBlock,title,assignees,buttons);card.append(row);
     const notes=node('div','card-notes');notes.id='notes-'+task.id;notes.hidden=!state.expanded.has(task.id);notes.append(node('div','notes-label','備考'),node('div','notes-text',task.notes||'備考はありません。'));card.append(notes);
     const menu=node('div','card-menu');menu.hidden=true;menu.id='menu-'+task.id;menu.setAttribute('role','menu');menu.setAttribute('aria-label','タスクの操作');more.setAttribute('aria-controls',menu.id);
     function menuItem(text,name,callback,cls) {
       const item=node('button',cls||'');item.type='button';item.setAttribute('role','menuitem');item.append(icon(name),node('span','',text));
       item.addEventListener('click',function(){closeMenus();callback();});menu.append(item);
     }
-    menuItem('編集する','edit',function(){openTask(task.id);});
+    menuItem('編集する','edit',function(){if(routine)openRoutineTask(task.id);else openTask(task.id);});
     menu.append(node('div','menu-divider'));
     menuItem('削除する','trash',async function(){
+      if(routine){await deleteRoutineTask(task.id);return;}
       if(!confirm('「'+task.title+'」を削除しますか？'+(state.mode==='shared'?'\n共有している全員の画面から削除されます。':'')))return;
       try{await savePatch(task.id,{deleted:true});toast('タスクを削除しました。');}catch(error){toast(errorText(error),true);}
     },'danger');
@@ -774,7 +1481,7 @@ noscript {display:block;padding:20px;color:var(--danger)}
     const now=Date.now();
     const overdue=C.sortedTasks(state.tasks.filter(function(t){return C.isOverdue(t,now);}));
     const ids=new Set(overdue.map(function(t){return t.id;}));
-    for(const card of document.querySelectorAll('.task-card')) {
+    for(const card of document.querySelectorAll('#board .task-card')) {
       const late=ids.has(card.dataset.id);
       card.classList.toggle('overdue',late);
       const el=card.querySelector('.late-label');el.hidden=!late;
@@ -797,13 +1504,22 @@ noscript {display:block;padding:20px;color:var(--danger)}
   }
   function updateSaveState() {
     if($('share-dialog').open)updateShareDialog();
+    $('routine-draft-save').disabled=state.writing>0||dialogBusy||state.booting||state.registering||state.savingDraft;
+    if(state.view==='routine'){
+      const blocked=state.writing>0||dialogBusy||state.booting||state.selectedDate<=today()||state.registrations.has(state.selectedDate);
+      $('routine-register').disabled=blocked||state.registering||routineReady(routineModel()).length>0;
+      document.querySelectorAll('.routine-add,.routine-assignee').forEach(function(el){el.disabled=blocked;});
+      if(!$('member-panel').hidden)validateMemberInput();
+      if(!$('roster-panel').hidden)validateRosterInput();
+    }
   }
   function updateTaskAddUI() {
     const currentDate=today();
     const past=state.selectedDate<currentDate;
     $('add-button').disabled=past;
     document.querySelectorAll('.column-add').forEach(function(button){button.disabled=past;});
-    $('task-date').min=currentDate;
+    $('task-date').min=state.view==='routine'?relativeDate(1):currentDate;
+    if(state.view==='routine'){displayRoutineDate();updateSaveState();}
   }
   function openTask(id,status) {
     if(dialogBusy||state.booting)return;
@@ -811,6 +1527,8 @@ noscript {display:block;padding:20px;color:var(--danger)}
     state.editing=id?state.tasks.find(function(t){return t.id===id;}):null;
     if(id&&!state.editing){toast('このタスクは削除されています。',true);return;}
     const t=state.editing;
+    state.templateEditing=null;$('task-date-field').hidden=false;$('task-status-field').hidden=false;$('task-floor').disabled=false;
+    fillMemberSelect($('task-assignee'),members(),t?t.assignee:'');fillMemberSelect($('task-assignee2'),members(),t?t.assignee2:'','2人目（任意）');
     updateTaskAddUI();
     $('task-dialog-title').textContent=t?'タスクを編集':'タスクを追加';
     $('task-save').textContent=t?'保存する':'追加する';
@@ -822,18 +1540,23 @@ noscript {display:block;padding:20px;color:var(--danger)}
     $('task-assignee').value=t?t.assignee:'';
     $('task-assignee2').value=t?t.assignee2:'';
     $('task-status').value=t?t.status:status||'pending';
+    $('task-floor').value=t?(t.floor||''):state.floorFilter;
     $('task-notes').value=t?t.notes:'';
     showError('task-error','');$('task-dialog').showModal();$('task-title').focus();
   }
   function formBusy(busy) {
     dialogBusy=busy;
+    $('routine-draft-save').disabled=busy||state.writing>0||state.booting||state.registering||state.savingDraft;
     $('task-form').querySelectorAll('button,input,select,textarea').forEach(function(el){el.disabled=busy;});
     $('task-save').textContent=busy?'保存中…':state.editing?'保存する':'追加する';
+    if(!busy&&!members().length){$('assign-me').disabled=true;$('assign-me2').disabled=true;}
   }
   $('task-form').addEventListener('submit',async function(event){
     event.preventDefault();if(dialogBusy)return;
-    const patch={date:$('task-date').value,time:$('task-time').value,title:$('task-title').value.trim(),assignee:$('task-assignee').value.trim(),assignee2:$('task-assignee2').value.trim(),status:$('task-status').value,notes:$('task-notes').value};
+    const patch={date:$('task-date').value,time:$('task-time').value,title:$('task-title').value.trim(),assignee:$('task-assignee').value.trim(),assignee2:$('task-assignee2').value.trim(),status:$('task-status').value,notes:$('task-notes').value,floor:$('task-floor').value};
     if(!Object.keys(patch).every(function(k){return C.validField(k,patch[k]);})){showError('task-error','日付・時間・タスクを確認してください。');return;}
+    if(state.templateEditing){try{await saveRoutineForm(patch);}catch(error){showError('task-error',errorText(error));}return;}
+    if([patch.assignee,patch.assignee2].some(function(name){return name&&!members().includes(name);})){showError('task-error','担当者をマスタのリストから選択してください。');return;}
     const original=state.editing;
     if(patch.date<today()){showError('task-error','日付は今日以降を選択してください。');return;}
     const targetDate=patch.date;
@@ -843,7 +1566,7 @@ noscript {display:block;padding:20px;color:var(--danger)}
     try {
       const id=original?original.id:uuid();
       if(original&&!state.tasks.some(function(t){return t.id===id;}))throw new Error('ほかの利用者がこのタスクを削除しています。入力内容をコピーし、新しいタスクとして追加してください。');
-      await savePatch(id,patch);
+      await savePatch(id,patch,true);
       state.selectedDate=targetDate;render();$('task-dialog').close();toast(original?'変更を保存しました。':'タスクを追加しました。');
     }catch(error){showError('task-error',errorText(error));}
     finally{formBusy(false);}
@@ -859,7 +1582,7 @@ noscript {display:block;padding:20px;color:var(--danger)}
     if(!card||dragInteractive){event.preventDefault();return;}
     closeMenus();state.dragging=card.dataset.id;card.classList.add('dragging');event.dataTransfer.setData('application/x-taskboard-id',state.dragging);event.dataTransfer.setData('text/plain',state.dragging);event.dataTransfer.effectAllowed='move';
   });
-  for(const column of document.querySelectorAll('.column')) {
+  for(const column of document.querySelectorAll('#board .column')) {
     column.addEventListener('dragover',function(event){if(!state.dragging)return;event.preventDefault();event.dataTransfer.dropEffect='move';column.classList.add('drag-over');});
     column.addEventListener('dragleave',function(event){if(!column.contains(event.relatedTarget))column.classList.remove('drag-over');});
     column.addEventListener('drop',function(event){
@@ -873,8 +1596,8 @@ noscript {display:block;padding:20px;color:var(--danger)}
     if(state.renderPending)render();
   }
   $('board').addEventListener('dragend',endDrag);
-  function selectDate(value) {if(C.validDate(value)){state.selectedDate=value;state.expanded.clear();render();}}
-  function shiftDate(amount){const date=new Date(state.selectedDate+'T12:00:00');date.setDate(date.getDate()+amount);selectDate(localDate(date));}
+  function selectDate(value) {if(C.validDate(value)){if(state.view==='routine'){try{checkRoutineDate(value);}catch(error){toast(errorText(error),true);$('board-date').value=state.selectedDate;return;}}state.selectedDate=value;state.expanded.clear();if(state.view==='routine'){state.dayType=[0,6].includes(new Date(value+'T12:00:00').getDay())?'weekend':'weekday';if(!$('roster-panel').hidden)showRosterPanel(false);}render();}}
+  function shiftDate(amount){const date=new Date(state.selectedDate+'T12:00:00');date.setDate(date.getDate()+amount);const value=state.view==='routine'?nextRoutineDate(localDate(date),amount):localDate(date);if(value)selectDate(value);}
   $('board-date').addEventListener('change',function(){selectDate(this.value);});
   $('previous-day').addEventListener('click',function(){shiftDate(-1);});
   $('next-day').addEventListener('click',function(){shiftDate(1);});
@@ -921,14 +1644,17 @@ noscript {display:block;padding:20px;color:var(--danger)}
     try {
       const root=await window.showDirectoryPicker({id:'tag-taskboard-shared',mode:'readwrite'});
       dialogBusy=true;updateShareDialog();
-      const handle=root.name==='TaskBoard_Data'?root:await root.getDirectoryHandle('TaskBoard_Data',{create:true});
+      const handle=root;
       let same=false;
       try{same=!!state.config&&await state.config.handle.isSameEntry(handle);}catch(_){}
-      const config={handle:handle,parentName:root.name==='TaskBoard_Data'?'選択した共有フォルダ':root.name,cacheId:same?state.config.cacheId:uuid()};
+      const config={handle:handle,parentName:root.name,cacheId:same?state.config.cacheId:uuid(),layout:2};
       const store=new C.FolderStore(handle);
       await store.refresh();
+      const routineStore=new R.Store(handle,null,ROUTINE_PREFIX);await routineStore.refresh();
       try{await setting('put',config);}catch(_){toast('共有先の記憶ができません。次回はもう一度フォルダを選択してください。',true);}
-      state.config=config;state.store=store;state.mode='shared';state.ops=store.operations;state.syncState=store.unread?'partial':'ok';state.lastSync=new Date();cacheShared();showError('system-message','');state.expanded.clear();rebuild();
+      Object.assign(state,{routineStore,routineOwner:store,routineMode:'shared',routineOps:routineStore.operations,registrations:routineStore.registrations});
+      state.rosterDrafts.clear();state.memberDraftBase=null;$('member-panel').hidden=true;$('roster-panel').hidden=true;
+      state.config=config;state.store=store;state.mode='shared';state.ops=store.operations;state.syncState=store.unread||routineStore.unread?'partial':'ok';state.lastSync=new Date();mergeRoutineTasks();cacheShared();cacheRoutine();showError('system-message','');state.expanded.clear();rebuild();
       let added=0;
       try {
         for(const task of publish){const copy={};for(const key of C.FIELDS)if(key!=='deleted'&&task[key]!==undefined)copy[key]=task[key];await savePatch(uuid(),copy);added++;}
@@ -941,6 +1667,7 @@ noscript {display:block;padding:20px;color:var(--danger)}
   $('connect-folder').addEventListener('click',connectFolder);
   $('reconnect-folder').addEventListener('click',async function(){
     if(!state.config||state.writing||dialogBusy)return;
+    if(state.config.layout!==2){await connectFolder();return;}
     try {
       const allowed=await state.config.handle.requestPermission({mode:'readwrite'});
       if(allowed!=='granted')throw new Error('アクセスが許可されませんでした。「共有フォルダを選択」から接続先を選び直すこともできます。');
@@ -953,7 +1680,11 @@ noscript {display:block;padding:20px;color:var(--danger)}
     if(state.writing||dialogBusy)return;
     try{await setting('delete');}
     catch(error){showError('share-error','接続先の記憶を消せませんでした。ブラウザを再起動すると共有の再接続が表示される場合があります。');}
-    state.mode='local';state.store=null;state.config=null;state.syncState='local';state.lastSync=null;state.ops=readLocal();state.expanded.clear();showError('system-message','');rebuild();updateShareDialog();toast('このブラウザの個人用タスクに戻りました。');
+    let routineStore;
+    try{routineStore=new R.Store(null,window.localStorage,ROUTINE_PREFIX);await routineStore.refresh();}catch(error){if(!routineStore)routineStore=new R.Store(null,null,ROUTINE_PREFIX);showError('system-message','このブラウザの原本を読み込めません。共有フォルダを接続してください。');}
+    Object.assign(state,{routineStore,routineOwner:null,routineMode:'local',routineOps:routineStore.operations,registrations:routineStore.registrations});
+    state.rosterDrafts.clear();state.memberDraftBase=null;$('member-panel').hidden=true;$('roster-panel').hidden=true;
+    state.mode='local';state.store=null;state.config=null;state.syncState='local';state.lastSync=null;state.ops=readLocal();state.expanded.clear();rebuild();updateShareDialog();toast('このブラウザの個人用タスクに戻りました。');
   });
   $('demo-button').addEventListener('click',async function(){
     if(state.tasks.length||state.mode!=='local'||dialogBusy)return;
@@ -971,20 +1702,25 @@ noscript {display:block;padding:20px;color:var(--danger)}
     catch(error){toast(errorText(error),true);}finally{$('demo-button').disabled=false;}
   });
   async function boot() {
+    try{await refreshRoutineData();}catch(error){showError('system-message','ブラウザの保存領域を利用できません。共有フォルダを接続してください。');}
     state.ops=readLocal();rebuild();
     try {
       const config=await setting('get');
       if(config&&config.handle&&config.cacheId) {
-        state.config=config;state.mode='shared';state.ops=readCache(config);state.syncState='paused';rebuild();
+        state.config=config;state.mode='shared';state.ops=readCache(config);readRoutineCache(config);state.syncState='paused';rebuild();
+        if(config.layout!==2){showError('system-message','保存先の構成が変わりました。「設定」から共有フォルダを選び直してください。旧データも読み込めます。');}
+        else {
         const permission=await config.handle.queryPermission({mode:'readwrite'});
         if(permission==='granted'){state.store=new C.FolderStore(config.handle);await syncShared(false);state.ops=state.store.operations;rebuild();}
         else showError('system-message','前回の共有タスクを表示しています。編集する前に「設定」から再接続してください。');
+        }
       }
     } catch(_) {}
     state.booting=false;refreshReminders();updateSaveState();
     if(!state.myName&&!document.querySelector('dialog[open]'))openProfile();
   }
   window.addEventListener('storage',function(event){
+    if(state.mode==='local'&&event.key&&event.key.startsWith(ROUTINE_PREFIX))refreshRoutineData().then(function(){rebuild();}).catch(function(error){showError('system-message',errorText(error));});
     if(event.key===PROFILE_KEY||event.key===null){state.myName=readMyName();if(!state.myName)state.onlyMine=false;render();}
     if(state.mode==='local'&&event.key&&event.key.startsWith(LOCAL_PREFIX)){state.ops=readLocal();rebuild();}
   });
