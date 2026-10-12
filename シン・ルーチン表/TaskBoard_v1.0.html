@@ -111,6 +111,7 @@ h1 {font-size:25px;line-height:1.4;letter-spacing:.02em;margin:0;font-weight:700
 #board .done .column-head {--status-color:#595d68}
 #board .column-head .status-dot,#board .column-head .column-count {background:var(--status-color)}
 #board .column-head .column-count {color:#fff;display:inline-flex;align-items:center;justify-content:center;height:20px;padding:0 8px;line-height:1;text-align:center;flex-shrink:0}
+#routine-board .column-head .column-count {display:inline-flex;align-items:center;justify-content:center;height:20px;padding:0 8px;line-height:1;text-align:center;flex-shrink:0}
 .card-list {padding:0 14px 14px;flex:1;min-height:270px}
 .task-card {border:1px solid var(--tone-line);background:var(--tone);border-radius:10px;padding:10px 12px;position:relative;margin-bottom:8px;box-shadow:var(--shadow);cursor:grab;transition:box-shadow .15s,transform .15s,border-color .15s}
 .task-card:last-child {margin-bottom:0}
@@ -232,6 +233,12 @@ body[data-view="routine"] .routine-column.floor-9 {--tone:#ebe2ef;--tone-line:#c
 .routine-card .card-row {grid-template-columns:64px minmax(0,1fr) minmax(90px,125px) 55px}
 .routine-card button,.routine-card select {cursor:pointer}
 .routine-card .card-assignees {gap:4px}
+#routine-board .routine-card .card-row {grid-template-columns:64px minmax(0,1fr) 55px;gap:8px 10px}
+#routine-board .routine-card .card-time-block {grid-column:1;grid-row:1;align-self:center}
+#routine-board .routine-card .task-title {grid-column:2;grid-row:1}
+#routine-board .routine-card .card-buttons {grid-column:3;grid-row:1;align-self:center}
+#routine-board .routine-card .card-assignees {grid-column:1 / -1;grid-row:2;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#routine-board .routine-assignee {min-height:34px;padding:6px 8px;font-size:13px}
 .routine-card:active {transform:none}
 #routine-register:disabled {cursor:not-allowed}
 body[data-view="routine"] .date-shortcuts .button:disabled {opacity:.4;cursor:not-allowed}
