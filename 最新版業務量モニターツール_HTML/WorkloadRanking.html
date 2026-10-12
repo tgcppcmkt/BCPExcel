@@ -100,7 +100,7 @@
     .ranking-header-wrap { background: #dce3ed; }
     .ranking-scroll-wrap { position: relative; overflow: hidden; }
     .pinned-staff { display: none; position: absolute; top: 0; left: 0; right: 0; z-index: 5; background: #e4deef; box-shadow: 0 3px 6px rgba(48, 42, 76, .12); }
-    .ranking-scroll { height: 300px; overflow-y: auto; overflow-x: hidden; }
+    .ranking-scroll { height: 300px; overflow-y: auto; overflow-x: hidden; overflow-anchor: none; }
     .ranking-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
     .ranking-table th { height: 42px; padding: 9px 17px; text-align: right; background: #dce3ed; color: #465873; font-size: 11px; font-weight: 700; border-top: 1px solid #e9edf4; border-bottom: 1px solid #e9edf4; }
     .ranking-table th.rank-heading { text-align: center; }
@@ -306,6 +306,8 @@
     .browser-extra button { white-space: nowrap; }
     .browser-conflict { color: #a9253b; white-space: pre-wrap; }
     .browser-feedback .browser-note { margin: 0 0 14px; }
+    .browser-feedback { position: relative; }
+    .browser-feedback .browser-note.save-pending { display: none; position: absolute; top: -22px; left: 0; right: 0; margin: 0; }
     .capacity-settings { margin-top: 12px; }
     .capacity-settings-button { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 31px; padding: 5px 10px; border: 1px solid #7384a0; border-radius: 5px; background: #e5eaf1; color: #43566f; cursor: pointer; list-style: none; font-size: 11px; font-weight: 600; line-height: 1.5; }
     .capacity-settings-button::-webkit-details-marker { display: none; }
@@ -713,7 +715,7 @@
     }
     function setMode(mode) {
       if ((mode !== "weekday" && mode !== "weekend") || mode === displayMode) { return; }
-      if (importBusy || shareWriteBusy || editing || pendingSupport || pendingRemoval || WorkloadBrowser.isChoosing()) {
+      if (importBusy || shareWriteBusy || editing || pendingSupport || pendingRemoval || WorkloadBrowser.isChoosing() || WorkloadShare.isBusy()) {
         toast("入力・保存・集計が完了してから切り替えてください。", true); return;
       }
       if (mode === "weekend" && typeof WorkloadWeekend === "undefined") { showImportError("workload-weekend.jsをHTMLと同じフォルダに配置してください。"); return; }
@@ -731,6 +733,7 @@
       byId("capturedTimeInput").value = view ? view.input : ""; byId("capturedTimeInput").className = view ? view.inputClass : "time-input";
       setText(byId("dataFooter"), view ? view.footer : "「ログ集計」でCSVと振分表を取り込みます。");
       pinnedStaffRow = pinnedStaffDetail = null; pinnedStaffHTML = ""; tableDataVersion = -1; sharedVersion = "";
+      sharedSnapshot = WorkloadShare.setMode(mode); sharedError = "";
       if (mode === "weekend") { WorkloadWeekend.applySelection(staffData); }
       rebuildDataIndexes(); projectShared(staffData); updateModeLayout(); searchFocus(false);
       renderSummary(); renderCapacity(); renderTable(true); shareStatus();
@@ -850,12 +853,28 @@
       }
       return changes;
     }
+    function focusWithoutScroll(target) {
+      var positions = [], node = target, i, position;
+      if (!target) { return; }
+      /* フォーカスだけを戻し、一覧・固定見出し・ページの表示位置を保つ。 */
+      while (node) {
+        if (node.nodeType === 1) { positions.push({ node: node, top: node.scrollTop, left: node.scrollLeft }); }
+        node = node.parentNode;
+      }
+      try { target.focus({ preventScroll: true }); } catch (ignore) { target.focus(); }
+      /* オプションが未対応でも、スクロール位置をその場で復元する。 */
+      for (i = positions.length - 1; i >= 0; i--) {
+        position = positions[i]; position.node.scrollTop = position.top; position.node.scrollLeft = position.left;
+      }
+    }
     function applyShared(force) {
-      var version, list, scroll, focus, target, changes, i, key, staff;
+      var version, list, scroll, listTop, page, pageTop, pageLeft, focus, target, changes, i, key, staff;
       if (!sharedSnapshot || importBusy || shareWriteBusy || editing || pendingRemoval) { return; }
-      version = sharedSnapshot.date + "|" + sharedSnapshot.revision;
+      version = displayMode + "|" + sharedSnapshot.date + "|" + sharedSnapshot.revision;
       if (!force && sharedVersion === version) { return; }
       sharedVersion = version; list = byId("rankingScroll"); scroll = list.scrollTop;
+      listTop = list.getBoundingClientRect().top;
+      page = document.scrollingElement || document.documentElement; pageTop = page.scrollTop; pageLeft = page.scrollLeft;
       focus = document.activeElement && document.activeElement.id;
       changes = projectShared(staffData);
       if (changes.counts) {
@@ -876,11 +895,14 @@
         if (force && !editing && byId("supportInput")) { renderTable(true); }
       }
       if (renderCheckOverview()) { resizeRanking(); }
-      list.scrollTop = scroll;
-      target = focus && byId(focus); if (target && !target.disabled) { try { target.focus(); } catch (ignore) {} }
+      page.scrollTop = pageTop; page.scrollLeft = pageLeft;
+      /* CAチェック未の一覧が縮んでも、表示中の行の位置を保つ。 */
+      list.scrollTop = scroll + list.getBoundingClientRect().top - listTop;
+      target = focus && byId(focus); if (target && !target.disabled) { try { focusWithoutScroll(target); } catch (ignore) {} }
       refreshStaffPin();
     }
     function sharedChanged(error, snapshot) {
+      if (snapshot && snapshot.mode && snapshot.mode !== displayMode) { return; }
       if (snapshot) { sharedSnapshot = snapshot; }
       sharedError = error ? (error.message || error.description || String(error)) : "";
       shareStatus();
@@ -1233,7 +1255,7 @@
       if (ca) {
         refreshSupports(ca);
         target = byId("support-" + ca.id + "-" + slot);
-        if (target) { target.focus(); }
+        if (target) { focusWithoutScroll(target); }
       }
       applyShared(false);
     }
@@ -1258,7 +1280,7 @@
       closeSupportPrompt();
       if (editing === request.editing) {
         editing.draft = ""; input = byId("supportInput");
-        if (input) { input.value = ""; input.className = "support-input"; input.focus(); }
+        if (input) { input.value = ""; input.className = "support-input"; focusWithoutScroll(input); }
       }
       if (request.afterSave) { request.afterSave(); }
     }
@@ -1285,20 +1307,20 @@
         setText(byId("supportConfirmName"), name);
         byId("supportConfirmOverlay").style.display = "block";
         document.body.style.overflow = "hidden";
-        byId("supportConfirmNo").focus();
+        focusWithoutScroll(byId("supportConfirmNo"));
         return false;
       }
       setShareBusy(true);
       WorkloadShare.addSupport(ca, name, function (error, snapshot) {
         completed = true; setShareBusy(false);
         if (error) {
-          input = byId("supportInput"); if (input) { input.className = "support-input invalid"; input.focus(); }
+          input = byId("supportInput"); if (input) { input.className = "support-input invalid"; focusWithoutScroll(input); }
           sharedSaveError(error, snapshot); return;
         }
         saved = true; editing = null; if (snapshot) { sharedSnapshot = snapshot; } sharedError = "";
         applyShared(true); shareStatus(); toast(name + "さんをサポートに追加しました。");
         ca = findCA(ca.id); slot = ca ? ca.supports.length - 1 : slot;
-        input = byId("support-" + ca.id + "-" + slot); if (input && !preserveFocus) { input.focus(); }
+        input = byId("support-" + ca.id + "-" + slot); if (input && !preserveFocus) { focusWithoutScroll(input); }
         if (!inCall && afterSave) { afterSave(); }
       });
       inCall = false; return completed && saved;
@@ -1313,7 +1335,7 @@
       editing = { caId: caId, slot: slot, draft: "" };
       refreshSupports(ca);
       input = byId("supportInput");
-      if (input) { input.focus(); }
+      if (input) { focusWithoutScroll(input); }
     }
     function supportKey(e) {
       e = e || window.event;
@@ -1432,7 +1454,7 @@
       setText(byId("removalCA"), ca.name);
       byId("removalOverlay").style.display = "block";
       document.body.style.overflow = "hidden";
-      byId("removalCancel").focus();
+      focusWithoutScroll(byId("removalCancel"));
     }
     function closeRemoval() {
       var target;
@@ -1441,7 +1463,7 @@
       pendingRemoval = null;
       byId("removalOverlay").style.display = "none";
       document.body.style.overflow = "";
-      if (target) { target.focus(); }
+      if (target) { focusWithoutScroll(target); }
       applyShared(false);
     }
     function confirmRemoval() {
@@ -1567,7 +1589,7 @@
       }
       positionStaffPin();
       if (focus && focus.indexOf("pinned-") === 0 && byId("pinnedStaff").style.display === "block") {
-        target = byId(focus); if (target) { try { target.focus(); } catch (ignore) {} }
+        target = byId(focus); if (target) { try { focusWithoutScroll(target); } catch (ignore) {} }
       }
     }
     function positionStaffPin() {
@@ -1648,7 +1670,7 @@
       commitTimer = window.setInterval(updateCommitVisibility, 30000);
       window.onbeforeunload = beforeClose;
       window.onunload = closeImportSession;
-      if (typeof WorkloadShare !== "undefined") { WorkloadShare.start(sharedChanged); }
+      if (typeof WorkloadShare !== "undefined") { WorkloadShare.start(sharedChanged, displayMode); }
     }
     return {
       init: init,
@@ -1658,6 +1680,7 @@
       canChooseBrowserFiles: function () { return !(importBusy || shareWriteBusy || editing || pendingSupport || pendingRemoval); },
       browserWriteRecovered: function (action, snapshot) {
         var ca;
+        if (snapshot && snapshot.mode && snapshot.mode !== displayMode) { return; }
         if (snapshot) { sharedSnapshot = snapshot; }
         if (action.kind === "add" && editing) {
           syncDraft(); ca = findCA(editing.caId);

@@ -244,7 +244,7 @@ var WorkloadShare = (function () {
         } else { throw new Error("共有操作の種類が不正です。"); }
         return record;
     }
-    var root = null, listener = null, running = false, timer = null, busy = false, lastState = null, lastSignature = "", lastError = "";
+    var root = null, listener = null, running = false, timer = null, busy = false, lastState = null, lastSignature = "", lastError = "", displayMode = "weekday";
     var contexts = new Map(), callbacks = new Map(), rootHandles = new Map();
     var pendingPrefix = "workload-html.pending.v1.", dataDirectory = "WORKLOAD_HTML_DATA";
     var kinds = ["check", "supportRequest", "staffSupportRequest", "commit", "cancelCommit", "add", "finish"];
@@ -262,9 +262,12 @@ var WorkloadShare = (function () {
                 try { job = JSON.parse(storage.getItem(key)); }
                 catch (error) { throw failure("端末内の保存待ちデータが壊れています。控えを保全してから管理担当へ確認してください。"); }
                 if (!job || key !== pendingPrefix + job.id || !/^h-[a-f0-9]{32}$/.test(job.id) ||
-                    !/^\d{8}$/.test(job.date) || typeof job.rootKey !== "string" || !job.action || !job.stamp) {
+                    !/^\d{8}$/.test(job.date) || typeof job.rootKey !== "string" || !job.action || !job.stamp ||
+                    typeof job.mode !== "undefined" && job.mode !== "weekday" && job.mode !== "weekend") {
                     throw failure("端末内の保存待ちデータの形式が不正です。自動的には削除しません。");
                 }
+                /* モードを持たない旧版の保存待ちは、既存の平日履歴として扱う。 */
+                if (typeof job.mode === "undefined") { job.mode = "weekday"; }
                 result.push(job);
             }
         }
@@ -295,14 +298,16 @@ var WorkloadShare = (function () {
             throw failure("共有フォルダへの読み書きが許可されていません。「共有フォルダを接続」または「保存を再試行」で許可してください。");
         }
     }
-    async function dayContext(day) {
-        if (contexts.has(day)) { return contexts.get(day); }
-        var base = empty(day), legacyName = day + ".json", fileHandle = await optionalFile(root.handle, legacyName), file;
+    function modeState(day, mode) { var state = empty(day); state.mode = mode; return state; }
+    async function dayContext(day, mode) {
+        var contextKey = mode + ":" + day;
+        if (contexts.has(contextKey)) { return contexts.get(contextKey); }
+        var base = empty(day), legacyName = day + ".json", fileHandle = mode === "weekday" ? await optionalFile(root.handle, legacyName) : null, file;
         if (fileHandle) {
             file = await fileHandle.getFile();
             if (file.size > 16 * 1024 * 1024) { throw failure("移行元の日付JSONが大きすぎます。"); }
             base = parse(await file.text(), day);
-        } else {
+        } else if (mode === "weekday") {
             fileHandle = await optionalFile(root.handle, day + ".js");
             if (fileHandle) {
                 file = await fileHandle.getFile();
@@ -314,24 +319,29 @@ var WorkloadShare = (function () {
         base.supportRequests = base.supportRequests.filter(function (row) {
             return row.organization === "@WorkloadStaffSupport" || active(base, keyOf(row.organization, row.caName)).length < 3;
         });
-        var ctx = { day: day, base: base, baseHandle: fileHandle,
+        base.mode = mode;
+        var ctx = { day: day, mode: mode, base: base, baseHandle: fileHandle,
             baseMark: file ? file.size + ":" + file.lastModified : "", events: new Map(),
             order: [], state: clone(base), rejected: [], maximum: 0, snapshot: clone(base), signature: "", integrityCursor: 0, invalidError: null };
-        contexts.set(day, ctx); return ctx;
+        contexts.set(contextKey, ctx); return ctx;
     }
-    function validateEvent(event, name, day) {
+    function validateEvent(event, name, day, mode) {
         if (!event || event.schemaVersion !== 1 || event.application !== "WorkloadRankingHTML" ||
             !/^h-[a-f0-9]{32}$/.test(event.id) || name !== "op-" + event.id + ".json" || event.date !== day ||
             !Number.isSafeInteger(event.clock) || event.clock < 1 || event.clock > 1000000000000 ||
             typeof event.stamp !== "string" || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(event.stamp) ||
             !Number.isFinite(Date.parse(event.stamp)) || dayKey(new Date(event.stamp)) !== day ||
-            !event.action || kinds.indexOf(event.action.kind) < 0) {
+            !event.action || kinds.indexOf(event.action.kind) < 0 ||
+            (typeof event.mode === "undefined" ? "weekday" : event.mode) !== mode) {
             throw failure("共有履歴の形式・日付・操作番号が不正です：" + name);
         }
         validateIdentity(event.action);
     }
-    async function scanDay(day) {
-        var ctx = await dayContext(day), storage = await optionalDirectory(root.handle, dataDirectory);
+    async function scanDay(day, mode) {
+        mode = mode || displayMode;
+        var ctx = await dayContext(day, mode), storage = await optionalDirectory(root.handle, dataDirectory);
+        /* 平日は既存の保存先を保ち、土日は別の名前空間へ保存する。 */
+        if (storage && mode === "weekend") { storage = await optionalDirectory(storage, "weekend"); }
         if (ctx.invalidError) { throw ctx.invalidError; }
         var folder = storage ? await optionalDirectory(storage, day) : null, seen = new Set(), count = 0;
         // Immutable operation bodies stay cached. Check existing metadata in small,
@@ -339,7 +349,7 @@ var WorkloadShare = (function () {
         var cachedNames = Array.from(ctx.events.keys()), checks = new Set();
         for (var cursor = 0; cursor < Math.min(16, cachedNames.length); cursor++) { checks.add(cachedNames[(ctx.integrityCursor + cursor) % cachedNames.length]); }
         ctx.integrityCursor = cachedNames.length ? (ctx.integrityCursor + checks.size) % cachedNames.length : 0;
-        var currentBase = await optionalFile(root.handle, day + ".json") || await optionalFile(root.handle, day + ".js");
+        var currentBase = mode === "weekday" ? await optionalFile(root.handle, day + ".json") || await optionalFile(root.handle, day + ".js") : null;
         if (!!currentBase !== !!ctx.baseHandle || currentBase && !await currentBase.isSameEntry(ctx.baseHandle)) {
             throw failure("移行元の日付履歴が新規作成・置換されています。旧版を停止し、全員がHTML版を開き直してください。");
         }
@@ -369,7 +379,7 @@ var WorkloadShare = (function () {
                 var event;
                 try { event = JSON.parse(await file.text()); }
                 catch (error) { throw failure("共有履歴を読み込めません。元ファイルは変更しません：" + name); }
-                validateEvent(event, name, day); ctx.events.set(name, { event: event, mark: mark });
+                validateEvent(event, name, day, mode); ctx.events.set(name, { event: event, mark: mark });
             }
         }
         for (var cachedName of ctx.events.keys()) {
@@ -389,11 +399,12 @@ var WorkloadShare = (function () {
             }
         }
         ctx.order = order; ctx.maximum = ordered.length ? ordered[ordered.length - 1].clock : 0;
-        var signature = day + ":" + order.join(",");
+        var signature = mode + ":" + day + ":" + order.join(",");
         if (ctx.signature !== signature) { ctx.snapshot = clone(ctx.state); ctx.signature = signature; }
         return ctx;
     }
     function publish(ctx, error) {
+        if (ctx.mode && ctx.mode !== displayMode) { return; }
         lastState = ctx.snapshot;
         var message = error ? error.message || String(error) : "";
         if (listener && (lastError !== message || error || lastSignature !== ctx.signature)) {
@@ -412,6 +423,7 @@ var WorkloadShare = (function () {
     function report(error) { lastError = error.message || String(error); if (listener) { listener(error, lastState); } status(null, error); }
     async function writeEvent(job, event) {
         var storage = await root.handle.getDirectoryHandle(dataDirectory, { create: true });
+        if (job.mode === "weekend") { storage = await storage.getDirectoryHandle("weekend", { create: true }); }
         var folder = await storage.getDirectoryHandle(job.date, { create: true });
         var name = "op-" + job.id + ".json", text = JSON.stringify(event, null, 2) + "\n";
         var handle = await optionalFile(folder, name);
@@ -436,20 +448,20 @@ var WorkloadShare = (function () {
             var jobs = pendingJobs(), failed = null;
             for (var i = 0; i < jobs.length; i++) {
                 var job = jobs[i]; if (!await belongs(job)) { continue; }
-                var callback = callbacks.get(job.id), error = null;
+                var callback = callbacks.get(job.id), error = null, ctx = null;
                 try {
-                    var ctx = await scanDay(job.date);
+                    ctx = await scanDay(job.date, job.mode);
                     if (!own(ctx.state.ids, "@" + job.id)) {
                         if (!job.event) {
                             try { makeRecord(ctx.state, job.action, job.id, new Date(job.stamp)); }
                             catch (badAction) { badAction.terminal = true; throw badAction; }
-                            job.event = { schemaVersion: 1, application: "WorkloadRankingHTML", id: job.id, date: job.date,
+                            job.event = { schemaVersion: 1, application: "WorkloadRankingHTML", id: job.id, date: job.date, mode: job.mode,
                                 clock: ctx.maximum + 1, stamp: job.stamp, action: job.action };
                             keepJob(job);
                         }
-                        validateEvent(job.event, "op-" + job.id + ".json", job.date);
+                        validateEvent(job.event, "op-" + job.id + ".json", job.date, job.mode);
                         await writeEvent(job, job.event);
-                        ctx = await scanDay(job.date);
+                        ctx = await scanDay(job.date, job.mode);
                         var rejection = ctx.rejected.find(function (x) { return x.id === job.id; });
                         if (rejection) { throw failure("同時操作により反映できませんでした。最新の状態を確認してください。\n" + rejection.message, true); }
                         if (!own(ctx.state.ids, "@" + job.id)) { throw failure("共有側で操作の反映を確認できません。控えを残して再試行します。"); }
@@ -459,13 +471,15 @@ var WorkloadShare = (function () {
                     error = saveError;
                     if (error.terminal) { removeJob(job); }
                 }
+                /* 他方の保存待ちも元のモードへ再試行し、表示・入力欄には反映しない。 */
+                callbacks.delete(job.id);
+                if (job.mode !== displayMode) { if (callback) { callback(error, ctx ? ctx.snapshot : null); } continue; }
                 var today;
                 try { today = await scanDay(dayKey(new Date())); }
                 catch (readError) { if (!error) { error = readError; } today = { snapshot: lastState, signature: lastSignature, rejected: [] }; }
-                callbacks.delete(job.id);
                 publish(today, error);
                 if (callback) { callback(error, lastState); }
-                else if (!error && typeof WorkloadUI !== "undefined") { WorkloadUI.browserWriteRecovered(job.action, lastState); }
+                else if (!error && job.date === dayKey(new Date()) && typeof WorkloadUI !== "undefined") { WorkloadUI.browserWriteRecovered(job.action, lastState); }
                 if (error && !error.terminal) { failed = error; break; }
             }
             publish(await scanDay(dayKey(new Date())), failed);
@@ -482,21 +496,31 @@ var WorkloadShare = (function () {
         if (!root || !running) { callback(failure("先に全員が使う「共有フォルダを接続」してください。"), lastState); return; }
         // Retrying a confirmed operation reuses its durable identity.
         var pending;
-        try { pending = pendingJobs().find(function (x) { return x.rootKey === root.key && x.date === dayKey(new Date()) && JSON.stringify(x.action) === JSON.stringify(action); }); }
+        try { pending = pendingJobs().find(function (x) { return x.rootKey === root.key && x.mode === displayMode && x.date === dayKey(new Date()) && JSON.stringify(x.action) === JSON.stringify(action); }); }
         catch (error) { callback(error, lastState); return; }
         if (pending) { callbacks.set(pending.id, callback); drain(); return; }
-        var job = { id: uid(), date: dayKey(new Date()), stamp: new Date().toISOString(), action: clone(action),
+        var job = { id: uid(), date: dayKey(new Date()), mode: displayMode, stamp: new Date().toISOString(), action: clone(action),
             rootKey: root.key, rootName: root.handle.name };
         try { keepJob(job); } catch (error) { callback(error, lastState); return; }
         callbacks.set(job.id, callback); status(null); drain();
     }
-    function start(callback) {
-        stop(); listener = callback; running = true; lastSignature = "";
+    function start(callback, mode) {
+        stop(); displayMode = mode === "weekend" ? "weekend" : "weekday"; listener = callback; running = true; lastSignature = "";
+        lastState = modeState(dayKey(new Date()), displayMode); lastError = "";
         if (root) { refresh(); }
-        else { listener(failure("全員が使う共有フォルダを接続してください。"), empty(dayKey(new Date()))); }
+        else { listener(failure("全員が使う共有フォルダを接続してください。"), lastState); }
         timer = window.setInterval(function () { refresh().catch(report); }, 3000);
     }
     function stop() { running = false; if (timer) { window.clearInterval(timer); timer = null; } }
+    function setMode(mode) {
+        if (mode !== "weekday" && mode !== "weekend") { throw failure("集計モードが不正です。"); }
+        if (busy) { throw failure("保存・読込が完了してから切り替えてください。"); }
+        displayMode = mode; lastSignature = ""; lastError = "";
+        var ctx = contexts.get(mode + ":" + dayKey(new Date()));
+        lastState = ctx ? ctx.snapshot : modeState(dayKey(new Date()), mode);
+        status(ctx, null); refresh().catch(report);
+        return clone(lastState);
+    }
     async function connect(handle, key) {
         if (busy) { throw failure("保存・読込が完了してから接続してください。"); }
         var previous = root;
@@ -516,12 +540,12 @@ var WorkloadShare = (function () {
         await drain();
     }
     return {
-        start: start, refresh: refresh, stop: stop, connect: connect,
+        start: start, refresh: refresh, stop: stop, connect: connect, setMode: setMode,
         isConnected: function () { return !!root; }, isBusy: function () { return busy; },
         hasPendingWrites: function () { try { return callbacks.size > 0 || pendingJobs().length > 0; } catch (error) { return true; } },
         pendingExport: function () { return pendingJobs(); },
-        snapshot: function () { return lastState ? clone(lastState) : empty(dayKey(new Date())); },
-        historyText: function () { return encode(lastState || empty(dayKey(new Date()))); },
+        snapshot: function () { return lastState ? clone(lastState) : modeState(dayKey(new Date()), displayMode); },
+        historyText: function () { return encode(lastState || modeState(dayKey(new Date()), displayMode)); },
         checkCA: function (ca, callback) { request({ kind: "check", organization: ca.organization, caName: ca.name }, callback); },
         setSupportRequest: function (ca, requested, callback) { request({ kind: "supportRequest", organization: ca.organization, caName: ca.name, requested: requested, requestId: ca.supportRequestId || "" }, callback); },
         staffSupportKey: staffSupportKey,

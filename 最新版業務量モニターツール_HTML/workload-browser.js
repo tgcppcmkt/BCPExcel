@@ -205,7 +205,7 @@ var WorkloadWorkbook = (function () {
 var WorkloadBrowser = (function () {
     var selected = {}, roots = {}, starts = {}, remembered = null, choosing = false, shared = null;
     function node(id) { return document.getElementById(id); }
-    function info(message, bad) { var el = node("browserStatus"); if (el) { el.textContent = message; el.className = "browser-note" + (bad ? " error" : ""); } }
+    function info(message, bad, saving) { var el = node("browserStatus"); if (el) { el.textContent = message; el.className = "browser-note" + (bad ? " error" : "") + (saving ? " save-pending" : ""); } }
     function fail(error) { if (error.name !== "AbortError") { var message = error.message || String(error); info(message, true); window.alert(message); } }
     function allowed() { return !choosing && (!window.WorkloadUI || WorkloadUI.canChooseBrowserFiles()); }
     function display(kind) {
@@ -458,7 +458,8 @@ var WorkloadBrowser = (function () {
         if (value.connected) { node("sharedRootName").textContent = value.folder; node("sharedRootName").title = value.folder; }
         info((value.error || (value.connected ? "" : "「設定」の「共有」で接続してください。") +
             (value.pending ? " ／ 保存待ち " + value.pending + "件（完了まで画面を開いてください）" : "") +
-            (value.rejected.length ? " ／ 同時操作による未反映 " + value.rejected.length + "件" : "")).replace(/^ ／ /, ""), !!value.error || !!value.rejected.length);
+            (value.rejected.length ? " ／ 同時操作による未反映 " + value.rejected.length + "件" : "")).replace(/^ ／ /, ""), !!value.error || !!value.rejected.length,
+            value.connected && value.pending > 0 && !value.error && !value.rejected.length);
         var box = node("browserConflict");
         if (box) { box.textContent = value.rejected.map(function (x) { return x.stamp + "　" + x.organization + "／" + x.caName + "：" + x.message; }).join("\n"); }
     }
