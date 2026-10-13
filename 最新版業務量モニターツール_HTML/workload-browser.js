@@ -204,7 +204,28 @@ var WorkloadWorkbook = (function () {
 
 var WorkloadBrowser = (function () {
     var selected = {}, roots = {}, starts = {}, remembered = null, choosing = false, shared = null;
+    var settingErrors = {}, folderErrors = {};
     function node(id) { return document.getElementById(id); }
+    function settingText(id, value) { var el = node(id); if (el && el.textContent !== value) { el.textContent = value; } }
+    function refreshSettings() {
+        for (var kind of ["shared", "unread", "flag", "weekend", "assignment"]) {
+            var configured = kind === "shared" ? !!remembered : kind === "assignment" ? !!selected.assignment : !!roots[kind];
+            var error = settingErrors[kind] || folderErrors[kind] || (kind === "shared" && shared && shared.error) || "";
+            var waiting = configured && kind === "shared" && (!shared || !shared.connected);
+            var label = error ? "設定を確認" : !configured ? "未設定" : waiting ? "再接続待ち" : kind === "shared" ? "接続済" : "設定済";
+            var state = node(kind + "SettingState");
+            settingText(kind + "SettingState", label);
+            if (state) { state.className = "setting-state" + (error || waiting ? " needs-attention" : configured ? " is-set" : ""); state.title = error || label; }
+            if (kind === "unread" || kind === "flag" || kind === "weekend") {
+                var start = starts[kind], path = roots[kind] ? roots[kind].name : "ログ";
+                var hint = kind === "unread" ? " / yyyymm / mmdd" : kind === "flag" ? " / yyyymm" : " / yymmdd";
+                if (start && start.day === new Date().toDateString()) {
+                    hint = start.exact ? "参照先：" + path + " / " + start.parts.join(" / ") : "日付フォルダなし：" + path + "を開きます";
+                } else { hint = "「ログ」を選択：" + path + hint; }
+                settingText(kind + "SettingPath", hint);
+            }
+        }
+    }
     function info(message, bad, saving) { var el = node("browserStatus"); if (el) { el.textContent = message; el.className = "browser-note" + (bad ? " error" : "") + (saving ? " save-pending" : ""); } }
     function fail(error) { if (error.name !== "AbortError") { var message = error.message || String(error); info(message, true); window.alert(message); } }
     function allowed() { return !choosing && (!window.WorkloadUI || WorkloadUI.canChooseBrowserFiles()); }
@@ -217,13 +238,15 @@ var WorkloadBrowser = (function () {
         if (!(kind === "assignment" ? /\.(xlsx|xlsm)$/i : /\.csv$/i).test(file.name)) { throw new Error(kind === "assignment" ? "振分表は .xlsx または .xlsm を選択してください。" : "CSVファイルを選択してください。"); }
         selected[kind] = { handle: handle, name: file.name }; display(kind);
         await WorkloadBrowserStore.set("file-" + kind, handle);
+        delete settingErrors[kind]; refreshSettings();
     }
     async function dateStart(kind) {
         if (!roots[kind]) { return; }
         var date = new Date(), month = date.getFullYear() + ("0" + (date.getMonth() + 1)).slice(-2), day = ("0" + (date.getMonth() + 1)).slice(-2) + ("0" + date.getDate()).slice(-2);
         var folder = roots[kind], parts = kind === "weekend" ? [String(date.getFullYear()).slice(-2) + day] : kind === "unread" ? [month, day] : [month];
-        try { for (var part of parts) { folder = await folder.getDirectoryHandle(part); } starts[kind] = { handle: folder, parts: parts, exact: true, day: date.toDateString() }; }
-        catch (error) { if (error.name !== "NotFoundError") { throw error; } starts[kind] = { handle: roots[kind], parts: [], exact: false, day: date.toDateString() }; }
+        try { for (var part of parts) { folder = await folder.getDirectoryHandle(part); } starts[kind] = { handle: folder, parts: parts, exact: true, day: date.toDateString() }; delete folderErrors[kind]; }
+        catch (error) { if (error.name !== "NotFoundError") { folderErrors[kind] = error.message || String(error); throw error; } starts[kind] = { handle: roots[kind], parts: [], exact: false, day: date.toDateString() }; delete folderErrors[kind]; }
+        finally { refreshSettings(); }
     }
     function pickerOptions(kind) {
         var opts = { multiple: false, id: "workload-" + kind, types: kind === "assignment" ?
@@ -387,13 +410,14 @@ var WorkloadBrowser = (function () {
         if (!allowed()) { info("入力・保存・集計が完了してからファイルを選択してください。", true); return; }
         if (typeof window.showOpenFilePicker !== "function") {
             var input = node("browserFileInput"); input.accept = kind === "assignment" ? ".xlsx,.xlsm" : ".csv"; input.value = "";
-            input.onchange = function () { var file = input.files[0]; if (file) { selected[kind] = { file: file, name: file.name }; display(kind); } }; input.click(); return;
+            input.onchange = function () { var file = input.files[0]; if (file) { selected[kind] = { file: file, name: file.name }; display(kind); delete settingErrors[kind]; refreshSettings(); } }; input.click(); return;
         }
         choosing = true;
         try {
             var handles = await window.showOpenFilePicker(pickerOptions(kind));
             await acceptChoice(kind, handles[0]); info("ファイルを選択しました。「ログ集計」で未読CSV・フラグCSVを選択してください。");
-        } catch (error) { fail(error); } finally { choosing = false; }
+        } catch (error) { if (error.name !== "AbortError") { settingErrors[kind] = error.message || String(error); } fail(error); }
+        finally { choosing = false; refreshSettings(); }
     }
     async function chooseRoot(kind) {
         if (!allowed()) { info("入力・保存・集計が完了してから設定してください。", true); return; }
@@ -403,8 +427,10 @@ var WorkloadBrowser = (function () {
             var handle = await window.showDirectoryPicker({ id: "workload-root-" + kind, mode: "read" });
             roots[kind] = handle; await WorkloadBrowserStore.set("root-" + kind, handle);
             node(kind + "RootName").textContent = handle.name; node(kind + "RootName").title = handle.name; await dateStart(kind);
+            delete settingErrors[kind]; refreshSettings();
             info("読込フォルダを設定しました。「ログ集計」でCSVを選択してください。");
-        } catch (error) { fail(error); } finally { choosing = false; }
+        } catch (error) { if (error.name !== "AbortError") { settingErrors[kind] = error.message || String(error); } fail(error); }
+        finally { choosing = false; refreshSettings(); }
     }
     async function connectShared() {
         if (!allowed()) { info("入力・保存・集計が完了してから共有先を接続してください。", true); return; }
@@ -416,8 +442,9 @@ var WorkloadBrowser = (function () {
             key = remembered && await handle.isSameEntry(remembered.handle) ? remembered.key : "shared-root-" + window.crypto.randomUUID();
             await WorkloadShare.connect(handle, key);
             remembered = { handle: handle, key: key }; await WorkloadBrowserStore.set("shared-current", remembered);
-        } catch (error) { fail(error); }
-        finally { choosing = false; node("connectShared").disabled = false; }
+            delete settingErrors.shared;
+        } catch (error) { if (error.name !== "AbortError") { settingErrors.shared = error.message || String(error); } fail(error); }
+        finally { choosing = false; node("connectShared").disabled = false; refreshSettings(); }
     }
     async function fileOf(kind) {
         var choice = selected[kind];
@@ -462,6 +489,7 @@ var WorkloadBrowser = (function () {
             value.connected && value.pending > 0 && !value.error && !value.rejected.length);
         var box = node("browserConflict");
         if (box) { box.textContent = value.rejected.map(function (x) { return x.stamp + "　" + x.organization + "／" + x.caName + "：" + x.message; }).join("\n"); }
+        refreshSettings();
     }
     async function init() {
         try {
@@ -480,9 +508,11 @@ var WorkloadBrowser = (function () {
             } else if (remembered) { info("前回の共有先を記憶しています。「ログ集計」で読み書きを許可してください。共有先を変更する場合は「設定」の「共有」を選択してください。"); }
             if (!window.showDirectoryPicker || !window.isSecureContext) { info("この開き方では共有フォルダを利用できません。通常のEdgeでHTMLファイルを開いてください。", true); }
         } catch (error) { info("設定を復元できません：" + (error.message || String(error)) + "　ファイルと共有先を選択してください。", true); }
+        finally { refreshSettings(); }
     }
     return { init: init, choose: choose, chooseRoot: chooseRoot, connectShared: connectShared,
         selectLogs: selectLogs, runWeekday: runWeekday, sharedStatus: sharedStatus,
-        selectWeekendLogs: selectWeekendLogs, runWeekend: runWeekend, isChoosing: function () { return choosing; }
+        selectWeekendLogs: selectWeekendLogs, runWeekend: runWeekend, isChoosing: function () { return choosing; },
+        refreshSettings: refreshSettings
     };
 }());

@@ -10,7 +10,7 @@ var WorkloadWeekendConfig = {
     headerRow: 2,                       // 項目名の見出し行
     startRow: 3,                        // データの開始行
     columns: {
-        organization: "C",             // 組織（B列のエリアは照合に使いません）
+        organization: "B",             // 組織（振分表の組織列と照合します）
         caName: "D",                   // CA名
         items: ["F", "G", "H", "I", "J", "K", "L", "M"], // 合計に含める8項目
         unsorted: "R",                 // 未仕分（合計には含めません）

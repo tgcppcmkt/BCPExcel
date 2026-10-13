@@ -321,7 +321,17 @@
     .capacity-settings .browser-file { min-width: 0; }
     .capacity-settings .browser-file button { width: 100%; min-width: 0; text-align: left; }
     .capacity-settings .browser-file-name { display: block; width: 100%; max-width: none; color: inherit; }
-    .browser-settings-hint { margin: 12px 0 0; font-size: 10px; color: #52637a; line-height: 1.7; white-space: normal; }
+    .setting-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 3px; font-size: 11px; }
+    .setting-state { padding: 1px 5px; border: 1px solid #aab6c8; border-radius: 4px; color: #536178; background: #e5eaf1; font-size: 10px; white-space: nowrap; }
+    .setting-state.is-set { color: #28614c; background: #dcebe2; border-color: #86aa96; }
+    .setting-state.needs-attention { color: #a83e53; background: #f2e2e7; border-color: #c57681; }
+    .setting-path { display: block; margin-top: 3px; color: #536178; font-size: 10px; white-space: normal; overflow-wrap: anywhere; }
+    @media (prefers-color-scheme: dark) {
+      .setting-state { color: #c5cedd; background: #2a303c; border-color: #647186; }
+      .setting-state.is-set { color: #c1ead3; background: #253c32; border-color: #729d86; }
+      .setting-state.needs-attention { color: #f4c5cd; background: #462a33; border-color: #b78290; }
+      .setting-path { color: var(--wm-muted); }
+    }
     @media screen and (min-width: 1280px) { .capacity-settings-button { height: 42px; font-size: 13px; } }
 
     /* Keep the existing light palette; follow the browser's dark page preference. */
@@ -345,7 +355,6 @@
       .capacity-settings-button { background: var(--wm-raised); color: var(--wm-text); border-color: #7b8ba3; }
       .capacity-settings-button:hover { background: #384150; }
       .capacity-settings-button:focus-visible { outline-color: var(--wm-accent); }
-      .browser-settings-hint { color: var(--wm-muted); }
       .primary .summary-label { color: #e0ebff; }
       .primary .summary-unit { color: #d6e4fa; }
       .primary .summary-caption { color: #d6e4fa; }
@@ -712,6 +721,7 @@
       setText(byId("summaryFormula"), weekend ? "チェックした対象ログの合計" : "純粋未読 ＋ フラグ");
       setText(byId("totalFormula"), weekend ? "合計 ＝ チェックした対象ログ　／　未仕分・参考項目は合計に含めません。" : "合計 ＝ 純粋未読 ＋ フラグ　／　未仕分は合計に含めません。");
       byId("aggregateLog").title = weekend ? "共有情報を更新し、当日の土日ログCSVを3つ選択して振分表と集計します" : "共有情報を更新してから未読CSV・フラグCSVを順に選択し、設定した振分表と集計します";
+      if (typeof WorkloadBrowser !== "undefined" && WorkloadBrowser.refreshSettings) { WorkloadBrowser.refreshSettings(); }
     }
     function setMode(mode) {
       if ((mode !== "weekday" && mode !== "weekend") || mode === displayMode) { return; }
@@ -1796,13 +1806,12 @@
               <div class="browser-file"><span>フラグCSV：</span><span id="flagFileName" class="browser-file-name">未選択</span></div>
             </div>
             <div id="browserSettingsRow" class="browser-extra" role="group" aria-labelledby="browserSettingsTitle">
-              <div class="browser-file"><button type="button" id="connectShared" class="connect-button" title="共有フォルダを選択・変更" onclick="WorkloadBrowser.connectShared()"><span id="sharedRootName" class="browser-file-name">共有フォルダを選択</span></button></div>
-              <div class="browser-file weekday-only"><button type="button" title="未読フォルダを選択・変更" onclick="WorkloadBrowser.chooseRoot('unread')"><span id="unreadRootName" class="browser-file-name">未読フォルダを選択</span></button></div>
-              <div class="browser-file weekday-only"><button type="button" title="フラグフォルダを選択・変更" onclick="WorkloadBrowser.chooseRoot('flag')"><span id="flagRootName" class="browser-file-name">フラグフォルダを選択</span></button></div>
-              <div class="browser-file weekend-only"><button type="button" title="土日ログフォルダを選択・変更" onclick="WorkloadBrowser.chooseRoot('weekend')"><span id="weekendRootName" class="browser-file-name">土日ログフォルダを選択</span></button></div>
-              <div class="browser-file"><button type="button" id="chooseAssignment" title="振分表を選択・変更" onclick="WorkloadBrowser.choose('assignment')"><span id="assignmentFileName" class="browser-file-name">振分表を選択</span></button></div>
+              <div class="browser-file"><button type="button" id="connectShared" class="connect-button" title="共有フォルダを選択・変更" onclick="WorkloadBrowser.connectShared()"><span class="setting-label">共有<span id="sharedSettingState" class="setting-state">未設定</span></span><span id="sharedRootName" class="browser-file-name">共有フォルダを選択</span></button></div>
+              <div class="browser-file weekday-only"><button type="button" title="未読フォルダを選択・変更" onclick="WorkloadBrowser.chooseRoot('unread')"><span class="setting-label">未読<span id="unreadSettingState" class="setting-state">未設定</span></span><span id="unreadRootName" class="browser-file-name">未読フォルダを選択</span><span id="unreadSettingPath" class="setting-path">「ログ」を選択：ログ / yyyymm / mmdd</span></button></div>
+              <div class="browser-file weekday-only"><button type="button" title="フラグフォルダを選択・変更" onclick="WorkloadBrowser.chooseRoot('flag')"><span class="setting-label">フラグ<span id="flagSettingState" class="setting-state">未設定</span></span><span id="flagRootName" class="browser-file-name">フラグフォルダを選択</span><span id="flagSettingPath" class="setting-path">「ログ」を選択：ログ / yyyymm</span></button></div>
+              <div class="browser-file weekend-only"><button type="button" title="土日ログフォルダを選択・変更" onclick="WorkloadBrowser.chooseRoot('weekend')"><span class="setting-label">土日ログ<span id="weekendSettingState" class="setting-state">未設定</span></span><span id="weekendRootName" class="browser-file-name">土日ログフォルダを選択</span><span id="weekendSettingPath" class="setting-path">「ログ」を選択：ログ / yymmdd</span></button></div>
+              <div class="browser-file"><button type="button" id="chooseAssignment" title="振分表を選択・変更" onclick="WorkloadBrowser.choose('assignment')"><span class="setting-label">振分表<span id="assignmentSettingState" class="setting-state">未設定</span></span><span id="assignmentFileName" class="browser-file-name">振分表を選択</span></button></div>
             </div>
-            <p class="browser-settings-hint">業務量モニター3.0tagが格納されているフォルダ内のフォルダ・ファイルを選択する</p>
             <input type="file" id="browserFileInput" style="display:none" />
           </section>
         </details>
