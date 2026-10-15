@@ -136,8 +136,9 @@
     .team-badge.active { border-color: #a798d5; background: #e8e1f8; color: #4c3b90; }
     .staff-name { position: relative; padding: 4px 28px 4px 0; display: block; width: 100%; text-align: left; color: #33445d; background: transparent; border: 0; border-radius: 4px; font-size: 15px; font-weight: 700; line-height: 26px; }
     .staff-name:hover { color: #4d568d; }
-    .ca-count { margin-left: 9px; color: #586780; font-size: 10px; font-weight: 600; }
-    .staff-ca-meta { display: inline-block; white-space: nowrap; vertical-align: middle; }
+    .staff-name-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 20px; }
+    .ca-count { margin-left: 0; color: #586780; font-size: 10px; font-weight: 600; }
+    .staff-ca-meta { display: block; white-space: nowrap; vertical-align: middle; font-size: 10px; line-height: 16px; }
     .staff-ca-check { display: inline-block; margin-left: 8px; color: #a83e53; font-size: 10px; font-weight: 700; line-height: 1.5; }
     .staff-ca-check.checked { color: #2f7351; }
     .expand-indicator { position: absolute; right: 1px; top: 6px; width: 21px; height: 21px; border-radius: 5px; background: #dce3ed; color: #536179; text-align: center; line-height: 20px; font-size: 15px; font-weight: 600; }
@@ -1205,7 +1206,7 @@
         barWidth = maxTotal ? Math.round(t.total / maxTotal * 100) : 0;
         html.push('<tr class="' + staffRowClass(staff, opened) + '" id="staff-row-' + staff.id + '">');
         html.push('<td class="rank-cell"><span class="rank-number' + (i < 3 ? ' leading' : '') + '">' + (i + 1) + '</span></td>');
-        html.push('<td class="staff-cell"><button type="button" class="staff-name" id="staff-button-' + staff.id + '" aria-expanded="' + (opened ? 'true' : 'false') + '" aria-controls="detail-' + staff.id + '" title="担当CAごとの内訳を' + (opened ? '閉じる' : '開く') + '" onclick="WorkloadUI.toggleStaff(\'' + staff.id + '\')">' + esc(staff.name) + '<span class="staff-ca-meta"><span class="ca-count">' + staff.cas.length + ' CA</span>' + staffCheckHTML(staff) + '</span><span class="expand-indicator" aria-hidden="true">' + (opened ? '−' : '＋') + '</span></button></td>');
+        html.push('<td class="staff-cell"><button type="button" class="staff-name" id="staff-button-' + staff.id + '" aria-expanded="' + (opened ? 'true' : 'false') + '" aria-controls="detail-' + staff.id + '" title="担当CAごとの内訳を' + (opened ? '閉じる' : '開く') + '" onclick="WorkloadUI.toggleStaff(\'' + staff.id + '\')"><span class="staff-name-label" title="' + esc(staff.name) + '">' + esc(staff.name) + '</span><span class="staff-ca-meta"><span class="ca-count">' + staff.cas.length + ' CA</span>' + staffCheckHTML(staff) + '</span><span class="expand-indicator" aria-hidden="true">' + (opened ? '−' : '＋') + '</span></button></td>');
         if (displayMode === "weekday") { html.push('<td class="team-cell"><button type="button" class="team-badge' + (selectedTeam === teamNameOf(staff) ? ' active' : '') + '" id="team-button-' + staff.id + '" aria-label="' + esc(teamNameOf(staff)) + 'のランキングを表示" aria-pressed="' + (selectedTeam === teamNameOf(staff) ? 'true' : 'false') + '" title="' + esc(teamNameOf(staff)) + 'のランキングを表示' + (excludedReason(staff) ? ' ／ 件数・対応余力の対象から除外：' + esc(excludedReason(staff)) : '') + '" onclick="WorkloadUI.filterByTeam(\'' + staff.id + '\')">' + esc(teamNameOf(staff)) + '</button></td>'); }
         html.push('<td class="staff-unsorted"><span class="metric-value unsorted">' + format(t.unsorted) + '</span></td>');
         if (displayMode === "weekday") {
