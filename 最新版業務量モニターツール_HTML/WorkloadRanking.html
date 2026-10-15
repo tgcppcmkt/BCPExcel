@@ -160,7 +160,7 @@
     .ca-table td { padding: 9px 17px; border-bottom: 1px solid #eef0f6; height: 51px; text-align: right; color: #40516d; font-size: 13px; }
     .ca-table tr:last-child td { border-bottom: 0; }
     .ca-table td.ca-name-cell { text-align: left; padding-left: 17px; font-weight: 700; color: #3c4e69; }
-    .ca-name-label { display: inline-block; min-width: 80px; max-width: 112px; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; white-space: nowrap; }
+    .ca-name-label { display: inline-block; width: 112px; min-width: 80px; max-width: 112px; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; white-space: nowrap; }
     .ca-links { display: inline-block; margin-left: 18px; vertical-align: middle; white-space: nowrap; }
     .ca-link-button { height: 28px; margin-right: 10px; border: 1px solid #a69abd; background: #e7e1f1; border-radius: 5px; color: #5f4a93; padding: 3px 10px; font-family: "Segoe UI", Meiryo, sans-serif; font-size: 11px; line-height: 20px; }
     .ca-link-button.canvas-button { margin-right: 0; }
@@ -281,7 +281,7 @@
       .capacity-log-action { margin-left: 10px; padding-left: 10px; }
       .capacity-equation { font-size: 11px; }
       .capacity-components { font-size: 10px; }
-      .ca-name-label { min-width: 64px; max-width: 78px; }
+      .ca-name-label { width: 78px; min-width: 64px; max-width: 78px; }
       .ca-links { margin-left: 12px; }
       .ca-link-button { padding-left: 8px; padding-right: 8px; margin-right: 8px; }
     }
@@ -1356,7 +1356,7 @@
       return true;
     }
     function closeOtherStaff(id) {
-      var key, row, target, detail, spans, closed = false;
+      var key, row, target, detail, indicator, closed = false;
       for (key in expanded) {
         if (!Object.prototype.hasOwnProperty.call(expanded, key) || key === id || !expanded[key]) { continue; }
         expanded[key] = false; closed = true;
@@ -1365,7 +1365,7 @@
         target = byId("staff-button-" + key);
         if (target) {
           target.setAttribute("aria-expanded", "false"); target.title = "担当CAごとの内訳を開く";
-          spans = target.getElementsByTagName("span"); if (spans.length > 1) { setText(spans[1], "＋"); }
+          indicator = target.querySelector(".expand-indicator"); if (indicator) { setText(indicator, "＋"); }
         }
       }
       if (closed) { cancelDetailRender(); }
