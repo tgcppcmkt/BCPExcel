@@ -199,7 +199,19 @@ var WorkloadWorkbook = (function () {
         }
         return { rows: rows, linksByRow: links, warnings: warnings };
     }
-    return { read: read };
+    async function readWeekend(file, config) {
+        /* 土日ログも既存の安全なExcel読込を使い、数式は保存済みの結果だけを読む。 */
+        var cols = config.columns, columns = { organization: cols.organization, caName: cols.caName,
+            unsorted: cols.unsorted, reference: cols.reference };
+        cols.items.forEach(function (column, index) { columns["item" + index] = column; });
+        try {
+            return await read(file, { assignment: { sheetName: config.sheetName, startRow: config.startRow,
+                columns: columns } });
+        } catch (failure) {
+            throw new Error("土日ログ（" + file.name + "）：" + String(failure.message || failure).replace(/^振分表：/, ""));
+        }
+    }
+    return { read: read, readWeekend: readWeekend };
 }());
 
 var WorkloadBrowser = (function () {
@@ -249,8 +261,8 @@ var WorkloadBrowser = (function () {
         finally { refreshSettings(); }
     }
     function pickerOptions(kind) {
-        var opts = { multiple: false, id: "workload-" + kind, types: kind === "assignment" ?
-            [{ description: "振分表Excel", accept: { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"], "application/vnd.ms-excel.sheet.macroEnabled.12": [".xlsm"] } }] :
+        var opts = { multiple: false, id: "workload-" + kind, types: kind === "assignment" || kind === "weekend" ?
+            [{ description: kind === "weekend" ? "土日ログExcel" : "振分表Excel", accept: { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"], "application/vnd.ms-excel.sheet.macroEnabled.12": [".xlsm"] } }] :
             [{ description: "CSV", accept: { "text/csv": [".csv"] } }] };
         var start = starts[kind];
         if (start && start.day === new Date().toDateString()) { opts.startIn = start.handle; }
@@ -365,21 +377,21 @@ var WorkloadBrowser = (function () {
             await dateStart("weekend");
             var selectedDay = new Date().toDateString(), options = pickerOptions("weekend");
             for (var i = 0; i < 3; i++) {
-                report("土日ログ " + (i + 1) + "/3：CSVを選択してください。");
+                report("土日ログ " + (i + 1) + "/3：Excelを選択してください。");
                 var choice = await logGestureAction(function () { return window.showOpenFilePicker(options); },
-                    "土日ログ " + (i + 1) + "/3 の選択画面を開きます。「CSVを選択」を押してください。", "CSVを選択", report);
+                    "土日ログ " + (i + 1) + "/3 の選択画面を開きます。「Excelを選択」を押してください。", "Excelを選択", report);
                 handles.push(choice[0]);
             }
             for (i = 0; i < handles.length; i++) {
                 var relative = await roots.weekend.resolve(handles[i]);
-                if (!relative || (starts.weekend.exact && relative.slice(0, -1).join("/") !== starts.weekend.parts.join("/"))) { throw new Error((starts.weekend.exact ? "土日ログの当日フォルダ内" : "「土日ログ」に設定した親フォルダ内") + "のCSVを選択してください。"); }
-                if (!/\.csv$/i.test(handles[i].name)) { throw new Error("土日ログにはCSVファイルを選択してください。"); }
+                if (!relative || (starts.weekend.exact && relative.slice(0, -1).join("/") !== starts.weekend.parts.join("/"))) { throw new Error((starts.weekend.exact ? "土日ログの当日フォルダ内" : "「土日ログ」に設定した親フォルダ内") + "のExcelを選択してください。"); }
+                if (!/\.(xlsx|xlsm)$/i.test(handles[i].name)) { throw new Error("土日ログは .xlsx または .xlsm を選択してください。"); }
                 for (var j = 0; j < i; j++) {
-                    if (await handles[i].isSameEntry(handles[j])) { throw new Error("同じCSVが選択されています。異なる3つのCSVを選択してください。"); }
+                    if (await handles[i].isSameEntry(handles[j])) { throw new Error("同じExcelが選択されています。異なる3つのExcelを選択してください。"); }
                 }
             }
             if (selected.assignment.handle) { await logPermission(selected.assignment.handle, "read", "振分表", report); }
-            if (selectedDay !== new Date().toDateString()) { throw new Error("選択中に日付が変わりました。もう一度「ログ集計」で当日のCSVを選択してください。"); }
+            if (selectedDay !== new Date().toDateString()) { throw new Error("選択中に日付が変わりました。もう一度「ログ集計」で当日のExcelを選択してください。"); }
             return { cancelled: false, handles: handles, day: selectedDay };
         } catch (error) {
             if (error.name === "AbortError") { return { cancelled: true }; }
@@ -388,14 +400,14 @@ var WorkloadBrowser = (function () {
     }
     async function runWeekend(previousStaff, selection, progress) {
         if (typeof WorkloadWeekend === "undefined") { throw new Error("workload-weekend.jsをHTMLと同じフォルダに配置してください。"); }
-        if (!selection || !selection.handles || selection.handles.length !== 3) { throw new Error("土日ログのCSVを3つ選択してください。"); }
+        if (!selection || !selection.handles || selection.handles.length !== 3) { throw new Error("土日ログのExcelを3つ選択してください。"); }
         var config = WorkloadImport.validateConfig(), report = progress || function () {}, logs = [], files = [];
         await dateStart("weekend");
         for (var i = 0; i < 3; i++) {
             var handle = selection.handles[i], relative = await roots.weekend.resolve(handle);
-            if (selection.day !== new Date().toDateString() || !relative || (starts.weekend.exact && relative.slice(0, -1).join("/") !== starts.weekend.parts.join("/"))) { throw new Error("当日の土日ログCSVをもう一度選択してください。"); }
-            report("土日ログ " + (i + 1) + "/3 を読み込んでいます。");
-            var file = await handle.getFile(), decoded = await csv(file, "auto"); files.push(file.name);
+            if (selection.day !== new Date().toDateString() || !relative || (starts.weekend.exact && relative.slice(0, -1).join("/") !== starts.weekend.parts.join("/"))) { throw new Error("当日の土日ログExcelをもう一度選択してください。"); }
+            report("土日ログ " + (i + 1) + "/3 の「集計」シートを読み込んでいます。");
+            var file = await handle.getFile(), decoded = await WorkloadWorkbook.readWeekend(file, WorkloadWeekendConfig); files.push(file.name);
             logs.push(WorkloadWeekend.readLog(decoded.rows, file.name));
         }
         report("振分表を読み込んでいます。");
@@ -428,7 +440,7 @@ var WorkloadBrowser = (function () {
             roots[kind] = handle; await WorkloadBrowserStore.set("root-" + kind, handle);
             node(kind + "RootName").textContent = handle.name; node(kind + "RootName").title = handle.name; await dateStart(kind);
             delete settingErrors[kind]; refreshSettings();
-            info("読込フォルダを設定しました。「ログ集計」でCSVを選択してください。");
+            info("読込フォルダを設定しました。「ログ集計」で" + (kind === "weekend" ? "Excel" : "CSV") + "を選択してください。");
         } catch (error) { if (error.name !== "AbortError") { settingErrors[kind] = error.message || String(error); } fail(error); }
         finally { choosing = false; refreshSettings(); }
     }

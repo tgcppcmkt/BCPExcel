@@ -720,7 +720,7 @@
       byId("heading-reference").style.display = weekend ? "" : "none";
       setText(byId("summaryFormula"), weekend ? "チェックした対象ログの合計" : "純粋未読 ＋ フラグ");
       setText(byId("totalFormula"), weekend ? "合計 ＝ チェックした対象ログ　／　未仕分・参考項目は合計に含めません。" : "合計 ＝ 純粋未読 ＋ フラグ　／　未仕分は合計に含めません。");
-      byId("aggregateLog").title = weekend ? "共有情報を更新し、当日の土日ログCSVを3つ選択して振分表と集計します" : "共有情報を更新してから未読CSV・フラグCSVを順に選択し、設定した振分表と集計します";
+      byId("aggregateLog").title = weekend ? "共有情報を更新し、当日の土日ログExcelを3つ選択して「集計」シートと振分表を集計します" : "共有情報を更新してから未読CSV・フラグCSVを順に選択し、設定した振分表と集計します";
       if (typeof WorkloadBrowser !== "undefined" && WorkloadBrowser.refreshSettings) { WorkloadBrowser.refreshSettings(); }
     }
     function setMode(mode) {
@@ -741,7 +741,7 @@
       hourlyRate = view ? view.rate : mode === "weekend" ? 10 : WorkloadConfig.capacity.hourlyRate;
       byId("searchInput").value = view ? view.searchValue : "";
       byId("capturedTimeInput").value = view ? view.input : ""; byId("capturedTimeInput").className = view ? view.inputClass : "time-input";
-      setText(byId("dataFooter"), view ? view.footer : "「ログ集計」でCSVと振分表を取り込みます。");
+      setText(byId("dataFooter"), view ? view.footer : displayMode === "weekend" ? "「ログ集計」で土日ログExcelの「集計」シートと振分表を取り込みます。" : "「ログ集計」でCSVと振分表を取り込みます。");
       pinnedStaffRow = pinnedStaffDetail = null; pinnedStaffHTML = ""; tableDataVersion = -1; sharedVersion = "";
       sharedSnapshot = WorkloadShare.setMode(mode); sharedError = "";
       if (mode === "weekend") { WorkloadWeekend.applySelection(staffData); }
@@ -949,7 +949,7 @@
       }
       hourlyRate = result.hourlyRate; renderSummary(); at = result.importedAt;
       byId("capturedTimeInput").value = clockText(at.getHours() * 60 + at.getMinutes());
-      setText(byId("dataFooter"), "CSVと振分表を反映しています。サポート・コミットは当日の共有フォルダに保存します。");
+      setText(byId("dataFooter"), (displayMode === "weekend" ? "土日ログExcelの「集計」シート" : "CSV") + "と振分表を反映しています。サポート・コミットは当日の共有フォルダに保存します。");
       applyCapturedTime(); renderTable(); shareStatus();
       toast("ログ集計が完了しました。");
       if (result.warnings && result.warnings.length) {
@@ -982,7 +982,7 @@
       syncDraft();
       if (supportBlurTimer) { window.clearTimeout(supportBlurTimer); supportBlurTimer = null; }
       importBusy = true;
-      importPhase = "CSV選択画面を準備しています。"; shareStatus();
+      importPhase = (displayMode === "weekend" ? "Excel" : "CSV") + "選択画面を準備しています。"; shareStatus();
       byId("aggregateLog").disabled = true;
       setText(byId("aggregateLog"), "集計中…");
       toast("ログ集計を開始します。");

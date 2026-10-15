@@ -7,6 +7,7 @@
  * 平日の設定・振分表・共有保存処理には影響しません。
  */
 var WorkloadWeekendConfig = {
+    sheetName: "集計",                 // 土日ログExcelの読込シート
     headerRow: 2,                       // 項目名の見出し行
     startRow: 3,                        // データの開始行
     columns: {
@@ -81,11 +82,11 @@ var WorkloadWeekend = (function () {
         return { labels: names, log: result, counts: counts };
     }
     function build(logs, roster, previousStaff, config) {
-        if (logs.length !== 3) { throw new Error("土日ログはCSVを3つ選択してください。"); }
+        if (logs.length !== 3) { throw new Error("土日ログはExcelを3つ選択してください。"); }
         var merged = { map: {}, order: [], rowCount: 0, duplicateCount: 0 }, counts = {}, names = logs[0].labels, columns = logSettings().values, i, j, key, current, item;
         for (i = 0; i < logs.length; i++) {
             for (j = 0; j < 10; j++) {
-                if (normal(names[j]) !== normal(logs[i].labels[j])) { throw new Error("土日ログ " + (i + 1) + "つ目：項目名が最初のCSVと一致しません（" + WorkloadImport.columnLabel(columns[j]) + "列）。同じ日の同じ項目のCSVを選択してください。"); }
+                if (normal(names[j]) !== normal(logs[i].labels[j])) { throw new Error("土日ログ " + (i + 1) + "つ目：項目名が最初のExcelと一致しません（" + WorkloadImport.columnLabel(columns[j]) + "列）。同じ日の同じ項目のExcelを選択してください。"); }
             }
             for (var n = 0; n < logs[i].log.order.length; n++) {
                 key = logs[i].log.order[n]; item = logs[i].log.map[key]; current = merged.map[key];
