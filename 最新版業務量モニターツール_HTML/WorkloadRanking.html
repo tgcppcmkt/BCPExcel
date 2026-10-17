@@ -111,6 +111,7 @@
     .ranking-table th.reference-heading { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .reference-heading span { display: inline-block; max-width: calc(100% - 22px); overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
     .ranking-table th.support-heading { text-align: center; }
+    .ranking-table th.performance-heading { padding-left: 4px; padding-right: 4px; white-space: nowrap; }
     .support-heading-note { display: block; color: #536179; font-size: 9px; font-weight: 500; }
     .staff-row td.staff-support { text-align: center; }
     .support-count { color: #42695d; font-size: 14px; font-weight: 700; }
@@ -118,7 +119,7 @@
     .team-filter-bar { margin: 0 22px 16px; padding: 10px 14px; border: 1px solid #c9c0e8; border-radius: 7px; background: #e1daee; color: #4d3f87; }
     .team-filter-label { font-size: 11px; }
     .team-filter-name { margin-left: 8px; font-size: 14px; font-weight: 700; }
-    .team-filter-rank { margin-left: 12px; font-size: 11px; }
+    .team-filter-metric { display: inline-block; margin-left: 12px; font-size: 11px; white-space: nowrap; }
     .team-filter-clear { margin-left: 16px; height: 28px; border: 1px solid #b6a9df; border-radius: 5px; padding: 3px 10px; background: #e9edf2; color: #51419a; font-size: 11px; font-weight: 700; }
     .team-filter-clear:hover { background: #e9e2fa; }
     .team-filter-note { margin: 4px 0 0; color: #536178; font-size: 10px; }
@@ -667,9 +668,10 @@
       var result = [], i, referenceSort = displayMode === "weekend" && sortKey === "reference";
       for (i = 0; i < staffData.length; i++) {
         if (selectedTeam && teamNameOf(staffData[i]) !== selectedTeam) { continue; }
-        result.push({ staff: staffData[i], totals: totalsFor(staffData[i]), reference: referenceSort ? weekendReferenceFor(staffData[i]) : 0, originalOrder: i });
+        result.push({ staff: staffData[i], totals: totalsFor(staffData[i]), reference: referenceSort ? weekendReferenceFor(staffData[i]) : 0, supportWanted: sortKey === "supportRequest" && hasSupportRequest(staffData[i]) ? 1 : 0, originalOrder: i });
       }
       result.sort(function (a, b) {
+        if (sortKey === "supportRequest") { return (b.supportWanted - a.supportWanted) || (b.totals.total - a.totals.total) || (a.originalOrder - b.originalOrder); }
         return (referenceSort ? b.reference - a.reference : b.totals[sortKey] - a.totals[sortKey]) || (a.originalOrder - b.originalOrder);
       });
       return result;
@@ -903,7 +905,8 @@
           if (!Object.prototype.hasOwnProperty.call(changes.staffs, key)) { continue; }
           staff = changes.staffs[key]; refreshStaffSupport(staff);
         }
-        if (force && !editing && byId("supportInput")) { renderTable(true); }
+        if (sortKey === "supportRequest") { renderTable(); }
+        else if (force && !editing && byId("supportInput")) { renderTable(true); }
       }
       if (renderCheckOverview()) { resizeRanking(); }
       page.scrollTop = pageTop; page.scrollLeft = pageLeft;
@@ -1094,7 +1097,7 @@
     }
     function detailHTML(staff, deferred) {
       var html = [], i, cas;
-      html.push('<tr class="detail-row" id="detail-' + staff.id + '"><td class="detail-cell" colspan="' + (displayMode === "weekend" ? 6 : 8) + '">');
+      html.push('<tr class="detail-row" id="detail-' + staff.id + '"><td class="detail-cell" colspan="' + (displayMode === "weekend" ? 6 : 10) + '">');
       html.push('<div class="detail-header"><strong>' + esc(staff.name) + ' さんの担当CA</strong><span class="detail-note">サポートはCAごとに最大3名</span></div>');
       html.push('<table class="ca-table" aria-label="' + esc(staff.name) + 'さんの担当CA別内訳">');
       html.push(displayMode === "weekend" ? '<colgroup><col style="width:23%" /><col style="width:10%" /><col style="width:9%" /><col style="width:14%" /><col style="width:9%" /><col style="width:35%" /></colgroup>' : '<colgroup><col style="width:24%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>');
@@ -1193,7 +1196,7 @@
     }
     function renderTable(forceDetails) {
       var ranked = rankedStaff(), html = [], visible = 0, i, item, staff, t, opened, barWidth;
-      var maxTotal = 0, headings = ["unsorted", "unread", "flag", "total", "reference"];
+      var maxTotal = 0, headings = ["unsorted", "unread", "flag", "total", "reference", "supportRequest"];
       var reused = {}, pending = [], oldDetail;
       var canReuse = !forceDetails && tableDataVersion === dataVersion && detailSearchText === searchText;
       if (!canReuse) { cancelDetailRender(); }
@@ -1215,6 +1218,7 @@
         }
         html.push('<td class="staff-total"><span class="metric-value total-value">' + format(t.total) + '</span><div class="load-track" title="合計件数の比較（最多の担当者を100%として表示）"><span class="load-fill" style="width:' + barWidth + '%"></span></div></td>');
         if (displayMode === "weekend") { html.push('<td class="staff-reference"><span class="metric-value unsorted">' + format(weekendReferenceFor(staff)) + '</span></td>'); }
+        if (displayMode === "weekday") { html.push('<td class="staff-sph"><span class="metric-value" title="データ未連携">—</span></td><td class="staff-utilization"><span class="metric-value" title="データ未連携">—</span></td>'); }
         html.push('<td class="staff-support"><span class="staff-support-top"><span class="support-count" id="supportCount-' + staff.id + '" title="担当CA全体のサポート人数（同じ氏名は1名として集計）">' + supportCountFor(staff) + '名</span></span>' + supportWantedHTML(staff) + '</td></tr>');
         if (opened) {
           oldDetail = canReuse && byId("detail-" + staff.id);
@@ -1224,8 +1228,8 @@
         }
       }
       if (!visible) {
-        html.push(staffData.length ? '<tr><td colspan="8" class="empty-state"><strong>該当する担当者・CAが見つかりませんでした</strong>名前を変えて検索するか、検索欄をクリアしてください。</td></tr>' : '<tr><td colspan="8" class="empty-state"><strong>データはまだ集計されていません</strong>「ログ集計」ボタンで取り込んでください。</td></tr>');
-        if (displayMode === "weekend") { html[html.length - 1] = html[html.length - 1].replace('colspan="8"', 'colspan="6"'); }
+        html.push(staffData.length ? '<tr><td colspan="10" class="empty-state"><strong>該当する担当者・CAが見つかりませんでした</strong>名前を変えて検索するか、検索欄をクリアしてください。</td></tr>' : '<tr><td colspan="10" class="empty-state"><strong>データはまだ集計されていません</strong>「ログ集計」ボタンで取り込んでください。</td></tr>');
+        if (displayMode === "weekend") { html[html.length - 1] = html[html.length - 1].replace('colspan="10"', 'colspan="6"'); }
       }
       replaceRankingRows(html.join(""), reused);
       tableDataVersion = dataVersion; detailSearchText = searchText;
@@ -1233,7 +1237,7 @@
       setText(byId("visibleStaff"), visible);
       byId("searchClear").style.display = searchText ? "block" : "none";
       for (i = 0; i < headings.length; i++) {
-        byId("heading-" + headings[i]).className = "sortable-heading" + (headings[i] === "reference" ? " reference-heading" : "") + (sortKey === headings[i] ? " active-sort" : "");
+        byId("heading-" + headings[i]).className = "sortable-heading" + (headings[i] === "reference" ? " reference-heading" : headings[i] === "supportRequest" ? " support-heading" : "") + (sortKey === headings[i] ? " active-sort" : "");
         byId("heading-" + headings[i]).setAttribute("aria-sort", sortKey === headings[i] ? "descending" : "none");
         byId("sort-" + headings[i]).setAttribute("aria-pressed", sortKey === headings[i] ? "true" : "false");
       }
@@ -1424,7 +1428,7 @@
       byId("searchInput").focus();
     }
     function applySort(key) {
-      if (["total", "unread", "flag", "unsorted", "reference"].indexOf(key) === -1 || displayMode === "weekend" && (key === "unread" || key === "flag") || displayMode !== "weekend" && key === "reference") { return; }
+      if (["total", "unread", "flag", "unsorted", "reference", "supportRequest"].indexOf(key) === -1 || displayMode === "weekend" && (key === "unread" || key === "flag") || displayMode !== "weekend" && key === "reference") { return; }
       if (!commitSupport(true, function () { applySort(key); })) { return; }
       sortKey = key;
       renderTable();
@@ -1752,21 +1756,21 @@
         <div class="heading-count">表示 <strong id="visibleStaff">0</strong> ／ <span id="staffTotal">0</span> 名 &nbsp;・&nbsp; 全 <span id="caTotal">0</span> CA</div>
       </div>
       <div id="teamCheckSummary" class="team-ca-check-summary" role="status" aria-live="polite" style="display:none"></div>
-      <div id="teamFilterBar" class="team-filter-bar" style="display:none" aria-live="polite"><span class="team-filter-label">表示チーム</span><strong id="teamFilterName" class="team-filter-name"></strong><span class="team-filter-rank">チーム内順位</span><button type="button" id="clearTeamFilter" class="team-filter-clear" onclick="WorkloadUI.clearTeamFilter()">全チームに戻す</button></div>
+      <div id="teamFilterBar" class="team-filter-bar" style="display:none" aria-live="polite"><span class="team-filter-label">表示チーム</span><strong id="teamFilterName" class="team-filter-name"></strong><span class="team-filter-metric">平均SPH <strong id="teamAverageSPH" title="データ未連携">—</strong></span><span class="team-filter-metric">平均稼働率 <strong id="teamAverageUtilization" title="データ未連携">—</strong></span><button type="button" id="clearTeamFilter" class="team-filter-clear" onclick="WorkloadUI.clearTeamFilter()">全チームに戻す</button></div>
       <div class="ranking-header-wrap" id="rankingHeader">
       <table class="ranking-table" aria-label="ランキングの項目">
-        <colgroup id="rankingHeaderCols"><col style="width:5%" /><col style="width:18%" /><col style="width:10%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>
-        <thead><tr><th scope="col" class="rank-heading">順位</th><th scope="col" class="staff-heading">担当者</th><th scope="col" id="heading-team" class="team-heading">チーム</th><th scope="col" id="heading-unsorted" class="sortable-heading" aria-sort="none">未仕分<button type="button" id="sort-unsorted" class="sort-button" aria-label="未仕分が多い順に並び替え" title="未仕分が多い順に並び替え" aria-pressed="false" onclick="WorkloadUI.applySort('unsorted')">▼</button></th><th scope="col" id="heading-unread" class="sortable-heading" aria-sort="none">純粋未読<button type="button" id="sort-unread" class="sort-button" aria-label="純粋未読が多い順に並び替え" title="純粋未読が多い順に並び替え" aria-pressed="false" onclick="WorkloadUI.applySort('unread')">▼</button></th><th scope="col" id="heading-flag" class="sortable-heading" aria-sort="none">フラグ<button type="button" id="sort-flag" class="sort-button" aria-label="フラグが多い順に並び替え" title="フラグが多い順に並び替え" aria-pressed="false" onclick="WorkloadUI.applySort('flag')">▼</button></th><th scope="col" id="heading-total" class="sortable-heading active-sort" aria-sort="descending">合計<button type="button" id="sort-total" class="sort-button" aria-label="合計が多い順に並び替え" title="合計が多い順に並び替え" aria-pressed="true" onclick="WorkloadUI.applySort('total')">▼</button></th><th scope="col" id="heading-reference" class="sortable-heading reference-heading" aria-sort="none" style="display:none" title="合計件数には含めません"><span id="heading-reference-label">Q列</span><button type="button" id="sort-reference" class="sort-button" aria-label="Q列が多い順に並び替え" title="Q列が多い順に並び替え" aria-pressed="false" onclick="WorkloadUI.applySort('reference')">▼</button></th><th scope="col" class="support-heading">サポート投入状況<span class="support-heading-note">人数／担当CA別の氏名</span></th></tr></thead>
+        <colgroup id="rankingHeaderCols"><col style="width:5%" /><col style="width:18%" /><col style="width:10%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:6%" /><col style="width:7%" /><col style="width:22%" /></colgroup>
+        <thead><tr><th scope="col" class="rank-heading">順位</th><th scope="col" class="staff-heading">担当者</th><th scope="col" id="heading-team" class="team-heading">チーム</th><th scope="col" id="heading-unsorted" class="sortable-heading" aria-sort="none">未仕分<button type="button" id="sort-unsorted" class="sort-button" aria-label="未仕分が多い順に並び替え" title="未仕分が多い順に並び替え" aria-pressed="false" onclick="WorkloadUI.applySort('unsorted')">▼</button></th><th scope="col" id="heading-unread" class="sortable-heading" aria-sort="none">純粋未読<button type="button" id="sort-unread" class="sort-button" aria-label="純粋未読が多い順に並び替え" title="純粋未読が多い順に並び替え" aria-pressed="false" onclick="WorkloadUI.applySort('unread')">▼</button></th><th scope="col" id="heading-flag" class="sortable-heading" aria-sort="none">フラグ<button type="button" id="sort-flag" class="sort-button" aria-label="フラグが多い順に並び替え" title="フラグが多い順に並び替え" aria-pressed="false" onclick="WorkloadUI.applySort('flag')">▼</button></th><th scope="col" id="heading-total" class="sortable-heading active-sort" aria-sort="descending">合計<button type="button" id="sort-total" class="sort-button" aria-label="合計が多い順に並び替え" title="合計が多い順に並び替え" aria-pressed="true" onclick="WorkloadUI.applySort('total')">▼</button></th><th scope="col" id="heading-reference" class="sortable-heading reference-heading" aria-sort="none" style="display:none" title="合計件数には含めません"><span id="heading-reference-label">Q列</span><button type="button" id="sort-reference" class="sort-button" aria-label="Q列が多い順に並び替え" title="Q列が多い順に並び替え" aria-pressed="false" onclick="WorkloadUI.applySort('reference')">▼</button></th><th scope="col" class="performance-heading weekday-only">SPH</th><th scope="col" class="performance-heading weekday-only">稼働率</th><th scope="col" id="heading-supportRequest" class="sortable-heading support-heading" aria-sort="none">サポート投入状況<button type="button" id="sort-supportRequest" class="sort-button" aria-label="サポ希望ありを優先して並び替え" title="サポ希望ありを優先し、同じ区分は合計が多い順に並び替え" aria-pressed="false" onclick="WorkloadUI.applySort('supportRequest')">▼</button><span class="support-heading-note">人数／担当CA別の氏名</span></th></tr></thead>
       </table></div>
       <div class="ranking-scroll-wrap">
       <div class="pinned-staff" id="pinnedStaff" role="group" aria-label="展開中の担当者">
       <table class="ranking-table" aria-label="展開中の担当者の業務量">
-        <colgroup id="rankingPinnedCols"><col style="width:5%" /><col style="width:18%" /><col style="width:10%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>
+        <colgroup id="rankingPinnedCols"><col style="width:5%" /><col style="width:18%" /><col style="width:10%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:6%" /><col style="width:7%" /><col style="width:22%" /></colgroup>
         <tbody id="pinnedStaffBody"></tbody>
       </table></div>
       <div class="ranking-scroll" id="rankingScroll" tabindex="0" aria-label="担当者ランキング一覧">
       <table class="ranking-table" aria-label="担当者別の業務量ランキング">
-        <colgroup id="rankingBodyCols"><col style="width:5%" /><col style="width:18%" /><col style="width:10%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:35%" /></colgroup>
+        <colgroup id="rankingBodyCols"><col style="width:5%" /><col style="width:18%" /><col style="width:10%" /><col style="width:7%" /><col style="width:9%" /><col style="width:7%" /><col style="width:9%" /><col style="width:6%" /><col style="width:7%" /><col style="width:22%" /></colgroup>
         <tbody id="rankingBody"></tbody>
       </table></div>
       </div>
