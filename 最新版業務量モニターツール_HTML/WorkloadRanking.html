@@ -318,6 +318,10 @@
     .capacity-settings-button svg { width: 16px; height: 16px; flex-shrink: 0; }
     .capacity-settings-chevron { font-size: 10px; }
     .capacity-settings[open] .capacity-settings-chevron { transform: rotate(180deg); }
+    .capacity-settings[open] .capacity-settings-button { background: #fff0c2; color: #684600; border-color: #af7d21; }
+    .capacity-settings[open] .capacity-settings-button:hover { background: #ffe4a3; }
+    .capacity-settings[open] #browserSettingsTitle::after { content: "開いています"; display: inline-block; margin-left: 8px; padding: 1px 6px; border: 1px solid currentColor; border-radius: 4px; font-size: 10px; line-height: 1.4; vertical-align: 1px; }
+    .capacity-settings[open] .browser-controls { border-color: #af7d21; box-shadow: inset 3px 0 #af7d21; }
     .capacity-settings .browser-controls { margin: 8px 0 0; padding: 10px; white-space: normal; }
     .capacity-settings .browser-extra { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; align-items: stretch; }
     .capacity-settings .browser-file { min-width: 0; }
@@ -356,6 +360,9 @@
       .browser-settings-title { color: var(--wm-muted); }
       .capacity-settings-button { background: var(--wm-raised); color: var(--wm-text); border-color: #7b8ba3; }
       .capacity-settings-button:hover { background: #384150; }
+      .capacity-settings[open] .capacity-settings-button { background: #4a3821; color: #ffe0a3; border-color: #d5ac63; }
+      .capacity-settings[open] .capacity-settings-button:hover { background: #5b4528; }
+      .capacity-settings[open] .browser-controls { border-color: #d5ac63; box-shadow: inset 3px 0 #d5ac63; }
       .capacity-settings-button:focus-visible { outline-color: var(--wm-accent); }
       .primary .summary-label { color: #e0ebff; }
       .primary .summary-unit { color: #d6e4fa; }
