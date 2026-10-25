@@ -26,13 +26,8 @@ function showAcceptedAndPrepareMinimize(){
     setStatus("送信中です…");
 }
 
-var BASE_OPTIONS = [
-    "",
-    "首都圏",
-    "札幌",
-    "新潟",
-    "呉服"
-];
+// 導入拠点に合わせて、この文字列だけ変更してください（例："呉服"）。
+var REQUEST_BASE_NAME = "拠点を設定";
 
 var TYPE_OPTIONS = [
     "",
@@ -455,18 +450,11 @@ function setRequesterName(){
 }
 
 function populateBases(){
-    var i,sel,opt;
-    sel=$("requestBase");
-    if(!sel){ return; }
-
-    while(sel.options.length>0){ sel.remove(0); }
-
-    for(i=0;i<BASE_OPTIONS.length;i++){
-        opt=document.createElement("option");
-        opt.value=BASE_OPTIONS[i];
-        opt.text=(BASE_OPTIONS[i]==="" ? "選択してください" : BASE_OPTIONS[i]);
-        sel.add(opt);
-    }
+    var baseName=String(REQUEST_BASE_NAME || "拠点を設定");
+    var valueEl=$("requestBase");
+    var displayEl=$("requestBaseDisplay");
+    if(valueEl){ valueEl.value=baseName; }
+    if(displayEl){ displayEl.innerText=baseName; }
 }
 
 function populateTypes(){
@@ -907,13 +895,6 @@ function validateForm(){
         if(!validateRequestSection(i)){
             return false;
         }
-    }
-
-    // 拠点は最後にチェック
-    if(!trimValue("requestBase")){
-        markError("requestBase");
-        showValidationModal(0,"拠点を選択してください","requestBase");
-        return false;
     }
 
     return true;
