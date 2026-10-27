@@ -624,6 +624,8 @@
             }
         } catch (e) {
         }
+
+        removeEmptyPendingFolder(pendingPath);
     }
 
 
@@ -645,6 +647,52 @@
             );
         } catch (e) {
             // Notification failure must never affect CSV delivery.
+        }
+    }
+
+
+    function removeEmptyPendingFolder(path) {
+        try {
+            var desktop = String(shell.SpecialFolders("Desktop") || "");
+            if (!desktop) {
+                return;
+            }
+
+            var folderPath = fso.GetAbsolutePathName(fso.GetParentFolderName(path));
+            var expectedPath = fso.GetAbsolutePathName(fso.BuildPath(desktop, "MentionRequest_Pending"));
+            if (folderPath.toLowerCase() !== expectedPath.toLowerCase()) {
+                return;
+            }
+
+            var commandPath = fso.BuildPath(String(fso.GetSpecialFolder(1)), "cmd.exe");
+            // Run expands %variables%; reject paths that could be reinterpreted.
+            if (/[\x00-\x1f"%]/.test(folderPath) || /[\x00-\x1f"%]/.test(commandPath)) {
+                return;
+            }
+
+            for (var attempt = 0; attempt < 3; attempt++) {
+                if (!fso.FolderExists(folderPath)) {
+                    return;
+                }
+                var folder = fso.GetFolder(folderPath);
+                // Do not follow junctions, or remove any files/subdirectories.
+                if ((folder.Attributes & 1024) || folder.Files.Count !== 0 || folder.SubFolders.Count !== 0) {
+                    return;
+                }
+                folder = null;
+
+                // No /s: rd must fail if another sender creates a file now.
+                // /d disables AutoRun; /v:off keeps ! in quoted paths literal.
+                shell.Run('"' + commandPath + '" /d /v:off /c rd "' + folderPath + '"', 0, true);
+                if (!fso.FolderExists(folderPath)) {
+                    return;
+                }
+                if (attempt < 2) {
+                    WScript.Sleep(200);
+                }
+            }
+        } catch (e) {
+            // Cleanup failure must never change delivered CSV or pending data.
         }
     }
 

@@ -2374,7 +2374,7 @@ function savePendingPackage(baseName,requester,packageId,sentAt,requests,lines,c
       日本語WindowsのANSI(CP932)で保存し、
       共有CSVへ反映する予定の行をそのまま保持する。
     */
-    var file=fso.CreateTextFile(filePath,false,false);
+    var file=createPendingTextFile(fso,folderPath,filePath);
     var i;
 
     file.WriteLine(makeHeaderLine());
@@ -2423,6 +2423,23 @@ function savePendingPackage(baseName,requester,packageId,sentAt,requests,lines,c
     }
 
     return filePath;
+}
+
+function createPendingTextFile(fso,folderPath,filePath){
+    // An older Worker may remove the empty folder just before this new write.
+    for(var attempt=0;attempt<5;attempt++){
+        try{
+            return fso.CreateTextFile(filePath,false,false);
+        }catch(err){
+            // Retry only "Path not found"; never overwrite an existing Pending.
+            if(attempt>=4 || (err.number & 65535)!==76){ throw err; }
+            try{
+                ensureFolder(fso,folderPath);
+            }catch(folderErr){
+                if(!fso.FolderExists(folderPath)){ throw folderErr; }
+            }
+        }
+    }
 }
 
 function ensureFolder(fso,folderPath){
