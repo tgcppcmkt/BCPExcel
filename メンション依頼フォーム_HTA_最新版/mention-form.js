@@ -917,6 +917,10 @@ function hasAnyInput(req){
 function validateForm(){
     var i;
 
+    // 送信前に代理CA1～8の空欄を詰め、同一CAの連動先にも反映する。
+    for(i=1;i<=visibleRequestCount;i++){
+        compactProxyCAInputs(i);
+    }
     syncAllSameCA();
     clearErrors();
 
