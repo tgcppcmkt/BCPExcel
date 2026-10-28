@@ -471,6 +471,37 @@ function populateTypes(){
     }
 }
 
+function updateTypeOptions(no){
+    var sel=$("type"+no);
+    if(!sel){ return; }
+
+    var attendance=getAttendance(no);
+    var options=[""],current=String(sel.value||""),i,opt,selectedIndex=0;
+    if(attendance==="出社"){
+        options=options.concat(TYPE_OPTIONS.slice(1,4));
+    }else if(attendance==="公休" || attendance==="時短（時間外）"){
+        options=options.concat(TYPE_OPTIONS.slice(4,6));
+    }
+
+    // 同一CAの再同期などで候補が変わらない場合は、選択欄を作り直さない。
+    var same=sel.options.length===options.length;
+    for(i=0;same && i<options.length;i++){
+        if(sel.options[i].value!==options[i]){ same=false; }
+    }
+    if(same){ return; }
+
+    while(sel.options.length>0){ sel.remove(0); }
+    for(i=0;i<options.length;i++){
+        opt=document.createElement("option");
+        opt.value=options[i];
+        opt.text=(options[i]==="" ? "選択してください" : options[i]);
+        sel.add(opt);
+        if(options[i]===current){ selectedIndex=i; }
+    }
+    // 切替後も候補にある値だけを維持し、対象外の選択値は残さない。
+    sel.selectedIndex=selectedIndex;
+}
+
 function showRequest(no){
     // 2件目を開く前に依頼1、3件目を開く前に依頼2をチェック
     if(no===2){
@@ -1041,6 +1072,7 @@ function updateAttendanceUI(no){
     }
     el=$("urgent"+no); if(el){ el.disabled=!working; }
     el=$("noProxy"+no); if(el){ el.disabled=locked || !needsProxy; }
+    updateTypeOptions(no);
 }
 
 function proxyCAExtraCount(no){
