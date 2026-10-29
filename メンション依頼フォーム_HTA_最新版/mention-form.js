@@ -716,7 +716,7 @@ function getCurrentWorkArea(){
     return {left:left,top:top,width:width,height:height};
 }
 
-function fitCurrentWindowIntoWorkArea(fallbackW,fallbackH,preferUpperCenter){
+function fitCurrentWindowIntoWorkArea(fallbackW,fallbackH,preferUpperCenter,preservePositionIfUnknown){
     try{
         var area=getCurrentWorkArea();
         var pos=getCurrentWindowPosition();
@@ -772,6 +772,20 @@ function fitCurrentWindowIntoWorkArea(fallbackW,fallbackH,preferUpperCenter){
             if(preferredTop<minTop){ preferredTop=minTop; }
             if(preferredTop>maxTop){ preferredTop=maxTop; }
             if(moveY>preferredTop){ moveY=preferredTop; }
+        }
+
+        // 起動後はモニター原点が不明な場合、(0,0)基準で移動させず現在位置を維持する。
+        // 原点を取得できても、現在位置と一致しない画面範囲へは移動させない。
+        if(preservePositionIfUnknown){
+            var hasLeft=(screen.availLeft!=null && isFiniteScreenNumber(screen.availLeft)) ||
+                        (screen.left!=null && isFiniteScreenNumber(screen.left));
+            var hasTop=(screen.availTop!=null && isFiniteScreenNumber(screen.availTop)) ||
+                       (screen.top!=null && isFiniteScreenNumber(screen.top));
+            if(!hasLeft || !hasTop ||
+               pos.left<area.left || pos.left>=area.left+area.width ||
+               pos.top<area.top || pos.top>=area.top+area.height){
+                return;
+            }
         }
 
         if(Math.abs(moveX-pos.left)>1 || Math.abs(moveY-pos.top)>1){
@@ -849,13 +863,13 @@ function resizeApp(centerOnFirst){
             if(centerOnFirst && !hasPositionedWindow){
                 centerCurrentWindow(wantedW,wantedH);
             }else{
-                fitCurrentWindowIntoWorkArea(wantedW,wantedH,true);
+                fitCurrentWindowIntoWorkArea(wantedW,wantedH,true,true);
             }
 
             // resizeTo直後はHTAフレームの実寸反映が1テンポ遅れる場合があるため、
             // 非表示中にもう一度実寸で補正してから表示する。
             window.setTimeout(function(){
-                fitCurrentWindowIntoWorkArea(wantedW,wantedH,!centerOnFirst || hasPositionedWindow);
+                fitCurrentWindowIntoWorkArea(wantedW,wantedH,!centerOnFirst || hasPositionedWindow,!centerOnFirst);
             },10);
 
             window.scrollTo(0,0);
