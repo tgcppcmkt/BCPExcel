@@ -48,6 +48,31 @@ var TYPE_OPTIONS = [
     "⑮ その他の個別対応"
 ];
 
+// ===== タイプの切替設定（導入先で変更する箇所） =====
+// 表示文言は上の TYPE_OPTIONS、表示する番号と順番は下の6通りを編集してください。
+// 例：[1,2] は TYPE_OPTIONS の①・②。番号は1～15、追加時は上の一覧にも追記します。
+var TYPE_NUMBERS_BY_DAY = {
+    "平日": {
+        "出社": [1,2],
+        "公休": [3,4],
+        "時短（時間外）": [5,6]
+    },
+    "土日祝": {
+        "出社": [7,8],
+        "公休": [9,10],
+        "時短（時間外）": [11,12]
+    }
+};
+// HTAと同じフォルダのJSONを使用。旧「休日マスタ.txt」は参照しません。
+// JSONは {"2026":["2026-01-01",...],"2027":[...]} の形式で、UTF-8で保存します。
+// 各年の祝日・振替休日・国民の休日をすべて登録し、編集後はフォームを開き直してください。
+// 土日はPCの曜日、祝日はこの一覧で判定します。外部サイトへの接続は行いません。
+var HOLIDAY_MASTER_NAME = "休日マスタ.json";
+var typeCalendarDateKey = "";
+var typeCalendarDayKind = "";
+var typeCalendarError = "";
+var typeCalendarTimer = null;
+
 var visibleRequestCount = 1;
 var layoutTimer = null;
 var revealTimer = null;
@@ -371,6 +396,7 @@ function initApp(){
 
     populateBases();
     populateTypes();
+    startTypeCalendarWatcher();
     setRequesterName();
 
     try{
@@ -458,17 +484,12 @@ function populateBases(){
 }
 
 function populateTypes(){
-    var i,j,sel,opt;
-    for(i=1;i<=3;i++){
-        sel=$("type"+i);
-        while(sel.options.length>0){ sel.remove(0); }
-        for(j=0;j<TYPE_OPTIONS.length;j++){
-            opt=document.createElement("option");
-            opt.value=TYPE_OPTIONS[j];
-            opt.text=(TYPE_OPTIONS[j]==="" ? "選択してください" : TYPE_OPTIONS[j]);
-            sel.add(opt);
-        }
-    }
+    var today=new Date();
+    var calendar=getTypeCalendar(today);
+    typeCalendarDateKey=formatDate(today);
+    typeCalendarDayKind=calendar.kind;
+    typeCalendarError=calendar.error;
+    for(var i=1;i<=3;i++){ updateTypeOptions(i); }
 }
 
 function updateTypeOptions(no){
@@ -477,29 +498,142 @@ function updateTypeOptions(no){
 
     var attendance=getAttendance(no);
     var options=[""],current=String(sel.value||""),i,opt,selectedIndex=0;
-    if(attendance==="出社"){
-        options=options.concat(TYPE_OPTIONS.slice(1,4));
-    }else if(attendance==="公休" || attendance==="時短（時間外）"){
-        options=options.concat(TYPE_OPTIONS.slice(4,6));
-    }
+    var groups=TYPE_NUMBERS_BY_DAY[typeCalendarDayKind] || {};
+    var numbers=groups[attendance] || [];
+    for(i=0;i<numbers.length;i++){ options.push(TYPE_OPTIONS[numbers[i]]); }
+    var placeholder=typeCalendarError || "選択してください";
+    sel.title=typeCalendarError;
 
     // 同一CAの再同期などで候補が変わらない場合は、選択欄を作り直さない。
     var same=sel.options.length===options.length;
     for(i=0;same && i<options.length;i++){
         if(sel.options[i].value!==options[i]){ same=false; }
     }
-    if(same){ return; }
+    if(same && sel.options[0].text===placeholder){ return; }
 
     while(sel.options.length>0){ sel.remove(0); }
     for(i=0;i<options.length;i++){
         opt=document.createElement("option");
         opt.value=options[i];
-        opt.text=(options[i]==="" ? "選択してください" : options[i]);
+        opt.text=(options[i]==="" ? placeholder : options[i]);
         sel.add(opt);
         if(options[i]===current){ selectedIndex=i; }
     }
     // 切替後も候補にある値だけを維持し、対象外の選択値は残さない。
     sel.selectedIndex=selectedIndex;
+}
+
+function readHolidayMaster(){
+    var stream=null;
+    var path="";
+    var stage="保存場所の確認";
+    var adoError="";
+    var error=HOLIDAY_MASTER_NAME+"のJSON形式・日付を確認してください";
+    try{
+        var fso=new ActiveXObject("Scripting.FileSystemObject");
+        path=fso.BuildPath(getCurrentFolderPath(),HOLIDAY_MASTER_NAME);
+        if(!fso.FileExists(path)){
+            return {dates:{},years:{},error:HOLIDAY_MASTER_NAME+"が見つかりません。確認先："+path};
+        }
+        var text="";
+        try{
+            stage="ADODBでの読込み";
+            stream=new ActiveXObject("ADODB.Stream");
+            stream.Type=2;
+            stream.Charset="utf-8";
+            stream.Open();
+            stream.LoadFromFile(path);
+            text=stream.ReadText(-1).replace(/^\uFEFF/,"");
+            stream.Close();
+            stream=null;
+        }catch(adoErr){
+            adoError=holidayMasterErrorDetail(adoErr);
+            try{ if(stream){ stream.Close(); } }catch(adoCloseErr){}
+            stream=null;
+            stage="FSOでの読込み";
+            // 年・日付とJSONの記号はASCII。以前の読込み修正版と同じ代替方法を使用する。
+            // UTF-8 BOMのWindows日本語/欧文環境での表現だけを先頭から除去する。
+            stream=fso.OpenTextFile(path,1,false,0);
+            text=stream.ReadAll().replace(/^(?:\uFEFF|\u00EF\u00BB\u00BF|[\uFFFD?]\uFF7B\uFF7F)/,"");
+            stream.Close();
+            stream=null;
+        }
+
+        stage="日付の確認";
+        var master=JSON.parse(text);
+        var dates={},years={},year,items,i,match,month,day,date;
+        if(Object.prototype.toString.call(master)!=="[object Object]"){ throw new Error(error); }
+        for(year in master){
+            if(!Object.prototype.hasOwnProperty.call(master,year)){ continue; }
+            error=HOLIDAY_MASTER_NAME+"の年ごとの日付一覧を確認してください";
+            items=master[year];
+            if(!/^\d{4}$/.test(year) || Object.prototype.toString.call(items)!=="[object Array]" || items.length===0){
+                throw new Error(error);
+            }
+            for(i=0;i<items.length;i++){
+                error=HOLIDAY_MASTER_NAME+"の"+year+"年・"+(i+1)+"件目の日付を確認してください（YYYY-MM-DD）";
+                match=typeof items[i]==="string" ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(items[i]) : null;
+                if(!match || match[1]!==year){ throw new Error(error); }
+                month=parseInt(match[2],10);
+                day=parseInt(match[3],10);
+                date=new Date(parseInt(year,10),month-1,day);
+                if(date.getFullYear()!==parseInt(year,10) || date.getMonth()!==month-1 || date.getDate()!==day){
+                    throw new Error(error);
+                }
+                dates[formatDate(date)]=true;
+            }
+            years[year]=true;
+        }
+        return {dates:dates,years:years,error:""};
+    }catch(err){
+        try{ if(stream){ stream.Close(); } }catch(closeErr){}
+        if(stage!=="日付の確認"){
+            error=HOLIDAY_MASTER_NAME+"を読み込めません（"+stage+"）。\n確認先："+(path || "取得できません")+
+                  "\nエラー："+holidayMasterErrorDetail(err);
+            if(adoError){ error+="\nADODBエラー："+adoError; }
+        }
+        return {dates:{},years:{},error:error};
+    }
+}
+
+function holidayMasterErrorDetail(err){
+    var code="";
+    if(err && typeof err.number==="number"){
+        code="0x"+(err.number>>>0).toString(16).toUpperCase()+" ";
+    }
+    return code+String(err && (err.description || err.message) || err);
+}
+
+function getTypeCalendar(date){
+    // 土日はマスタに依存せず、祝日は編集可能なJSONで判定する。
+    if(date.getDay()===0 || date.getDay()===6){
+        return {kind:"土日祝",error:""};
+    }
+    var master=readHolidayMaster();
+    if(master.error){ return {kind:"",error:master.error}; }
+    if(!master.years[String(date.getFullYear())]){
+        return {kind:"",error:HOLIDAY_MASTER_NAME+"に"+date.getFullYear()+"年の祝日を追加してください"};
+    }
+    return {kind:master.dates[formatDate(date)] ? "土日祝" : "平日",error:""};
+}
+
+function refreshTypeCalendarIfDateChanged(){
+    if(typeCalendarDateKey!==formatDate(new Date())){ populateTypes(); }
+}
+
+function startTypeCalendarWatcher(){
+    if(typeCalendarTimer){ return; }
+    typeCalendarTimer=window.setInterval(refreshTypeCalendarIfDateChanged,60000);
+    // 日付をまたいだ直後の操作も、クリック・キー処理より先に更新する。
+    if(document.addEventListener){
+        document.addEventListener("click",refreshTypeCalendarIfDateChanged,true);
+        document.addEventListener("keydown",refreshTypeCalendarIfDateChanged,true);
+        window.addEventListener("focus",refreshTypeCalendarIfDateChanged,false);
+    }else if(document.attachEvent){
+        document.attachEvent("onmousedown",refreshTypeCalendarIfDateChanged);
+        document.attachEvent("onkeydown",refreshTypeCalendarIfDateChanged);
+        window.attachEvent("onfocus",refreshTypeCalendarIfDateChanged);
+    }
 }
 
 function showRequest(no){
@@ -950,6 +1084,7 @@ function validateForm(){
 }
 
 function validateRequestSection(i){
+    refreshTypeCalendarIfDateChanged();
     if(!trimValue("org"+i)){
         markError("org"+i);
         showValidationModal(i,"依頼"+i+"：組織を入力してください","org"+i);
@@ -991,6 +1126,11 @@ function validateRequestSection(i){
         return false;
     }
 
+    if(typeCalendarError){
+        markError("type"+i);
+        showValidationModal(i,typeCalendarError,"type"+i);
+        return false;
+    }
     if(!trimValue("type"+i)){
         markError("type"+i);
         showValidationModal(i,"依頼"+i+"：タイプを選択してください","type"+i);
