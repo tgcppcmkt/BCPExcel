@@ -26,7 +26,7 @@ function showAcceptedAndPrepareMinimize(){
     setStatus("送信中です…");
 }
 
-// 導入拠点に合わせて、この文字列だけ変更してください（例："呉服"）。
+// 拠点にはHTAの格納フォルダ名を使用します。取得できない場合だけ下の値を使用します。
 var REQUEST_BASE_NAME = "拠点を設定";
 
 var TYPE_OPTIONS = [
@@ -477,6 +477,11 @@ function setRequesterName(){
 
 function populateBases(){
     var baseName=String(REQUEST_BASE_NAME || "拠点を設定");
+    try{
+        var fso=new ActiveXObject("Scripting.FileSystemObject");
+        var folderName=String(fso.GetFileName(getCurrentFolderPath()) || "");
+        if(folderName){ baseName=folderName; }
+    }catch(err){}
     var valueEl=$("requestBase");
     var displayEl=$("requestBaseDisplay");
     if(valueEl){ valueEl.value=baseName; }
