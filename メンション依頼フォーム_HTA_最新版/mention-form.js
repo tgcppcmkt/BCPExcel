@@ -1050,6 +1050,7 @@ function collectRequest(no){
         proxyCA8:useProxy ? val("proxyCA"+no+"_8") : "",
         attendance:attendance,
         noProxy:noProxy,
+        groupMention:getGroupMention(no),
         mailMemo:val("mailMemo"+no),
         processedAt:val("processedAt"+no),
         dueDate:val("dueDate"+no),
@@ -1226,6 +1227,19 @@ function updateAttendanceUI(no){
         }else{
             el.style.display=needsProxy ? "block" : "none";
         }
+    }
+
+    var group=$("groupMention"+no);
+    if(group){
+        var groupText=working ? "CA＋Gメンション" : (needsProxy ? "代理＋Gメンション" : "");
+        if(group.value!==groupText){
+            group.checked=false;
+            group.value=groupText;
+            $("groupMentionLabel"+no).innerText=groupText;
+        }
+        if(noProxy){ group.checked=false; }
+        group.disabled=!groupText || (locked && noProxy);
+        group.parentNode.style.display=group.disabled ? "none" : "block";
     }
 
     var controls=["attendanceWork","attendanceOff","attendanceShort"];
@@ -1420,6 +1434,16 @@ function bindProxyCAFloatValueWatch(){
             }
         }
     }
+}
+
+function getGroupMention(no){
+    var group=$("groupMention"+no);
+    return group && group.checked && !group.disabled ? group.value : "";
+}
+
+function groupMentionChanged(no){
+    if(checked("groupMention"+no)){ setChecked("noProxy"+no,false); }
+    attendanceChanged(no);
 }
 
 function attendanceChanged(no){
@@ -1673,6 +1697,8 @@ function buildSendConfirmDetails(){
             }
         }
 
+        var groupMention=getGroupMention(i);
+        if(groupMention){ line+="　"+groupMention; }
         line+="："+trimValue("mailMemo"+i);
         lines.push(line);
     }
@@ -2037,6 +2063,7 @@ function copyRequestFields(fromNo,toNo){
     setChecked("urgent"+toNo,checked("urgent"+fromNo));
     setChecked("noProxy"+toNo,checked("noProxy"+fromNo));
     updateAttendanceUI(toNo);
+    setChecked("groupMention"+toNo,checked("groupMention"+fromNo));
 
     if($("type"+toNo) && $("type"+fromNo)){
         $("type"+toNo).value=$("type"+fromNo).value;
@@ -2656,6 +2683,7 @@ function makeHeaderLine(){
 function getCsvOptionValue(req){
     if(req.urgent){ return "至急"; }
     if(req.noProxy){ return "代理CA記載なし"; }
+    if(req.groupMention){ return req.groupMention; }
     return "";
 }
 
