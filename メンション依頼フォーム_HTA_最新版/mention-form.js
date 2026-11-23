@@ -1102,6 +1102,15 @@ function normalizeRequestNames(no){
     }
 }
 
+function validateRequestNamePrefix(no,id,label,focusId){
+    // CP932で「−」も全角の「－」になるため、両方を確認する。
+    if(!/^[-=+@＝＋－＠−]/.test(trimValue(id))){ return true; }
+
+    markError(id);
+    showValidationModal(no,label+"の先頭に数式として扱われる記号があります。\r\n個人名を入力してください。",focusId||id);
+    return false;
+}
+
 function validateRequestSection(i){
     refreshTypeCalendarIfDateChanged();
     if(!trimValue("org"+i)){
@@ -1115,6 +1124,7 @@ function validateRequestSection(i){
         showValidationModal(i,"依頼"+i+"：CA名を入力してください","ca"+i);
         return false;
     }
+    if(!validateRequestNamePrefix(i,"ca"+i,"CA名")){ return false; }
 
     var attendance=getAttendance(i);
     if(!attendance){
@@ -1140,6 +1150,9 @@ function validateRequestSection(i){
                 markError(proxyId);
                 showValidationModal(i,"代理CA欄には個人名を入力。\r\n代理CA「不明」の場合はチェックボックスを選択してください。",
                     j<=3 ? proxyId : "proxyCAToggle"+i);
+                return false;
+            }
+            if(!validateRequestNamePrefix(i,proxyId,"代理CA欄",j<=3 ? proxyId : "proxyCAToggle"+i)){
                 return false;
             }
         }
