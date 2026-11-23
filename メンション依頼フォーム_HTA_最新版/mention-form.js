@@ -1083,7 +1083,7 @@ function validateForm(){
     clearErrors();
 
     // 表示中の依頼を、画面左→右の順番でチェック
-    // 組織 → CA名 → 出社状況 → 代理CA名 → メールメモ → 処理日時 → タイプ
+    // 組織 → CA名 → 出社状況 → 代理CA名 → メールメモ → 処理日時 → 期日 → タイプ
     for(i=1;i<=visibleRequestCount;i++){
         if(!validateRequestSection(i)){
             return false;
@@ -1102,12 +1102,19 @@ function normalizeRequestNames(no){
     }
 }
 
-function validateRequestNamePrefix(no,id,label,focusId){
+function validateCsvFieldPrefix(no,id,label,nameField,focusId){
+    var value=val(id);
     // CP932で「−」も全角の「－」になるため、両方を確認する。
-    if(!/^[-=+@＝＋－＠−]/.test(trimValue(id))){ return true; }
+    var startsWithFormula=/^\s*[-=+@＝＋－＠−]/.test(value);
+    // 氏名欄以外は入力値をそのままCSVに渡す。
+    var startsWithControl=!nameField && /^[^\S\t\r\n]*[\t\r\n]/.test(value);
+    if(!startsWithFormula && !startsWithControl){ return true; }
 
+    var message=nameField
+        ? "の先頭に数式として扱われる記号があります。\r\n個人名を入力してください。"
+        : "の先頭に使用できない文字があります。\r\n先頭の記号やタブ・改行を取り除いてください。";
     markError(id);
-    showValidationModal(no,label+"の先頭に数式として扱われる記号があります。\r\n個人名を入力してください。",focusId||id);
+    showValidationModal(no,label+message,focusId||id);
     return false;
 }
 
@@ -1118,13 +1125,14 @@ function validateRequestSection(i){
         showValidationModal(i,"依頼"+i+"：組織を入力してください","org"+i);
         return false;
     }
+    if(!validateCsvFieldPrefix(i,"org"+i,"組織")){ return false; }
 
     if(!trimValue("ca"+i)){
         markError("ca"+i);
         showValidationModal(i,"依頼"+i+"：CA名を入力してください","ca"+i);
         return false;
     }
-    if(!validateRequestNamePrefix(i,"ca"+i,"CA名")){ return false; }
+    if(!validateCsvFieldPrefix(i,"ca"+i,"CA名",true)){ return false; }
 
     var attendance=getAttendance(i);
     if(!attendance){
@@ -1152,7 +1160,7 @@ function validateRequestSection(i){
                     j<=3 ? proxyId : "proxyCAToggle"+i);
                 return false;
             }
-            if(!validateRequestNamePrefix(i,proxyId,"代理CA欄",j<=3 ? proxyId : "proxyCAToggle"+i)){
+            if(!validateCsvFieldPrefix(i,proxyId,"代理CA欄",true,j<=3 ? proxyId : "proxyCAToggle"+i)){
                 return false;
             }
         }
@@ -1163,12 +1171,15 @@ function validateRequestSection(i){
         showValidationModal(i,"依頼"+i+"：メールメモを入力してください","mailMemo"+i);
         return false;
     }
+    if(!validateCsvFieldPrefix(i,"mailMemo"+i,"メールメモ")){ return false; }
 
     if(!trimValue("processedAt"+i)){
         markError("processedAt"+i);
         showValidationModal(i,"依頼"+i+"：処理日時を入力してください","processedAt"+i);
         return false;
     }
+    if(!validateCsvFieldPrefix(i,"processedAt"+i,"処理日時")){ return false; }
+    if(!validateCsvFieldPrefix(i,"dueDate"+i,"期日または面接日程")){ return false; }
 
     if(typeCalendarError){
         markError("type"+i);
