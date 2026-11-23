@@ -198,6 +198,11 @@
     .commit-visible .ca-check-button.checked, .ca-table tr.committed .ca-check-button { display: none; }
     .ca-table tr.ca-unchecked .ca-commit-action { display: none; }
     .ca-commit-button { width: 100%; height: 31px; padding: 4px 5px; border: 1px solid #a69abd; border-radius: 5px; background: #e1dceb; color: #77698f; font-size: 11px; white-space: nowrap; cursor: default; }
+    .staff-commit-control { display: none; }
+    .commit-visible .staff-commit-control { display: block; }
+    .staff-commit-control .ca-commit-button { width: auto; height: auto; margin-top: 3px; padding: 2px 6px; }
+    .staff-commit-control .ca-commit-button[aria-pressed="true"] { color: #8c233d; background: #f9d6de; border-color: #b34f68; }
+    .staff-commit-control .ca-commit-button[aria-pressed="true"]:not(:disabled):hover { background: #f4c1ce; }
     .support-slot { position: relative; display: inline-block; width: 32%; height: 30px; margin-right: 2%; vertical-align: middle; }
     .support-slot.last { margin-right: 0; }
     .support-button { width: 100%; height: 30px; display: block; border-radius: 5px; padding: 4px 7px; line-height: 20px; font-size: 11px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
@@ -389,6 +394,8 @@
       .capacity-log-button { color: #203654; background: #bfd6fa; border-color: #9eb8de; }
       .capacity-log-button:hover { color: #203654; background: #aac8f1; border-color: #bdd6ff; }
       .capacity-log-button:disabled, .ca-commit-button { color: var(--wm-grey-text); background: var(--wm-grey); border-color: var(--wm-border); }
+      .staff-commit-control .ca-commit-button[aria-pressed="true"] { color: var(--wm-red); background: var(--wm-red-bg); border-color: #bf8c9e; }
+      .staff-commit-control .ca-commit-button[aria-pressed="true"]:not(:disabled):hover { background: #593a48; }
       .search-clear { color: var(--wm-muted); }
       .search-clear:hover { background: var(--wm-raised); }
       .search-icon { border-color: var(--wm-muted); }
@@ -485,6 +492,8 @@
     var pendingSupport = null, supportBlurTimer = null;
     var toastTimer = null;
     var commitTimer = null;
+    var savingCommitReviewId = "";
+    var commitReviewOrganization = "@WorkloadStaffCommitNotice";
     var sharedSnapshot = null, sharedVersion = "", sharedError = "", shareWriteBusy = false;
     var searchText = "";
     var sortKey = "total";
@@ -616,10 +625,25 @@
     function supportRequestEnabled(ca) {
       return !!(sharingReady() && ca && caCheckSatisfied(ca) && !ca.committedAt && ca.supports.length < 3);
     }
+    function staffCommitted(staff) {
+      return staff.cas.length > 0 && staff.cas.every(function (ca) { return !!ca.committedAt; });
+    }
     function staffRowClass(staff, opened) {
-      var committed = staff.cas.length > 0, i;
-      for (i = 0; committed && i < staff.cas.length; i++) { if (!staff.cas[i].committedAt) { committed = false; } }
-      return "staff-row" + (opened ? " expanded" : "") + (committed ? " committed" : "");
+      return "staff-row" + (opened ? " expanded" : "") + (staffCommitted(staff) ? " committed" : "");
+    }
+    function staffCommitCheckSatisfied(staff) {
+      return displayMode === "weekend" || uncheckedCountFor(staff) === 0;
+    }
+    function staffCommitButtonHTML(staff) {
+      if (!staffCommitCheckSatisfied(staff)) { return ""; }
+      var done = staffCommitted(staff), reviewing = !done && !!staff.commitReviewId;
+      var label = done ? "コミット済み" : reviewing ? "コミット確認中" : "コミット";
+      var title = done ? label : !sharingReady() ? "共有フォルダを接続してください" : reviewing ? "コミット確認中の表示を解除します" : "コミットを確認中であることを共有します";
+      return '<button type="button" class="ca-commit-button" id="staff-commit-' + staff.id + '"' + (savingCommitReviewId === staff.id || done || !sharingReady() ? ' disabled="disabled"' : '') + ' title="' + title + '" aria-label="' + esc(staff.name) + 'の' + label + '"' + (done ? '' : ' aria-pressed="' + reviewing + '"') + ' onclick="WorkloadUI.toggleStaffCommitReview(\'' + staff.id + '\')">' + label + '</button>';
+    }
+    function refreshStaffCommit(staff) {
+      var control = byId("staff-commit-control-" + staff.id);
+      if (control) { control.innerHTML = staffCommitButtonHTML(staff); }
     }
     function supportWantedHTML(staff) {
       var wanted = hasSupportRequest(staff);
@@ -821,7 +845,7 @@
       notice.style.display = sharedError ? "block" : "none";
     }
     function projectShared(data) {
-      var i, j, ca, key, list, mark, n, row, same, staff, wanted, staffWanted;
+      var i, j, ca, key, list, mark, n, row, same, staff, wanted, staffWanted, reviewId;
       var active = {}, commits = {}, checks = {}, requests = {}, changes = { cas: [], counts: false, staffs: {}, rebuild: {} };
       /* 履歴は一度だけ組織＋CA名で索引化する。CAごとの全履歴走査を避ける。 */
       if (sharedSnapshot) {
@@ -843,6 +867,12 @@
       }
       for (i = 0; i < data.length; i++) {
         staff = data[i]; staffWanted = false;
+        row = sharedSnapshot && requests[WorkloadShare.keyOf(commitReviewOrganization, staff.id)];
+        reviewId = row ? row.id : "";
+        if ((staff.commitReviewId || "") !== reviewId) {
+          staff.commitReviewId = reviewId;
+          changes.staffs["@" + staff.id] = staff;
+        }
         for (j = 0; j < data[i].cas.length; j++) {
           ca = data[i].cas[j];
           ca.supportEntries = ca.supportEntries || []; ca.committedAt = ca.committedAt || "";
@@ -911,7 +941,7 @@
         }
         for (key in changes.staffs) {
           if (!Object.prototype.hasOwnProperty.call(changes.staffs, key)) { continue; }
-          staff = changes.staffs[key]; refreshStaffSupport(staff);
+          staff = changes.staffs[key]; refreshStaffSupport(staff); refreshStaffCommit(staff);
         }
         if (sortKey === "supportRequest") { renderTable(); }
         else if (force && !editing && byId("supportInput")) { renderTable(true); }
@@ -1217,7 +1247,9 @@
         barWidth = maxTotal ? Math.round(t.total / maxTotal * 100) : 0;
         html.push('<tr class="' + staffRowClass(staff, opened) + '" id="staff-row-' + staff.id + '">');
         html.push('<td class="rank-cell"><span class="rank-number' + (i < 3 ? ' leading' : '') + '">' + (i + 1) + '</span></td>');
-        html.push('<td class="staff-cell"><button type="button" class="staff-name" id="staff-button-' + staff.id + '" aria-expanded="' + (opened ? 'true' : 'false') + '" aria-controls="detail-' + staff.id + '" title="担当CAごとの内訳を' + (opened ? '閉じる' : '開く') + '" onclick="WorkloadUI.toggleStaff(\'' + staff.id + '\')"><span class="staff-name-label" title="' + esc(staff.name) + '">' + esc(staff.name) + '</span><span class="staff-ca-meta"><span class="ca-count">' + staff.cas.length + ' CA</span>' + staffCheckHTML(staff) + '</span><span class="expand-indicator" aria-hidden="true">' + (opened ? '−' : '＋') + '</span></button></td>');
+        html.push('<td class="staff-cell"><button type="button" class="staff-name" id="staff-button-' + staff.id + '" aria-expanded="' + (opened ? 'true' : 'false') + '" aria-controls="detail-' + staff.id + '" title="担当CAごとの内訳を' + (opened ? '閉じる' : '開く') + '" onclick="WorkloadUI.toggleStaff(\'' + staff.id + '\')"><span class="staff-name-label" title="' + esc(staff.name) + '">' + esc(staff.name) + '</span><span class="staff-ca-meta"><span class="ca-count">' + staff.cas.length + ' CA</span>' + staffCheckHTML(staff) + '</span><span class="expand-indicator" aria-hidden="true">' + (opened ? '−' : '＋') + '</span></button>');
+        if (staff.cas.length) { html.push('<span class="staff-commit-control" id="staff-commit-control-' + staff.id + '">' + staffCommitButtonHTML(staff) + '</span>'); }
+        html.push('</td>');
         if (displayMode === "weekday") { html.push('<td class="team-cell"><button type="button" class="team-badge' + (selectedTeam === teamNameOf(staff) ? ' active' : '') + '" id="team-button-' + staff.id + '" aria-label="' + esc(teamNameOf(staff)) + 'のランキングを表示" aria-pressed="' + (selectedTeam === teamNameOf(staff) ? 'true' : 'false') + '" title="' + esc(teamNameOf(staff)) + 'のランキングを表示' + (excludedReason(staff) ? ' ／ 件数・対応余力の対象から除外：' + esc(excludedReason(staff)) : '') + '" onclick="WorkloadUI.filterByTeam(\'' + staff.id + '\')">' + esc(teamNameOf(staff)) + '</button></td>'); }
         html.push('<td class="staff-unsorted"><span class="metric-value unsorted">' + format(t.unsorted) + '</span></td>');
         if (displayMode === "weekday") {
@@ -1503,13 +1535,29 @@
       });
     }
     function closeCommittedStaff(caId) {
-      var staff = caStaffIndex["@" + caId], i;
-      if (!staff || !staff.cas.length) { return; }
-      for (i = 0; i < staff.cas.length; i++) { if (!staff.cas[i].committedAt) { return; } }
+      var staff = caStaffIndex["@" + caId];
+      if (!staff || !staffCommitted(staff)) { return; }
       expanded[staff.id] = false;
       cancelDetailRender(); renderTable();
       byId("rankingScroll").scrollTop = 0;
       refreshStaffPin();
+    }
+    function toggleStaffCommitReview(staffId) {
+      var staff = staffIndex["@" + staffId], review;
+      if (shareWriteBusy || importBusy || pendingRemoval || WorkloadBrowser.isChoosing() || !staff || !staff.cas.length || new Date().getHours() < 17 || !sharingReady() || staffCommitted(staff)) { return; }
+      if (!staffCommitCheckSatisfied(staff)) { return; }
+      if (!commitSupport(true, function () { toggleStaffCommitReview(staffId); })) { return; }
+      // 通知専用のキーで既存の共有・再送を利用し、実際のCAの状態は操作しない。
+      review = { organization: commitReviewOrganization, name: staff.id, supportRequestId: staff.commitReviewId || "" };
+      savingCommitReviewId = staffId;
+      setShareBusy(true); refreshStaffCommit(staff); refreshStaffPin();
+      WorkloadShare.setSupportRequest(review, !review.supportRequestId, function (error, snapshot) {
+        savingCommitReviewId = "";
+        setShareBusy(false); refreshStaffCommit(staff);
+        if (error) { sharedSaveError(error, snapshot); return; }
+        if (snapshot) { sharedSnapshot = snapshot; } sharedError = "";
+        applyShared(true); shareStatus();
+      });
     }
     function requestCommit(caId) {
       var ca = findCA(caId), button;
@@ -1643,8 +1691,12 @@
     }
     function updateCommitVisibility() {
       var now = new Date(), list = byId("rankingScroll");
-      var name = "ranking-scroll" + (now.getHours() >= 17 ? " commit-visible" : "");
-      if (list.className !== name) { list.className = name; resizeRanking(); }
+      var visible = now.getHours() >= 17, name = "ranking-scroll" + (visible ? " commit-visible" : "");
+      if (list.className !== name) {
+        list.className = name;
+        byId("pinnedStaff").classList.toggle("commit-visible", visible);
+        resizeRanking();
+      }
     }
     function resizeRanking() {
       var list = byId("rankingScroll"), header = byId("rankingHeader");
@@ -1725,6 +1777,7 @@
       applyCapturedTime: applyCapturedTime,
       capturedTimeKey: capturedTimeKey,
       requestLogAggregate: requestLogAggregate,
+      toggleStaffCommitReview: toggleStaffCommitReview,
       requestCommit: requestCommit,
       requestCACheck: requestCACheck,
       requestSupportWanted: requestSupportWanted,
