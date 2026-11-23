@@ -631,7 +631,11 @@
     function staffRowClass(staff, opened) {
       return "staff-row" + (opened ? " expanded" : "") + (staffCommitted(staff) ? " committed" : "");
     }
+    function staffCommitCheckSatisfied(staff) {
+      return displayMode === "weekend" || uncheckedCountFor(staff) === 0;
+    }
     function staffCommitButtonHTML(staff) {
+      if (!staffCommitCheckSatisfied(staff)) { return ""; }
       var done = staffCommitted(staff), reviewing = !done && !!staff.commitReviewId;
       var label = done ? "コミット済み" : reviewing ? "コミット確認中" : "コミット";
       var title = done ? label : !sharingReady() ? "共有フォルダを接続してください" : reviewing ? "コミット確認中の表示を解除します" : "コミットを確認中であることを共有します";
@@ -1541,6 +1545,7 @@
     function toggleStaffCommitReview(staffId) {
       var staff = staffIndex["@" + staffId], review;
       if (shareWriteBusy || importBusy || pendingRemoval || WorkloadBrowser.isChoosing() || !staff || !staff.cas.length || new Date().getHours() < 17 || !sharingReady() || staffCommitted(staff)) { return; }
+      if (!staffCommitCheckSatisfied(staff)) { return; }
       if (!commitSupport(true, function () { toggleStaffCommitReview(staffId); })) { return; }
       // 通知専用のキーで既存の共有・再送を利用し、実際のCAの状態は操作しない。
       review = { organization: commitReviewOrganization, name: staff.id, supportRequestId: staff.commitReviewId || "" };
