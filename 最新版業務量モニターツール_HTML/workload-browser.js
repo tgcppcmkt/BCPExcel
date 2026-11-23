@@ -5,11 +5,21 @@ var WorkloadBrowserStore = (function () {
         if (!opening) {
             opening = new Promise(function (resolve, reject) {
                 if (!window.indexedDB) { reject(new Error("ブラウザに保存先を記憶できません。保存設定を確認してください。")); return; }
-                var request = window.indexedDB.open("WorkloadRankingHTML", 1);
+                var request = window.indexedDB.open("WorkloadRankingHTML", 1), blocked = false;
                 request.onupgradeneeded = function () { request.result.createObjectStore("handles"); };
-                request.onsuccess = function () { resolve(request.result); };
+                request.onsuccess = function () {
+                    // onblocked で失敗を返したリクエストが後から接続を開くことがある。
+                    if (blocked) { request.result.close(); return; }
+                    resolve(request.result);
+                };
                 request.onerror = function () { reject(request.error); };
-                request.onblocked = function () { reject(new Error("保存設定の更新が止まっています。他の業務量モニターを閉じて再度開いてください。")); };
+                request.onblocked = function () {
+                    blocked = true;
+                    reject(new Error("保存設定の更新が止まっています。他の業務量モニターを閉じて再度開いてください。"));
+                };
+            }).catch(function (error) {
+                opening = null;
+                throw error;
             });
         }
         return opening;
