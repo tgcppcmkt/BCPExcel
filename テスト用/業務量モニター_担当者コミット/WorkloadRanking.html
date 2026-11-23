@@ -201,6 +201,8 @@
     .staff-commit-control { display: none; }
     .commit-visible .staff-commit-control { display: block; }
     .staff-commit-control .ca-commit-button { width: auto; height: auto; margin-top: 3px; padding: 2px 6px; }
+    .staff-commit-control .ca-commit-button[aria-pressed="true"] { color: #8c233d; background: #f9d6de; border-color: #b34f68; }
+    .staff-commit-control .ca-commit-button[aria-pressed="true"]:not(:disabled):hover { background: #f4c1ce; }
     .support-slot { position: relative; display: inline-block; width: 32%; height: 30px; margin-right: 2%; vertical-align: middle; }
     .support-slot.last { margin-right: 0; }
     .support-button { width: 100%; height: 30px; display: block; border-radius: 5px; padding: 4px 7px; line-height: 20px; font-size: 11px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
@@ -392,6 +394,8 @@
       .capacity-log-button { color: #203654; background: #bfd6fa; border-color: #9eb8de; }
       .capacity-log-button:hover { color: #203654; background: #aac8f1; border-color: #bdd6ff; }
       .capacity-log-button:disabled, .ca-commit-button { color: var(--wm-grey-text); background: var(--wm-grey); border-color: var(--wm-border); }
+      .staff-commit-control .ca-commit-button[aria-pressed="true"] { color: var(--wm-red); background: var(--wm-red-bg); border-color: #bf8c9e; }
+      .staff-commit-control .ca-commit-button[aria-pressed="true"]:not(:disabled):hover { background: #593a48; }
       .search-clear { color: var(--wm-muted); }
       .search-clear:hover { background: var(--wm-raised); }
       .search-icon { border-color: var(--wm-muted); }
