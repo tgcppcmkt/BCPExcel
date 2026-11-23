@@ -1071,6 +1071,10 @@ function hasAnyInput(req){
 function validateForm(){
     var i;
 
+    for(i=1;i<=visibleRequestCount;i++){
+        normalizeRequestNames(i);
+    }
+
     // 送信前に代理CA1～8の空欄を詰め、同一CAの連動先にも反映する。
     for(i=1;i<=visibleRequestCount;i++){
         compactProxyCAInputs(i);
@@ -1087,6 +1091,15 @@ function validateForm(){
     }
 
     return true;
+}
+
+function normalizeRequestNames(no){
+    var caId="ca"+no;
+    setValue(caId,trimValue(caId));
+    for(var j=1;j<=8;j++){
+        var proxyId="proxyCA"+no+"_"+j;
+        setValue(proxyId,trimValue(proxyId));
+    }
 }
 
 function validateRequestSection(i){
@@ -1118,6 +1131,18 @@ function validateRequestSection(i){
         markError("proxyCA"+i+"_1");
         showValidationModal(i,"依頼"+i+"：代理CA名を入力してください（記載しない場合は「代理CA記載なし」を選択）","proxyCA"+i+"_1");
         return false;
+    }
+
+    if(attendance!=="出社" && !checked("noProxy"+i)){
+        for(var j=1;j<=8;j++){
+            var proxyId="proxyCA"+i+"_"+j;
+            if(/(不明|代理|リベロ|CA|記載|なし)/.test(trimValue(proxyId))){
+                markError(proxyId);
+                showValidationModal(i,"代理CA欄には個人名を入力。\r\n代理CA「不明」の場合はチェックボックスを選択してください。",
+                    j<=3 ? proxyId : "proxyCAToggle"+i);
+                return false;
+            }
+        }
     }
 
     if(!trimValue("mailMemo"+i)){
@@ -1634,6 +1659,12 @@ function clearErrors(){
         "org2","ca2","attendanceGroup2","proxyCA2_1","mailMemo2","processedAt2","type2",
         "org3","ca3","attendanceGroup3","proxyCA3_1","mailMemo3","processedAt3","type3"
     ];
+    for(var no=1;no<=3;no++){
+        ids.push("dueDate"+no);
+        for(var proxy=2;proxy<=8;proxy++){
+            ids.push("proxyCA"+no+"_"+proxy);
+        }
+    }
 
     var i,el;
 
