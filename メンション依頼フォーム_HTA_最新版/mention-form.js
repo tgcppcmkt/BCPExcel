@@ -48,6 +48,27 @@ var TYPE_OPTIONS = [
     "⑮ その他の個別対応"
 ];
 
+// ===== 期日または面接日程の設定 =====
+// 左の番号は上のタイプ番号です。右を「必須」「不要」「任意」のいずれかに変更してください。
+// 例：②を必須にする場合は 2: "必須"。一覧にないタイプは任意です。
+var DUE_DATE_MODE_BY_TYPE = {
+    1: "任意",
+    2: "任意",
+    3: "任意",
+    4: "任意",
+    5: "任意",
+    6: "任意",
+    7: "任意",
+    8: "任意",
+    9: "任意",
+    10: "任意",
+    11: "任意",
+    12: "任意",
+    13: "任意",
+    14: "任意",
+    15: "任意"
+};
+
 // ===== タイプの切替設定（導入先で変更する箇所） =====
 // 表示文言は上の TYPE_OPTIONS、表示する番号と順番は下の6通りを編集してください。
 // 例：[1,2] は TYPE_OPTIONS の①・②。番号は1～15、追加時は上の一覧にも追記します。
@@ -422,6 +443,7 @@ function initApp(){
     bindProxyCAFloatClose();
     bindProxyCAFloatValueWatch();
     for(var no=1;no<=3;no++){
+        bindDueDateMode(no);
         updateAttendanceUI(no);
         updateProxyCAFloatButton(no);
     }
@@ -526,6 +548,41 @@ function updateTypeOptions(no){
     }
     // 切替後も候補にある値だけを維持し、対象外の選択値は残さない。
     sel.selectedIndex=selectedIndex;
+    updateDueDateMode(no);
+}
+
+function getDueDateMode(no){
+    var typeNumber=TYPE_OPTIONS.indexOf(val("type"+no));
+    var mode=DUE_DATE_MODE_BY_TYPE[typeNumber];
+    return mode==="必須" || mode==="不要" ? mode : "任意";
+}
+
+function updateDueDateMode(no){
+    var input=$("dueDate"+no);
+    if(!input){ return; }
+
+    var mode=getDueDateMode(no);
+    var placeholder="mm/dd hhmmで入力";
+    if(mode==="必須"){ placeholder="必須：mm/dd hhmm"; }
+    if(mode==="不要"){ placeholder="入力不要"; }
+
+    input.disabled=mode==="不要";
+    input.setAttribute("aria-required",mode==="必須" ? "true" : "false");
+    if(input.placeholder!==placeholder){
+        input.placeholder=placeholder;
+        input.className=String(input.className||"")
+            .replace(/\berror-field\b/g,"")
+            .replace(/^\s+|\s+$/g,"");
+    }
+}
+
+function bindDueDateMode(no){
+    var type=$("type"+no);
+    if(!type){ return; }
+
+    var update=function(){ updateDueDateMode(no); };
+    if(type.addEventListener){ type.addEventListener("change",update,false); }
+    else if(type.attachEvent){ type.attachEvent("onchange",update); }
 }
 
 function readHolidayMaster(){
@@ -1053,7 +1110,7 @@ function collectRequest(no){
         groupMention:getGroupMention(no),
         mailMemo:val("mailMemo"+no),
         processedAt:val("processedAt"+no),
-        dueDate:val("dueDate"+no),
+        dueDate:getDueDateMode(no)==="不要" ? "" : val("dueDate"+no),
         shortTime:attendance==="時短（時間外）",
         urgent:attendance==="出社" && checked("urgent"+no),
         type:val("type"+no)
@@ -1179,7 +1236,15 @@ function validateRequestSection(i){
         return false;
     }
     if(!validateCsvFieldPrefix(i,"processedAt"+i,"処理日時")){ return false; }
-    if(!validateCsvFieldPrefix(i,"dueDate"+i,"期日または面接日程")){ return false; }
+
+    var dueDateMode=getDueDateMode(i);
+    var dueDateId="dueDate"+i;
+    if(dueDateMode==="必須" && !trimValue(dueDateId)){
+        markError(dueDateId);
+        showValidationModal(i,"依頼"+i+"：このタイプでは期日または面接日程を入力してください",dueDateId);
+        return false;
+    }
+    if(dueDateMode!=="不要" && !validateCsvFieldPrefix(i,dueDateId,"期日または面接日程")){ return false; }
 
     if(typeCalendarError){
         markError("type"+i);
@@ -2122,6 +2187,7 @@ function copyRequestFields(fromNo,toNo){
 
     if($("type"+toNo) && $("type"+fromNo)){
         $("type"+toNo).value=$("type"+fromNo).value;
+        updateDueDateMode(toNo);
     }
 }
 
@@ -2166,6 +2232,7 @@ function clearRequestFields(i){
 
     if($("type"+i)){
         $("type"+i).selectedIndex=0;
+        updateDueDateMode(i);
     }
 }
 
