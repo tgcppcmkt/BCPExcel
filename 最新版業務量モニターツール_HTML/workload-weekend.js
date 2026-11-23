@@ -142,7 +142,8 @@ var WorkloadWeekend = (function () {
             if (excluded(staff) || staff.cas.every(function (ca) { return !!ca.committedAt; })) { return; }
             staff.cas.forEach(function (ca) {
                 var values = ca.weekendCounts || [];
-                for (var i = 0; i < 10; i++) { totals[i] += values[i] || 0; }
+                // コミット済みCAは合計対象の8項目から除き、未仕分・参考項目は従来どおり集計する。
+                for (var i = ca.committedAt ? 8 : 0; i < 10; i++) { totals[i] += values[i] || 0; }
             });
         });
         for (var i = 0; i < 10; i++) {

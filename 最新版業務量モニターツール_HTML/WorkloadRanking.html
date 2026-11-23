@@ -574,12 +574,13 @@
       if (cachedTotals["@" + staff.id]) { return cachedTotals["@" + staff.id]; }
       for (i = 0; i < staff.cas.length; i++) {
         ca = staff.cas[i];
-        if (!ca.committedAt) { allCommitted = false; }
         totals.unsorted += ca.unsorted;
+        if (ca.committedAt) { continue; }
+        allCommitted = false;
         totals.unread += ca.unread;
         totals.flag += ca.flag;
       }
-      if (allCommitted) { totals.unsorted = 0; totals.unread = 0; totals.flag = 0; }
+      if (allCommitted) { totals.unsorted = 0; }
       totals.total = totals.unread + totals.flag;
       cachedTotals["@" + staff.id] = totals; return totals;
     }
