@@ -488,7 +488,8 @@
     var pendingSupport = null, supportBlurTimer = null;
     var toastTimer = null;
     var commitTimer = null;
-    var staffCommitId = "";
+    var savingCommitReviewId = "";
+    var commitReviewOrganization = "@WorkloadStaffCommitNotice";
     var sharedSnapshot = null, sharedVersion = "", sharedError = "", shareWriteBusy = false;
     var searchText = "";
     var sortKey = "total";
@@ -626,14 +627,11 @@
     function staffRowClass(staff, opened) {
       return "staff-row" + (opened ? " expanded" : "") + (staffCommitted(staff) ? " committed" : "");
     }
-    function staffCommitChecksReady(staff) {
-      return staff.cas.every(function (ca) { return ca.committedAt || caCheckSatisfied(ca); });
-    }
     function staffCommitButtonHTML(staff) {
-      var pending = staffCommitId === staff.id, done = staffCommitted(staff), checked = staffCommitChecksReady(staff);
-      var label = pending ? "コミット確認中" : done ? "コミット済み" : "コミット";
-      var title = pending || done ? label : !sharingReady() ? "共有フォルダを接続してください" : !checked ? "担当CAをすべてチェックしてください" : "担当CAをまとめてコミットします";
-      return '<button type="button" class="ca-commit-button" id="staff-commit-' + staff.id + '"' + (pending || done || !checked || !sharingReady() ? ' disabled="disabled"' : '') + ' title="' + title + '" aria-label="' + esc(staff.name) + 'の' + label + '" onclick="WorkloadUI.requestStaffCommit(\'' + staff.id + '\')">' + label + '</button>';
+      var done = staffCommitted(staff), reviewing = !done && !!staff.commitReviewId;
+      var label = done ? "コミット済み" : reviewing ? "コミット確認中" : "コミット";
+      var title = done ? label : !sharingReady() ? "共有フォルダを接続してください" : reviewing ? "コミット確認中の表示を解除します" : "コミットを確認中であることを共有します";
+      return '<button type="button" class="ca-commit-button" id="staff-commit-' + staff.id + '"' + (savingCommitReviewId === staff.id || done || !sharingReady() ? ' disabled="disabled"' : '') + ' title="' + title + '" aria-label="' + esc(staff.name) + 'の' + label + '"' + (done ? '' : ' aria-pressed="' + reviewing + '"') + ' onclick="WorkloadUI.toggleStaffCommitReview(\'' + staff.id + '\')">' + label + '</button>';
     }
     function refreshStaffCommit(staff) {
       var control = byId("staff-commit-control-" + staff.id);
@@ -839,7 +837,7 @@
       notice.style.display = sharedError ? "block" : "none";
     }
     function projectShared(data) {
-      var i, j, ca, key, list, mark, n, row, same, staff, wanted, staffWanted;
+      var i, j, ca, key, list, mark, n, row, same, staff, wanted, staffWanted, reviewId;
       var active = {}, commits = {}, checks = {}, requests = {}, changes = { cas: [], counts: false, staffs: {}, rebuild: {} };
       /* 履歴は一度だけ組織＋CA名で索引化する。CAごとの全履歴走査を避ける。 */
       if (sharedSnapshot) {
@@ -861,6 +859,12 @@
       }
       for (i = 0; i < data.length; i++) {
         staff = data[i]; staffWanted = false;
+        row = sharedSnapshot && requests[WorkloadShare.keyOf(commitReviewOrganization, staff.id)];
+        reviewId = row ? row.id : "";
+        if ((staff.commitReviewId || "") !== reviewId) {
+          staff.commitReviewId = reviewId;
+          changes.staffs["@" + staff.id] = staff;
+        }
         for (j = 0; j < data[i].cas.length; j++) {
           ca = data[i].cas[j];
           ca.supportEntries = ca.supportEntries || []; ca.committedAt = ca.committedAt || "";
@@ -995,7 +999,7 @@
     }
     function beforeClose(e) {
       syncDraft();
-      if (staffCommitId || (editing && String(editing.draft || "").trim()) || pendingSupport ||
+      if ((editing && String(editing.draft || "").trim()) || pendingSupport ||
           (typeof WorkloadShare !== "undefined" && WorkloadShare.hasPendingWrites())) {
         e = e || window.event;
         if (e) { if (e.preventDefault) { e.preventDefault(); } e.returnValue = ""; }
@@ -1530,54 +1534,21 @@
       byId("rankingScroll").scrollTop = 0;
       refreshStaffPin();
     }
-    async function waitForShareIdle() {
-      while (WorkloadShare.isBusy()) { await new Promise(function (resolve) { window.setTimeout(resolve, 50); }); }
-    }
-    function staffCommitSnapshot(day) {
-      if (day !== WorkloadShare.dayKey(new Date()) || !sharedSnapshot || sharedSnapshot.date !== day || sharedSnapshot.mode !== displayMode) {
-        throw new Error("日付または集計モードが変わりました。共有状況を確認してください。");
-      }
-      if (sharedError) { throw new Error(sharedError); }
-      return sharedSnapshot;
-    }
-    async function requestStaffCommit(staffId) {
-      var staff = staffIndex["@" + staffId], now = new Date(), day, keys, snapshot, i, failure;
-      if (shareWriteBusy || importBusy || pendingRemoval || WorkloadBrowser.isChoosing() || !staff || !staff.cas.length || now.getHours() < 17 || !sharingReady() || staffCommitted(staff) || !staffCommitChecksReady(staff)) { return; }
-      if (!commitSupport(true, function () { requestStaffCommit(staffId); })) { return; }
-      if (!window.confirm(staff.name + "さんの担当CAをまとめてコミットしますか？")) { return; }
-      day = WorkloadShare.dayKey(now);
-      keys = staff.cas.map(function (ca) { return WorkloadShare.keyOf(ca.organization, ca.name); });
-      staffCommitId = staffId;
+    function toggleStaffCommitReview(staffId) {
+      var staff = staffIndex["@" + staffId], review;
+      if (shareWriteBusy || importBusy || pendingRemoval || WorkloadBrowser.isChoosing() || !staff || !staff.cas.length || new Date().getHours() < 17 || !sharingReady() || staffCommitted(staff)) { return; }
+      if (!commitSupport(true, function () { toggleStaffCommitReview(staffId); })) { return; }
+      // 通知専用のキーで既存の共有・再送を利用し、実際のCAの状態は操作しない。
+      review = { organization: commitReviewOrganization, name: staff.id, supportRequestId: staff.commitReviewId || "" };
+      savingCommitReviewId = staffId;
       setShareBusy(true); refreshStaffCommit(staff); refreshStaffPin();
-      try {
-        await waitForShareIdle();
-        await WorkloadShare.refresh();
-        snapshot = staffCommitSnapshot(day);
-        if (displayMode === "weekday" && keys.some(function (key) {
-          return !WorkloadShare.committedForCA(snapshot, key) && !WorkloadShare.checkedForCA(snapshot, key);
-        })) { throw new Error("担当CAをすべてチェックしてからコミットしてください。"); }
-        for (i = 0; i < staff.cas.length; i++) {
-          snapshot = staffCommitSnapshot(day);
-          if (WorkloadShare.committedForCA(snapshot, keys[i])) { continue; }
-          await new Promise(function (resolve, reject) {
-            WorkloadShare.commitCA(staff.cas[i], function (error, saved) {
-              if (saved) { sharedSnapshot = saved; }
-              if (error) { reject(error); } else { resolve(); }
-            });
-          });
-          // 前の保存と確認処理が終わってから、次のCAを登録する。
-          await waitForShareIdle();
-        }
-        snapshot = staffCommitSnapshot(day);
-        if (!keys.every(function (key) { return !!WorkloadShare.committedForCA(snapshot, key); })) {
-          throw new Error("未コミットの担当CAがあります。最新の共有状況を確認してください。");
-        }
-      } catch (error) { failure = error; }
-      staffCommitId = "";
-      setShareBusy(false); refreshStaffCommit(staff);
-      if (failure) { sharedSaveError(failure, sharedSnapshot); return; }
-      applyShared(true); closeCommittedStaff(staff.cas[0].id); shareStatus();
-      toast(staff.name + "さんの担当CAをすべてコミットしました。");
+      WorkloadShare.setSupportRequest(review, !review.supportRequestId, function (error, snapshot) {
+        savingCommitReviewId = "";
+        setShareBusy(false); refreshStaffCommit(staff);
+        if (error) { sharedSaveError(error, snapshot); return; }
+        if (snapshot) { sharedSnapshot = snapshot; } sharedError = "";
+        applyShared(true); shareStatus();
+      });
     }
     function requestCommit(caId) {
       var ca = findCA(caId), button;
@@ -1797,7 +1768,7 @@
       applyCapturedTime: applyCapturedTime,
       capturedTimeKey: capturedTimeKey,
       requestLogAggregate: requestLogAggregate,
-      requestStaffCommit: requestStaffCommit,
+      toggleStaffCommitReview: toggleStaffCommitReview,
       requestCommit: requestCommit,
       requestCACheck: requestCACheck,
       requestSupportWanted: requestSupportWanted,
