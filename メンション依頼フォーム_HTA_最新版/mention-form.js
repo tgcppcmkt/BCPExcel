@@ -1,6 +1,6 @@
 ﻿// v28.30: 退避CSVの期待依頼数をファイル名へ保持し、部分欠落をWorkerで検知
 var CSV_SUBFOLDER_NAME = "書き込み用";
-var PENDING_FOLDER_NAME = "MentionRequest_Pending";
+var PENDING_FOLDER_NAME = "MentionRequest_PerSend_Pending";
 var BACKGROUND_WORKER_NAME = "mention-request-worker.js";
 var WORKER_MAX_RETRY_SECONDS = 300;
 var activeCompletionReadyPath = "";
