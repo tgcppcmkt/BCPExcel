@@ -1352,8 +1352,10 @@ function updateAttendanceUI(no){
             $("groupMentionLabel"+no).innerText=groupText;
         }
         if(noProxy){ group.checked=false; }
-        group.disabled=!groupText || (locked && noProxy);
-        group.parentNode.style.display=group.disabled ? "none" : "block";
+        else if(locked){ group.checked=!!getGroupMention(getSameCASourceNo(no)); }
+        var groupVisible=!!groupText && !(locked && noProxy);
+        group.disabled=locked || !groupVisible;
+        group.parentNode.style.display=groupVisible ? "block" : "none";
     }
 
     var controls=["attendanceWork","attendanceOff","attendanceShort"];
@@ -1552,7 +1554,7 @@ function bindProxyCAFloatValueWatch(){
 
 function getGroupMention(no){
     var group=$("groupMention"+no);
-    return group && group.checked && !group.disabled ? group.value : "";
+    return group && group.checked && (!group.disabled || (no>1 && checked("sameCA"+no))) ? group.value : "";
 }
 
 function groupMentionChanged(no){
@@ -1595,8 +1597,7 @@ function copySameCAValues(no){
     }
 
     // v28.28: 同一CAでは出社状況まで引き継ぐ。
-    // 「代理CA記載なし」はupdateAttendanceUI内で前依頼へ追従し、
-    // 「至急」だけは依頼ごとに独立させる。
+    // 代理CA記載なし・GメンションはupdateAttendanceUI内で前依頼へ追従する。
     setAttendance(no,getAttendance(src));
     updateAttendanceUI(no);
 }
