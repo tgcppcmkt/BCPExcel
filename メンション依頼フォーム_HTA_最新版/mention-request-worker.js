@@ -137,7 +137,7 @@
     var receiptPath = pendingPath + OUTPUT_RECEIPT_SUFFIX;
     var startedAt = new Date().getTime();
     var pending = null;
-    var outputStem = "";
+    var outputStems = null;
     var failureStep = "lock";
     var failureError = null;
 
@@ -161,7 +161,7 @@
                 failureStep = "pending";
                 pending = readPendingCsv(pendingPath);
                 failureStep = "name";
-                outputStem = buildOutputStem(pending.requester, pending.sentAt, pending.requestId);
+                outputStems = buildOutputStems(pending.baseName, pending.requester, pending.sentAt, pending.requestId);
             } catch (ePending) {
                 releaseLock(lockPath);
                 showFailurePopupWhenReady(pendingPath, failureStep, ePending);
@@ -170,7 +170,7 @@
         }
 
         try {
-            publishSubmission(csvFolder, outputStem, receiptPath, pendingPath, pending.text);
+            publishSubmission(csvFolder, outputStems, receiptPath, pendingPath, pending.text);
         } catch (ePublish) {
             failureError = ePublish;
             releaseLock(lockPath);
@@ -314,6 +314,7 @@
         }
 
         return {
+            baseName: baseName,
             sentAt: sentAt,
             requester: requester,
             requestId: requestIdFromRow(records[0], schema),
@@ -384,7 +385,7 @@
         return count;
     }
 
-    function publishSubmission(folder, stem, receiptPath, sourcePath, text) {
+    function publishSubmission(folder, stems, receiptPath, sourcePath, text) {
         var sequence = 1;
         var targetPath;
 
@@ -404,8 +405,11 @@
             }
 
             sequence = parseInt(attempt[1], 10);
-            targetPath = submissionPath(folder, stem, sequence);
-            if (fso.FileExists(targetPath) && readText(targetPath) === text) {
+            targetPath = submissionPath(folder, stems.current, sequence);
+            // Existing receipts only store the sequence, including those from the old naming rule.
+            var legacyPath = submissionPath(folder, stems.legacy, sequence);
+            if ((fso.FileExists(targetPath) && readText(targetPath) === text) ||
+                (fso.FileExists(legacyPath) && readText(legacyPath) === text)) {
                 markSubmissionPublished(receiptPath);
                 return;
             }
@@ -433,7 +437,7 @@
 
             for (; sequence <= MAX_OUTPUT_SEQUENCE; sequence++) {
                 failureStep = "name";
-                targetPath = submissionPath(folder, stem, sequence);
+                targetPath = submissionPath(folder, stems.current, sequence);
                 if (fso.FileExists(targetPath) || fso.FolderExists(targetPath)) {
                     continue;
                 }
@@ -763,34 +767,55 @@
     }
 
 
-    function buildOutputStem(requester, sentAt, requestId) {
+    function buildOutputStems(baseName, requester, sentAt, requestId) {
         var value = String(sentAt || "").replace(/[\uff10-\uff19]/g, function (digit) {
             return String.fromCharCode(digit.charCodeAt(0) - 0xfee0);
         }).replace(/\uff0f/g, "/").replace(/\uff1a/g, ":")
             .replace(/^[\s\u3000\ufeff]+|[\s\u3000\ufeff]+$/g, "");
-        var m = /^([0-9]{4})[\/.-]([0-9]{1,2})[\/.-]([0-9]{1,2})[Tt\s\u3000]+([0-9]{1,2}):([0-9]{1,2})(?::[0-9]{1,2}(?:\.[0-9]+)?)?$/.exec(value);
+        var m = /^([0-9]{4})[\/.-]([0-9]{1,2})[\/.-]([0-9]{1,2})[Tt\s\u3000]+([0-9]{1,2}):([0-9]{1,2})(?::([0-9]{1,2})(?:\.[0-9]+)?)?$/.exec(value);
         var stamp = m ? m[1] + ("0" + m[2]).slice(-2) + ("0" + m[3]).slice(-2) +
             ("0" + m[4]).slice(-2) + ("0" + m[5]).slice(-2) : "";
+        var seconds = m && m[6] ? ("0" + m[6]).slice(-2) : "";
+        var idTime = /^([0-9]{8})-([0-9]{4})([0-9]{2})[0-9]{3}-.*-R0[1-3]-[0-9A-F]{6}$/i.exec(String(requestId || ""));
+        var idMinute = idTime ? idTime[1] + idTime[2] : "";
 
         // A normal send uses the CSV timestamp. For an unrecognized display
         // format, use the time embedded in the original per-request ID.
         if (!isValidOutputMinute(stamp)) {
-            var idTime = /^([0-9]{8})-([0-9]{4})[0-9]{5}-.*-R0[1-3]-[0-9A-F]{6}$/i.exec(String(requestId || ""));
-            stamp = idTime ? idTime[1] + idTime[2] : "";
+            stamp = idMinute;
+            seconds = "";
             if (!isValidOutputMinute(stamp)) {
                 throw new Error("DATE_INVALID");
             }
         }
+        if (!seconds || Number(seconds) >= 60) {
+            seconds = idTime && stamp === idMinute && Number(idTime[3]) < 60 ? idTime[3] : "00";
+        }
 
-        var name = String(requester || "").replace(/[\x00-\x1f\\\/:*?"<>|]/g, "_")
+        var base = sanitizeOutputNamePart(baseName, "\u62e0\u70b9\u4e0d\u660e");
+        var name = sanitizeOutputNamePart(requester, "\u4f9d\u983c\u8005\u4e0d\u660e");
+        var legacy = name + stamp;
+
+        // Leave room for two separators, the timestamp, _9999 and .csv.
+        var nameLimit = 255 - 2 - 14 - 5 - 4;
+        if (base.length + name.length > nameLimit) {
+            base = base.slice(0, Math.max(Math.floor(nameLimit / 2), nameLimit - name.length));
+            name = name.slice(0, nameLimit - base.length);
+        }
+        return { current: base + "_" + name + "_" + stamp + seconds, legacy: legacy };
+    }
+
+
+    function sanitizeOutputNamePart(value, fallback) {
+        var name = String(value || "").replace(/[\x00-\x1f\\\/:*?"<>|]/g, "_")
             .replace(/^\s+|[\s.]+$/g, "");
         if (!name) {
-            name = "\u4f9d\u983c\u8005\u4e0d\u660e";
+            name = fallback;
         }
         if (/^(CON|PRN|AUX|NUL|COM[1-9\u00b9\u00b2\u00b3]|LPT[1-9\u00b9\u00b2\u00b3])\s*\./i.test(name)) {
             name = "_" + name;
         }
-        return name + stamp;
+        return name;
     }
 
 
