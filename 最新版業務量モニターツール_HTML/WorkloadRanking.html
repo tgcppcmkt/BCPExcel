@@ -487,6 +487,7 @@
   var WorkloadUI = (function () {
     var staffData = [];
     var expanded = {};
+    var displayedRanks = {}, deferredRankingRowId = "";
     var editing = null;
     var pendingRemoval = null;
     var pendingSupport = null, supportBlurTimer = null;
@@ -568,6 +569,7 @@
     }
     function rebuildDataIndexes() {
       var i, j, staff, ca;
+      deferredRankingRowId = "";
       caIndex = {}; staffIndex = {}; caStaffIndex = {};
       cachedTotals = {}; cachedSupports = {}; cachedGlobal = null; dataVersion++;
       for (i = 0; i < staffData.length; i++) {
@@ -703,6 +705,7 @@
         result.push({ staff: staffData[i], totals: totalsFor(staffData[i]), reference: referenceSort ? weekendReferenceFor(staffData[i]) : 0, supportWanted: sortKey === "supportRequest" && hasSupportRequest(staffData[i]) ? 1 : 0, originalOrder: i });
       }
       result.sort(function (a, b) {
+        if (deferredRankingRowId) { return displayedRanks["@" + a.staff.id] - displayedRanks["@" + b.staff.id]; }
         if (sortKey === "supportRequest") { return (b.supportWanted - a.supportWanted) || (b.totals.total - a.totals.total) || (a.originalOrder - b.originalOrder); }
         return (referenceSort ? b.reference - a.reference : b.totals[sortKey] - a.totals[sortKey]) || (a.originalOrder - b.originalOrder);
       });
@@ -929,6 +932,8 @@
       focus = document.activeElement && document.activeElement.id;
       changes = projectShared(staffData);
       if (changes.counts) {
+        // 件数は最新値で描画し、開いている担当者がいる間は直前の順位を使う。
+        if (!deferredRankingRowId && pinnedStaffRow) { deferredRankingRowId = pinnedStaffRow.id; }
         for (i = 0; i < changes.cas.length; i++) { refreshCARow(changes.cas[i]); }
         renderSummary(); renderCapacity(); renderTable();
         for (key in changes.staffs) {
@@ -1238,7 +1243,11 @@
       var reused = {}, pending = [], oldDetail;
       var canReuse = !forceDetails && tableDataVersion === dataVersion && detailSearchText === searchText;
       if (!canReuse) { cancelDetailRender(); }
-      for (i = 0; i < ranked.length; i++) { maxTotal = Math.max(maxTotal, ranked[i].totals.total); }
+      displayedRanks = {};
+      for (i = 0; i < ranked.length; i++) {
+        displayedRanks["@" + ranked[i].staff.id] = i;
+        maxTotal = Math.max(maxTotal, ranked[i].totals.total);
+      }
       for (i = 0; i < ranked.length; i++) {
         item = ranked[i]; staff = item.staff; t = item.totals;
         if (!matches(staff)) { continue; }
@@ -1420,6 +1429,14 @@
       if (!commitSupport(true, function () { toggleStaff(id); })) { return; }
       expanded[id] = !expanded[id];
       if (expanded[id]) { closeOtherStaff(id); }
+      if (expanded[id] && deferredRankingRowId && deferredRankingRowId !== "staff-row-" + id) {
+        deferredRankingRowId = "";
+        renderTable();
+        target = byId("staff-button-" + id);
+        if (target) { target.scrollIntoView({ block: "nearest", inline: "nearest" }); focusWithoutScroll(target); }
+        positionStaffPin();
+        return;
+      }
       target = byId("staff-button-" + id);
       row = byId("staff-row-" + id); detail = byId("detail-" + id); staff = staffIndex["@" + id];
       if (!target || !row || !staff) { renderTable(); return; }
@@ -1439,7 +1456,7 @@
     }
     function runSearch() {
       searchTimer = null;
-      var nextSearch = normalized(trim(byId("searchInput").value)), ranked, i, opened = false;
+      var nextSearch = normalized(trim(byId("searchInput").value)), ranked, firstMatch, i, opened = false;
       searchFocus(document.activeElement === byId("searchInput"));
       if (nextSearch === searchText) { return; }
       if (!commitSupport(true, runSearch)) { return; }
@@ -1448,8 +1465,13 @@
         ranked = rankedStaff();
         for (i = 0; i < ranked.length; i++) { if (matches(ranked[i].staff) && expanded[ranked[i].staff.id]) { opened = true; break; } }
         if (!opened) {
+          firstMatch = ranked.find(function (item) { return matches(item.staff); });
+          if (firstMatch && deferredRankingRowId && deferredRankingRowId !== "staff-row-" + firstMatch.staff.id) {
+            deferredRankingRowId = "";
+            firstMatch = rankedStaff().find(function (item) { return matches(item.staff); });
+          }
           expanded = {};
-          for (i = 0; i < ranked.length; i++) { if (matches(ranked[i].staff)) { expanded[ranked[i].staff.id] = true; break; } }
+          if (firstMatch) { expanded[firstMatch.staff.id] = true; }
         }
       }
       renderTable();
@@ -1470,7 +1492,7 @@
     function applySort(key) {
       if (["total", "unread", "flag", "unsorted", "reference", "supportRequest"].indexOf(key) === -1 || displayMode === "weekend" && (key === "unread" || key === "flag") || displayMode !== "weekend" && key === "reference") { return; }
       if (!commitSupport(true, function () { applySort(key); })) { return; }
-      sortKey = key;
+      sortKey = key; deferredRankingRowId = "";
       renderTable();
     }
     function filterByTeam(staffId) {
@@ -1480,7 +1502,7 @@
         if (staffData[i].id === staffId) {
           if (!commitSupport(true, function () { filterByTeam(staffId); })) { return; }
           if (searchTimer) { window.clearTimeout(searchTimer); searchTimer = null; }
-          selectedTeam = teamNameOf(staffData[i]);
+          selectedTeam = teamNameOf(staffData[i]); deferredRankingRowId = "";
           byId("searchInput").value = "";
           searchText = "";
           searchFocus(false);
@@ -1493,7 +1515,7 @@
     function clearTeamFilter() {
       if (!commitSupport(true, clearTeamFilter)) { return; }
       if (searchTimer) { window.clearTimeout(searchTimer); searchTimer = null; }
-      selectedTeam = "";
+      selectedTeam = ""; deferredRankingRowId = "";
       byId("searchInput").value = "";
       searchText = "";
       renderTable();
@@ -1534,14 +1556,6 @@
         closeRemoval(); applyShared(true); shareStatus(); toast(name + "さんのサポートを解除しました。");
       });
     }
-    function closeCommittedStaff(caId) {
-      var staff = caStaffIndex["@" + caId];
-      if (!staff || !staffCommitted(staff)) { return; }
-      expanded[staff.id] = false;
-      cancelDetailRender(); renderTable();
-      byId("rankingScroll").scrollTop = 0;
-      refreshStaffPin();
-    }
     function toggleStaffCommitReview(staffId) {
       var staff = staffIndex["@" + staffId], review;
       if (shareWriteBusy || importBusy || pendingRemoval || WorkloadBrowser.isChoosing() || !staff || !staff.cas.length || new Date().getHours() < 17 || !sharingReady() || staffCommitted(staff)) { return; }
@@ -1572,7 +1586,7 @@
         setShareBusy(false);
         if (error) { if (button) { button.disabled = false; } sharedSaveError(error, snapshot); return; }
         if (snapshot) { sharedSnapshot = snapshot; } sharedError = "";
-        applyShared(true); closeCommittedStaff(caId); shareStatus(); toast(ca.name + " CAをコミット完了にしました。");
+        applyShared(true); shareStatus(); toast(ca.name + " CAをコミット完了にしました。");
       });
     }
     function cancelCommit(caId) {
