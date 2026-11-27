@@ -712,10 +712,13 @@
       return result;
     }
     function matches(staff) {
-      var i;
+      var i, ca;
       if (!searchText || normalized(staff.name).indexOf(searchText) !== -1) { return true; }
       for (i = 0; i < staff.cas.length; i++) {
-        if (normalized(staff.cas[i].name).indexOf(searchText) !== -1) { return true; }
+        ca = staff.cas[i];
+        if (normalized(ca.name).indexOf(searchText) !== -1 || ca.supports.some(function (name) {
+          return normalized(name).indexOf(searchText) !== -1;
+        })) { return true; }
       }
       return false;
     }
@@ -848,8 +851,8 @@
       notice.style.display = sharedError ? "block" : "none";
     }
     function projectShared(data) {
-      var i, j, ca, key, list, mark, n, row, same, staff, wanted, staffWanted, reviewId;
-      var active = {}, commits = {}, checks = {}, requests = {}, changes = { cas: [], counts: false, staffs: {}, rebuild: {} };
+      var i, j, ca, key, list, mark, n, row, same, staff, wanted, staffWanted, reviewId, wasMatch;
+      var active = {}, commits = {}, checks = {}, requests = {}, changes = { cas: [], counts: false, staffs: {}, rebuild: {}, searchMatches: false };
       /* 履歴は一度だけ組織＋CA名で索引化する。CAごとの全履歴走査を避ける。 */
       if (sharedSnapshot) {
         for (i = 0; i < sharedSnapshot.supports.length; i++) {
@@ -870,6 +873,7 @@
       }
       for (i = 0; i < data.length; i++) {
         staff = data[i]; staffWanted = false;
+        wasMatch = searchText && matches(staff);
         row = sharedSnapshot && requests[WorkloadShare.keyOf(commitReviewOrganization, staff.id)];
         reviewId = row ? row.id : "";
         if ((staff.commitReviewId || "") !== reviewId) {
@@ -904,6 +908,7 @@
           staff.supportRequested = staffWanted; staff.supportRequestId = "";
           changes.staffs["@" + staff.id] = staff;
         }
+        if (searchText && wasMatch !== matches(staff)) { changes.searchMatches = true; }
       }
       return changes;
     }
@@ -948,7 +953,7 @@
           if (!Object.prototype.hasOwnProperty.call(changes.staffs, key)) { continue; }
           staff = changes.staffs[key]; refreshStaffSupport(staff); refreshStaffCommit(staff);
         }
-        if (sortKey === "supportRequest") { renderTable(); }
+        if (sortKey === "supportRequest" || changes.searchMatches) { renderTable(); }
         else if (force && !editing && byId("supportInput")) { renderTable(true); }
       }
       if (renderCheckOverview()) { resizeRanking(); }
@@ -1277,7 +1282,7 @@
         }
       }
       if (!visible) {
-        html.push(staffData.length ? '<tr><td colspan="10" class="empty-state"><strong>該当する担当者・CAが見つかりませんでした</strong>名前を変えて検索するか、検索欄をクリアしてください。</td></tr>' : '<tr><td colspan="10" class="empty-state"><strong>データはまだ集計されていません</strong>「ログ集計」ボタンで取り込んでください。</td></tr>');
+        html.push(staffData.length ? '<tr><td colspan="10" class="empty-state"><strong>該当する担当者・CA・サポート名が見つかりませんでした</strong>名前を変えて検索するか、検索欄をクリアしてください。</td></tr>' : '<tr><td colspan="10" class="empty-state"><strong>データはまだ集計されていません</strong>「ログ集計」ボタンで取り込んでください。</td></tr>');
         if (displayMode === "weekend") { html[html.length - 1] = html[html.length - 1].replace('colspan="10"', 'colspan="6"'); }
       }
       replaceRankingRows(html.join(""), reused);
@@ -1835,7 +1840,7 @@
     <div class="ranking-card">
       <div class="ranking-heading">
         <div class="heading-title"><h2>担当者別ランキング</h2><div class="heading-tools"><p class="ranking-description">担当者名を選択すると、当日の担当CAを表示されます</p>
-          <div class="search-box"><span class="search-icon" aria-hidden="true"></span><input type="text" id="searchInput" title="担当者・CA名で検索" aria-label="担当者・CA名で検索" onfocus="WorkloadUI.searchFocus(true)" onblur="WorkloadUI.searchFocus(false)" onkeyup="WorkloadUI.applySearch()" oninput="WorkloadUI.applySearch()" onchange="WorkloadUI.applySearch()" /><label for="searchInput" id="searchPlaceholder" class="search-placeholder">担当者・CA名で検索</label><button type="button" class="search-clear" id="searchClear" title="検索をクリア" aria-label="検索をクリア" onclick="WorkloadUI.clearSearch()">×</button></div>
+          <div class="search-box"><span class="search-icon" aria-hidden="true"></span><input type="text" id="searchInput" title="担当者・CA・サポート名で検索" aria-label="担当者・CA・サポート名で検索" onfocus="WorkloadUI.searchFocus(true)" onblur="WorkloadUI.searchFocus(false)" onkeyup="WorkloadUI.applySearch()" oninput="WorkloadUI.applySearch()" onchange="WorkloadUI.applySearch()" /><label for="searchInput" id="searchPlaceholder" class="search-placeholder">担当者・CA・サポート名で検索</label><button type="button" class="search-clear" id="searchClear" title="検索をクリア" aria-label="検索をクリア" onclick="WorkloadUI.clearSearch()">×</button></div>
         </div></div>
         <div class="heading-count">表示 <strong id="visibleStaff">0</strong> ／ <span id="staffTotal">0</span> 名 &nbsp;・&nbsp; 全 <span id="caTotal">0</span> CA</div>
       </div>
