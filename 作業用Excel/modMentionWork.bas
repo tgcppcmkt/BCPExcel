@@ -48,7 +48,7 @@ Private Const BUTTON_PADDING As Double = 5
 
 Private mStates As Object
 Private mPicked As Object
-Private mSourceRows As Variant
+Private mVisibleRequestIds As Variant
 Private mAccount As String
 Private mSelecting As Boolean
 
@@ -262,7 +262,8 @@ Failed:
 End Function
 
 Private Function RefreshView(ByRef failure As String) As Boolean
-    Dim data As Variant, states As Object, screenUpdates As Boolean
+    Dim data As Variant, visibleRequestIds As Variant
+    Dim states As Object, screenUpdates As Boolean
 
     screenUpdates = Application.ScreenUpdating
     On Error GoTo Failed
@@ -274,8 +275,8 @@ Private Function RefreshView(ByRef failure As String) As Boolean
     If Len(mAccount) = 0 Then Err.Raise WORK_ERROR, , "PCのアカウント名を取得できません。"
 
     Set states = ReadWorkSnapshot(GetOutbox(), data)
-    RenderWorkList data, states
-    mSourceRows = data
+    RenderWorkList data, states, visibleRequestIds
+    mVisibleRequestIds = visibleRequestIds
     Set mStates = states
     EndMentionSelection
     RefreshView = True
@@ -603,29 +604,70 @@ Private Function GetOutbox() As String
     End If
 End Function
 
-Private Sub RenderWorkList(ByRef data As Variant, ByVal states As Object)
+Private Function OrderWorkRows(ByRef data As Variant, ByVal states As Object) As Long()
+    Dim groupedRows(1 To 4) As Collection, orderedRows() As Long
+    Dim item As Variant, sourceRow As Variant, requestId As String
+    Dim group As Long, row As Long, position As Long
+
+    For group = LBound(groupedRows) To UBound(groupedRows)
+        Set groupedRows(group) = New Collection
+    Next group
+    For row = 2 To UBound(data, 1)
+        requestId = TextValue(data(row, SOURCE_ID))
+        group = 4
+        If Len(requestId) > 0 Then
+            item = states(requestId)
+            Select Case item(0)
+                Case IN_PROGRESS: group = 1
+                Case UNASSIGNED: group = 2
+                Case COMPLETED: group = 3
+            End Select
+        End If
+        groupedRows(group).Add row
+    Next row
+
+    ' グループ内は集計シートの行順を保つ。
+    ReDim orderedRows(1 To UBound(data, 1) - 1)
+    For group = LBound(groupedRows) To UBound(groupedRows)
+        For Each sourceRow In groupedRows(group)
+            position = position + 1
+            orderedRows(position) = CLng(sourceRow)
+        Next sourceRow
+    Next group
+    OrderWorkRows = orderedRows
+End Function
+
+Private Sub RenderWorkList(ByRef data As Variant, ByVal states As Object, ByRef visibleRequestIds As Variant)
     Dim display() As Variant, item As Variant
-    Dim row As Long, col As Long, rowCount As Long, previousRow As Long
+    Dim orderedRows() As Long
+    Dim row As Long, displayRow As Long, col As Long, rowCount As Long, previousRow As Long
     Dim requestId As String, cellText As String
 
     rowCount = UBound(data, 1) - 1
     If rowCount > 0 Then
+        orderedRows = OrderWorkRows(data, states)
+        ReDim visibleRequestIds(1 To rowCount) As String
         ReDim display(1 To rowCount, 1 To LAST_DATA_COL - DISPLAY_STATE + 1)
-        For row = 2 To rowCount + 1
+        For displayRow = 1 To rowCount
+            row = orderedRows(displayRow)
             requestId = TextValue(data(row, SOURCE_ID))
+            visibleRequestIds(displayRow) = requestId
             If Len(requestId) > 0 Then
                 item = states(requestId)
-                display(row - 1, 1) = item(0)
+                display(displayRow, 1) = item(0)
             End If
             For col = 1 To SOURCE_ID
                 cellText = TextValue(data(row, col))
-                If Len(cellText) > 0 Then display(row - 1, col + 1) = "'" & cellText
+                If Len(cellText) > 0 Then display(displayRow, col + 1) = "'" & cellText
             Next col
-        Next row
+        Next displayRow
     End If
 
     With WorkList()
         previousRow = .Cells(.Rows.Count, LAST_DATA_COL).End(xlUp).Row
+        If IsArray(mVisibleRequestIds) Then
+            If previousRow < UBound(mVisibleRequestIds) + 1 Then previousRow = UBound(mVisibleRequestIds) + 1
+        End If
         If previousRow > 1 Then
             .Range(.Cells(2, PICK_COL), .Cells(previousRow, LAST_DATA_COL)).ClearContents
         End If
@@ -644,15 +686,14 @@ End Sub
 
 Private Function PaintSelection() As Long
     Dim row As Long, requestId As String, values() As Variant
-    If Not IsArray(mSourceRows) Then Exit Function
-    If UBound(mSourceRows, 1) <= 1 Then Exit Function
-    ReDim values(1 To UBound(mSourceRows, 1) - 1, 1 To 1)
+    If Not IsArray(mVisibleRequestIds) Then Exit Function
+    ReDim values(1 To UBound(mVisibleRequestIds), 1 To 1)
     If mSelecting Then
-        For row = 2 To UBound(mSourceRows, 1)
-            requestId = TextValue(mSourceRows(row, SOURCE_ID))
+        For row = 1 To UBound(mVisibleRequestIds)
+            requestId = mVisibleRequestIds(row)
             If Len(requestId) > 0 Then
                 If Len(AvailableAction(mStates(requestId))) > 0 Then
-                    values(row - 1, 1) = PICKABLE
+                    values(row, 1) = PICKABLE
                     PaintSelection = PaintSelection + 1
                 End If
             End If
