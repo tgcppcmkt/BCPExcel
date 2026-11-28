@@ -636,6 +636,10 @@
     function staffCommitCheckSatisfied(staff) {
       return displayMode === "weekend" || uncheckedCountFor(staff) === 0;
     }
+    function caCommitDisabled(ca) {
+      var staff = caStaffIndex["@" + ca.id];
+      return !sharingReady() || (!ca.committedAt && (!caCheckSatisfied(ca) || !staff || !staff.commitReviewActive));
+    }
     function staffCommitButtonHTML(staff) {
       if (!staffCommitCheckSatisfied(staff)) { return ""; }
       var done = staffCommitted(staff), reviewing = !done && !!staff.commitReviewId;
@@ -851,8 +855,8 @@
       notice.style.display = sharedError ? "block" : "none";
     }
     function projectShared(data) {
-      var i, j, ca, key, list, mark, n, row, same, staff, wanted, staffWanted, reviewId, wasMatch;
-      var active = {}, commits = {}, checks = {}, requests = {}, changes = { cas: [], counts: false, staffs: {}, rebuild: {}, searchMatches: false };
+      var i, j, ca, key, list, mark, n, row, same, staff, wanted, staffWanted, reviewId, wasReviewing, wasMatch;
+      var active = {}, commits = {}, checks = {}, requests = {}, changes = { cas: [], counts: false, staffs: {}, rebuild: {}, reviewStaffs: [], searchMatches: false };
       /* 履歴は一度だけ組織＋CA名で索引化する。CAごとの全履歴走査を避ける。 */
       if (sharedSnapshot) {
         for (i = 0; i < sharedSnapshot.supports.length; i++) {
@@ -874,6 +878,7 @@
       for (i = 0; i < data.length; i++) {
         staff = data[i]; staffWanted = false;
         wasMatch = searchText && matches(staff);
+        wasReviewing = !!staff.commitReviewActive;
         row = sharedSnapshot && requests[WorkloadShare.keyOf(commitReviewOrganization, staff.id)];
         reviewId = row ? row.id : "";
         if ((staff.commitReviewId || "") !== reviewId) {
@@ -909,6 +914,8 @@
           changes.staffs["@" + staff.id] = staff;
         }
         if (searchText && wasMatch !== matches(staff)) { changes.searchMatches = true; }
+        staff.commitReviewActive = !!reviewId && staffCommitCheckSatisfied(staff);
+        if (wasReviewing !== staff.commitReviewActive) { changes.reviewStaffs.push(staff); }
       }
       return changes;
     }
@@ -956,6 +963,12 @@
         if (sortKey === "supportRequest" || changes.searchMatches) { renderTable(); }
         else if (force && !editing && byId("supportInput")) { renderTable(true); }
       }
+      changes.reviewStaffs.forEach(function (staff) {
+        staff.cas.forEach(function (ca) {
+          var button = byId("commit-" + ca.id);
+          if (button) { button.disabled = caCommitDisabled(ca); }
+        });
+      });
       if (renderCheckOverview()) { resizeRanking(); }
       page.scrollTop = pageTop; page.scrollLeft = pageLeft;
       /* CAチェック未の一覧が縮んでも、表示中の行の位置を保つ。 */
@@ -1123,7 +1136,7 @@
       html.push('</td>');
       html.push('<td class="ca-check-cell">');
       if (displayMode === "weekday") { html.push('<button type="button" id="ca-check-' + ca.id + '" class="ca-check-button' + (ca.checked ? ' checked' : '') + '"' + (ca.checked || ca.committedAt || !sharingReady() ? ' disabled="disabled"' : '') + ' aria-pressed="' + (ca.checked ? 'true' : 'false') + '" title="' + (ca.checked ? 'CAチェック済' : 'CAを確認後、サポート・コミットを有効にします') + '" onclick="WorkloadUI.requestCACheck(\'' + ca.id + '\')">' + (ca.checked ? 'CAチェック済' : 'CAチェック未') + '</button>'); }
-      html.push('<span class="ca-commit-action"><button type="button" class="ca-commit-button" id="commit-' + ca.id + '"' + (!sharingReady() || !ca.committedAt && !caCheckSatisfied(ca) ? ' disabled="disabled"' : '') + ' title="' + (ca.committedAt ? 'コミットを取り消します（コミット時刻：' + esc(ca.committedAt) + '）' : 'このCAをコミット完了にします') + '" aria-label="' + esc(ca.name) + ' CAの' + (ca.committedAt ? 'コミット取消' : 'コミット') + '" onclick="WorkloadUI.requestCommit(\'' + ca.id + '\')">' + (ca.committedAt ? 'コミット取消' : 'コミット') + '</button></span></td>');
+      html.push('<span class="ca-commit-action"><button type="button" class="ca-commit-button" id="commit-' + ca.id + '"' + (caCommitDisabled(ca) ? ' disabled="disabled"' : '') + ' title="' + (ca.committedAt ? 'コミットを取り消します（コミット時刻：' + esc(ca.committedAt) + '）' : 'このCAをコミット完了にします') + '" aria-label="' + esc(ca.name) + ' CAの' + (ca.committedAt ? 'コミット取消' : 'コミット') + '" onclick="WorkloadUI.requestCommit(\'' + ca.id + '\')">' + (ca.committedAt ? 'コミット取消' : 'コミット') + '</button></span></td>');
       html.push('<td class="ca-unsorted">' + format(unsorted) + '</td>');
       if (displayMode === "weekday") { html.push('<td class="ca-unread">' + format(unread) + '</td><td class="ca-flag">' + format(flag) + '</td>'); }
       html.push('<td class="ca-total">' + format(unread + flag) + '</td>');
@@ -1584,6 +1597,7 @@
       if (!ca.committedAt && !caCheckSatisfied(ca)) { return; }
       if (!commitSupport(true, function () { requestCommit(caId); })) { return; }
       if (ca.committedAt) { cancelCommit(caId); return; }
+      if (caCommitDisabled(ca)) { return; }
       if (!window.confirm(ca.name + " CAはコミット完了でよいでしょうか？\n組織：" + ca.organization)) { return; }
       button = byId("commit-" + caId); if (button) { button.disabled = true; }
       setShareBusy(true);
