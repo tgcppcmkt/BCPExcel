@@ -244,22 +244,29 @@ var WorkloadShare = (function () {
         } else { throw new Error("共有操作の種類が不正です。"); }
         return record;
     }
-    var root = null, listener = null, running = false, timer = null, busy = false, lastState = null, lastSignature = "", lastError = "", displayMode = "weekday";
+    var root = null, listener = null, running = false, timer = null, activeDrain = null, connecting = false, lastState = null, lastSignature = "", lastError = "", displayMode = "weekday";
     var contexts = new Map(), callbacks = new Map(), rootHandles = new Map();
     var pendingPrefix = "workload-html.pending.v1.", dataDirectory = "WORKLOAD_HTML_DATA";
     var kinds = ["check", "supportRequest", "staffSupportRequest", "commit", "cancelCommit", "add", "finish"];
     function clone(value) { return JSON.parse(JSON.stringify(value)); }
     function failure(message, terminal) { var error = new Error(message); error.terminal = !!terminal; return error; }
+    function retryingError(error) {
+        if (error.name !== "NetworkError" && error.name !== "NotReadableError" && error.name !== "AbortError") { return error; }
+        return retryFailure(error.message || error.name);
+    }
+    function retryFailure(message) { var error = failure(message); error.retrying = true; return error; }
     function uid() {
         var bytes = new Uint8Array(16); window.crypto.getRandomValues(bytes);
         return "h-" + Array.from(bytes, function (b) { return ("0" + b.toString(16)).slice(-2); }).join("");
     }
     function pendingJobs() {
-        var result = [], storage = window.localStorage, i, key, job;
+        var result = [], storage = window.localStorage, i, key, raw, job;
         for (i = 0; i < storage.length; i++) {
             key = storage.key(i);
             if (key && key.indexOf(pendingPrefix) === 0) {
-                try { job = JSON.parse(storage.getItem(key)); }
+                raw = storage.getItem(key);
+                if (raw === null) { continue; }
+                try { job = JSON.parse(raw); }
                 catch (error) { throw failure("端末内の保存待ちデータが壊れています。控えを保全してから管理担当へ確認してください。"); }
                 if (!job || key !== pendingPrefix + job.id || !/^h-[a-f0-9]{32}$/.test(job.id) ||
                     !/^\d{8}$/.test(job.date) || typeof job.rootKey !== "string" || !job.action || !job.stamp ||
@@ -294,7 +301,10 @@ var WorkloadShare = (function () {
         return !!handle && await root.handle.isSameEntry(handle);
     }
     async function permission() {
-        if (!root || await root.handle.queryPermission({ mode: "readwrite" }) !== "granted") {
+        var access;
+        try { access = root && await root.handle.queryPermission({ mode: "readwrite" }); }
+        catch (error) { throw retryingError(error); }
+        if (access !== "granted") {
             throw failure("共有フォルダへの読み書きが許可されていません。「共有フォルダを接続」または「保存を再試行」で許可してください。");
         }
     }
@@ -376,8 +386,8 @@ var WorkloadShare = (function () {
                     continue;
                 }
                 if (file.size > 2 * 1024 * 1024) { throw failure("共有操作のファイルが大きすぎます：" + name); }
-                var event;
-                try { event = JSON.parse(await file.text()); }
+                var content = await file.text(), event;
+                try { event = JSON.parse(content); }
                 catch (error) { throw failure("共有履歴を読み込めません。元ファイルは変更しません：" + name); }
                 validateEvent(event, name, day, mode); ctx.events.set(name, { event: event, mark: mark });
             }
@@ -417,10 +427,15 @@ var WorkloadShare = (function () {
             var count = 0;
             try { count = pendingJobs().length; } catch (badPending) { error = badPending; }
             WorkloadBrowser.sharedStatus({ connected: !!root, folder: root ? root.handle.name : "",
-                pending: count, rejected: ctx ? ctx.rejected : [], error: error ? error.message : "" });
+                pending: count, rejected: ctx ? ctx.rejected : [],
+                error: error && !error.retrying ? error.message : "", retrying: error && error.retrying ? error.message : "" });
         }
     }
     function report(error) { lastError = error.message || String(error); if (listener) { listener(error, lastState); } status(null, error); }
+    async function refreshDay(day, mode) {
+        try { return await scanDay(day, mode); }
+        catch (error) { throw retryingError(error); }
+    }
     async function writeEvent(job, event) {
         var storage = await root.handle.getDirectoryHandle(dataDirectory, { create: true });
         if (job.mode === "weekend") { storage = await storage.getDirectoryHandle("weekend", { create: true }); }
@@ -438,20 +453,43 @@ var WorkloadShare = (function () {
         try { await stream.write(text); await stream.close(); }
         catch (error) { try { await stream.abort(); } catch (ignored) {} throw error; }
         var written = await handle.getFile();
-        if (await written.text() !== text) { throw failure("共有履歴の保存結果を確認できません。端末内の控えから再試行します。"); }
+        if (await written.text() !== text) { throw retryFailure("共有履歴の保存結果を確認できません。端末内の控えから再試行します。"); }
     }
-    async function drain() {
-        if (!running || !root || busy) { return; }
-        busy = true;
+    async function completeJobsSavedInAnotherTab(entries, today) {
+        for (var entry of entries) {
+            var job = entry.job;
+            if (!await belongs(job)) { continue; }
+            var ctx = job.date === today.day && job.mode === today.mode ? today : await refreshDay(job.date, job.mode);
+            var saved = ctx.events.get("op-" + job.id + ".json");
+            var matches = saved && saved.event.stamp === job.stamp && JSON.stringify(saved.event.action) === JSON.stringify(job.action);
+            var error = null;
+            if (!matches || !own(ctx.state.ids, "@" + job.id)) {
+                var rejection = matches && ctx.rejected.find(function (row) { return row.id === job.id; });
+                error = failure(rejection ? rejection.message : "別のタブで処理された操作の結果を確認できませんでした。最新の状態を確認してください。", true);
+            }
+            callbacks.delete(job.id);
+            if (entry.callback) { entry.callback(error, job.mode === displayMode ? today.snapshot : ctx.snapshot); }
+            else if (!error && ctx === today && typeof WorkloadUI !== "undefined") { WorkloadUI.browserWriteRecovered(job.action, today.snapshot); }
+        }
+    }
+    function drain() {
+        if (!running || !root || activeDrain || connecting) { return; }
+        activeDrain = drainJobs().finally(function () { activeDrain = null; });
+        return activeDrain;
+    }
+    async function drainJobs() {
         try {
             await permission();
             var jobs = pendingJobs(), failed = null;
             for (var i = 0; i < jobs.length; i++) {
                 var job = jobs[i]; if (!await belongs(job)) { continue; }
-                var callback = callbacks.get(job.id), error = null, ctx = null;
+                var entry = callbacks.get(job.id), callback = entry && entry.callback, error = null, ctx = null;
                 try {
-                    ctx = await scanDay(job.date, job.mode);
+                    ctx = await refreshDay(job.date, job.mode);
                     if (!own(ctx.state.ids, "@" + job.id)) {
+                        var pending = window.localStorage.getItem(pendingPrefix + job.id);
+                        if (pending === null) { continue; }
+                        job.event = JSON.parse(pending).event;
                         if (!job.event) {
                             try { makeRecord(ctx.state, job.action, job.id, new Date(job.stamp)); }
                             catch (badAction) { badAction.terminal = true; throw badAction; }
@@ -461,48 +499,64 @@ var WorkloadShare = (function () {
                         }
                         validateEvent(job.event, "op-" + job.id + ".json", job.date, job.mode);
                         await writeEvent(job, job.event);
-                        ctx = await scanDay(job.date, job.mode);
+                        ctx = await refreshDay(job.date, job.mode);
                         var rejection = ctx.rejected.find(function (x) { return x.id === job.id; });
                         if (rejection) { throw failure("同時操作により反映できませんでした。最新の状態を確認してください。\n" + rejection.message, true); }
-                        if (!own(ctx.state.ids, "@" + job.id)) { throw failure("共有側で操作の反映を確認できません。控えを残して再試行します。"); }
+                        if (!own(ctx.state.ids, "@" + job.id)) { throw retryFailure("共有側で操作の反映を確認できません。控えを残して再試行します。"); }
                     }
                     removeJob(job);
                 } catch (saveError) {
-                    error = saveError;
+                    error = retryingError(saveError);
                     if (error.terminal) { removeJob(job); }
                 }
                 /* 他方の保存待ちも元のモードへ再試行し、表示・入力欄には反映しない。 */
-                callbacks.delete(job.id);
-                if (job.mode !== displayMode) { if (callback) { callback(error, ctx ? ctx.snapshot : null); } continue; }
+                if (job.mode !== displayMode) {
+                    callbacks.delete(job.id);
+                    if (callback) { callback(error, ctx ? ctx.snapshot : null); }
+                    continue;
+                }
                 var today;
-                try { today = await scanDay(dayKey(new Date())); }
-                catch (readError) { if (!error) { error = readError; } today = { snapshot: lastState, signature: lastSignature, rejected: [] }; }
+                try { today = await refreshDay(dayKey(new Date())); }
+                catch (readError) { if (!error || error.retrying) { error = readError; } today = { snapshot: lastState, signature: lastSignature, rejected: [] }; }
+                if (entry && error && error.retrying) { entry.callback = null; }
+                else { callbacks.delete(job.id); }
                 publish(today, error);
                 if (callback) { callback(error, lastState); }
                 else if (!error && job.date === dayKey(new Date()) && typeof WorkloadUI !== "undefined") { WorkloadUI.browserWriteRecovered(job.action, lastState); }
                 if (error && !error.terminal) { failed = error; break; }
             }
-            publish(await scanDay(dayKey(new Date())), failed);
+            /* Observe peer removals before reading history, so that the scan can see their writes. */
+            var missingJobs = Array.from(callbacks.values()).filter(function (entry) {
+                return window.localStorage.getItem(pendingPrefix + entry.job.id) === null;
+            });
+            var latest = await refreshDay(dayKey(new Date()));
+            await completeJobsSavedInAnotherTab(missingJobs, latest);
+            publish(latest, failed);
         } catch (error) {
-            for (var entry of callbacks) { entry[1](error, lastState); }
-            callbacks.clear(); report(error);
-        } finally { busy = false; }
+            for (var entry of callbacks.values()) {
+                var notify = entry.callback;
+                if (error.retrying) { entry.callback = null; }
+                else { callbacks.delete(entry.job.id); }
+                if (notify) { notify(error, lastState); }
+            }
+            report(error);
+        }
     }
     async function refresh() {
-        if (!running || !root || busy) { return; }
         await drain();
     }
     function request(action, callback) {
         if (!root || !running) { callback(failure("先に全員が使う「共有フォルダを接続」してください。"), lastState); return; }
+        if (connecting) { callback(failure("共有フォルダへの接続が完了してから操作してください。"), lastState); return; }
         // Retrying a confirmed operation reuses its durable identity.
         var pending;
         try { pending = pendingJobs().find(function (x) { return x.rootKey === root.key && x.mode === displayMode && x.date === dayKey(new Date()) && JSON.stringify(x.action) === JSON.stringify(action); }); }
         catch (error) { callback(error, lastState); return; }
-        if (pending) { callbacks.set(pending.id, callback); drain(); return; }
+        if (pending) { callbacks.set(pending.id, { job: pending, callback: callback }); drain(); return; }
         var job = { id: uid(), date: dayKey(new Date()), mode: displayMode, stamp: new Date().toISOString(), action: clone(action),
             rootKey: root.key, rootName: root.handle.name };
         try { keepJob(job); } catch (error) { callback(error, lastState); return; }
-        callbacks.set(job.id, callback); status(null); drain();
+        callbacks.set(job.id, { job: job, callback: callback }); status(null); drain();
     }
     function start(callback, mode) {
         stop(); displayMode = mode === "weekend" ? "weekend" : "weekday"; listener = callback; running = true; lastSignature = "";
@@ -514,7 +568,7 @@ var WorkloadShare = (function () {
     function stop() { running = false; if (timer) { window.clearInterval(timer); timer = null; } }
     function setMode(mode) {
         if (mode !== "weekday" && mode !== "weekend") { throw failure("集計モードが不正です。"); }
-        if (busy) { throw failure("保存・読込が完了してから切り替えてください。"); }
+        if (activeDrain || connecting) { throw failure("保存・読込が完了してから切り替えてください。"); }
         displayMode = mode; lastSignature = ""; lastError = "";
         var ctx = contexts.get(mode + ":" + dayKey(new Date()));
         lastState = ctx ? ctx.snapshot : modeState(dayKey(new Date()), mode);
@@ -522,10 +576,20 @@ var WorkloadShare = (function () {
         return clone(lastState);
     }
     async function connect(handle, key) {
-        if (busy) { throw failure("保存・読込が完了してから接続してください。"); }
+        if (connecting) { throw failure("共有フォルダに接続中です。"); }
+        connecting = true;
+        try {
+            if (activeDrain) { await activeDrain; }
+            await connectFolder(handle, key);
+        } finally { connecting = false; }
+        await drain();
+    }
+    async function connectFolder(handle, key) {
         var previous = root;
-        if (previous && !await previous.handle.isSameEntry(handle)) {
+        var changingFolder = previous && !await previous.handle.isSameEntry(handle);
+        if (changingFolder) {
             for (var job of pendingJobs()) { if (await belongs(job)) { throw failure("現在の共有先への保存待ちがあります。保存完了後に共有先を変更してください。"); } }
+            for (var entry of callbacks.values()) { if (entry.callback && await belongs(entry.job)) { throw failure("現在の共有先への保存待ちがあります。保存完了後に共有先を変更してください。"); } }
         }
         if (await handle.queryPermission({ mode: "readwrite" }) !== "granted") { throw failure("共有フォルダへの読み書きの許可が必要です。"); }
         // Store the actual handle before accepting writes; a folder name alone is not an identity.
@@ -536,12 +600,12 @@ var WorkloadShare = (function () {
             await handle.getDirectoryHandle(dataDirectory, { create: true });
             var ctx = await scanDay(dayKey(new Date())); publish(ctx, null);
         } catch (error) { root = previous; contexts = new Map(); lastSignature = ""; report(error); throw error; }
+        if (changingFolder) { callbacks.clear(); }
         if (typeof WorkloadUI !== "undefined") { WorkloadUI.refreshBrowserShare(); }
-        await drain();
     }
     return {
         start: start, refresh: refresh, stop: stop, connect: connect, setMode: setMode,
-        isConnected: function () { return !!root; }, isBusy: function () { return busy; },
+        isConnected: function () { return !!root; }, isBusy: function () { return !!(activeDrain || connecting); },
         hasPendingWrites: function () { try { return callbacks.size > 0 || pendingJobs().length > 0; } catch (error) { return true; } },
         pendingExport: function () { return pendingJobs(); },
         snapshot: function () { return lastState ? clone(lastState) : modeState(dayKey(new Date()), displayMode); },

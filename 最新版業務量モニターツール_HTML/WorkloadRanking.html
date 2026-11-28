@@ -495,7 +495,7 @@
     var commitTimer = null;
     var savingCommitReviewId = "";
     var commitReviewOrganization = "@WorkloadStaffCommitNotice";
-    var sharedSnapshot = null, sharedVersion = "", sharedError = "", shareWriteBusy = false;
+    var sharedSnapshot = null, sharedVersion = "", sharedError = "", sharedRetrying = false, shareWriteBusy = false;
     var searchText = "";
     var sortKey = "total";
     var selectedTeam = "";
@@ -847,11 +847,12 @@
     }
     function shareStatus() {
       var status = byId("dataStatus");
+      var heading = sharedRetrying ? "共有状態の更新を再試行中です" : "共有状態を更新できません";
       status.className = "prototype-note" + (!importBusy && sharedError ? " share-error" : "");
-      setText(status, importBusy && importPhase ? importPhase : sharedError ? "共有状態を更新できません：" + sharedError :
+      setText(status, importBusy && importPhase ? importPhase : sharedError ? heading + "：" + sharedError :
         (shareWriteBusy ? "共有ファイルへ保存中…" : (staffData.length ? "" : "未集計 ／ サポート・コミットを共有")));
       var notice = byId("shareErrorNotice");
-      setText(notice, sharedError ? "共有状態を更新できません。表示が最新でない可能性があります。\n" + sharedError : "");
+      setText(notice, sharedError ? heading + "。表示が最新でない可能性があります。\n" + sharedError : "");
       notice.style.display = sharedError ? "block" : "none";
     }
     function projectShared(data) {
@@ -980,6 +981,7 @@
       if (snapshot && snapshot.mode && snapshot.mode !== displayMode) { return; }
       if (snapshot) { sharedSnapshot = snapshot; }
       sharedError = error ? (error.message || error.description || String(error)) : "";
+      sharedRetrying = !!(error && error.retrying);
       shareStatus();
       applyShared(false);
     }
@@ -994,13 +996,14 @@
       var ca, mark;
       if (snapshot) { sharedSnapshot = snapshot; }
       sharedError = error.message || error.description || String(error);
+      sharedRetrying = !!error.retrying;
       if (editing && snapshot) {
         ca = findCA(editing.caId);
         mark = ca && WorkloadShare.committedForCA(snapshot, WorkloadShare.keyOf(ca.organization, ca.name));
         if (mark) { editing = null; }
       }
       shareStatus(); applyShared(true);
-      window.alert("共有ファイルへ保存できませんでした。\n\n" + sharedError);
+      if (!sharedRetrying) { window.alert("共有ファイルへ保存できませんでした。\n\n" + sharedError); }
     }
     function applyImportedData(result) {
       var i, teamExists, at;

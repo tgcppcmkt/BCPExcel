@@ -233,11 +233,12 @@ var WorkloadBrowser = (function () {
         for (var kind of ["shared", "unread", "flag", "weekend", "assignment"]) {
             var configured = kind === "shared" ? !!remembered : kind === "assignment" ? !!selected.assignment : !!roots[kind];
             var error = settingErrors[kind] || folderErrors[kind] || (kind === "shared" && shared && shared.error) || "";
+            var retrying = kind === "shared" && shared && shared.retrying;
             var waiting = configured && kind === "shared" && (!shared || !shared.connected);
-            var label = error ? "設定を確認" : !configured ? "未設定" : waiting ? "再接続待ち" : kind === "shared" ? "接続済" : "設定済";
+            var label = error ? "設定を確認" : !configured ? "未設定" : waiting ? "再接続待ち" : retrying ? "再試行中" : kind === "shared" ? "接続済" : "設定済";
             var state = node(kind + "SettingState");
             settingText(kind + "SettingState", label);
-            if (state) { state.className = "setting-state" + (error || waiting ? " needs-attention" : configured ? " is-set" : ""); state.title = error || label; }
+            if (state) { state.className = "setting-state" + (error || waiting || retrying ? " needs-attention" : configured ? " is-set" : ""); state.title = error || retrying || label; }
             if (kind === "unread" || kind === "flag" || kind === "weekend") {
                 var start = starts[kind], path = roots[kind] ? roots[kind].name : "ログ";
                 var hint = kind === "unread" ? " / yyyymm / mmdd" : kind === "flag" ? " / yyyymm" : " / yymmdd";
@@ -329,7 +330,7 @@ var WorkloadBrowser = (function () {
         if (!WorkloadShare.isConnected()) { await WorkloadShare.connect(remembered.handle, remembered.key); }
         else { await WorkloadShare.refresh(); }
         /* refreshの読込・保存失敗は状態通知で返るため、CSV選択前に確認する。 */
-        if (shared && shared.error) { throw new Error("共有情報を更新できません。\n" + shared.error); }
+        if (shared && (shared.error || shared.retrying)) { throw new Error("共有情報を更新できません。\n" + (shared.error || shared.retrying)); }
     }
     async function pickLogFile(kind, report) {
         var options = pickerOptions(kind);
@@ -505,10 +506,10 @@ var WorkloadBrowser = (function () {
     function sharedStatus(value) {
         shared = value;
         if (value.connected) { node("sharedRootName").textContent = value.folder; node("sharedRootName").title = value.folder; }
-        info((value.error || (value.connected ? "" : "「設定」の「共有」で接続してください。") +
+        info((value.error || (value.retrying ? "共有状態の更新を再試行中です。" : value.connected ? "" : "「設定」の「共有」で接続してください。") +
             (value.pending ? " ／ 保存待ち " + value.pending + "件（完了まで画面を開いてください）" : "") +
             (value.rejected.length ? " ／ 同時操作による未反映 " + value.rejected.length + "件" : "")).replace(/^ ／ /, ""), !!value.error || !!value.rejected.length,
-            value.connected && value.pending > 0 && !value.error && !value.rejected.length);
+            value.connected && value.pending > 0 && !value.error && !value.retrying && !value.rejected.length);
         var box = node("browserConflict");
         if (box) { box.textContent = value.rejected.map(function (x) { return x.stamp + "　" + x.organization + "／" + x.caName + "：" + x.message; }).join("\n"); }
         refreshSettings();
