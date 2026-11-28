@@ -27,7 +27,8 @@ Public Sub ImportMentionRequests()
     Dim statusNames As New Collection, completedNames As New Collection
     Dim requestRows As Object, statusIds As Object, oldStatuses As Object
     Dim requestRow As Variant, fileName As Variant
-    Dim fields As Variant, requestId As String, row As Long
+    Dim fields As Variant, currentStatus As Variant, requestId As String, row As Long
+    Dim isCompleted As Boolean
     Dim statusCell As Range
     Dim inbox As String, logPath As String, importDay As String
     Dim dataTarget As Range, historyTarget As Range
@@ -96,8 +97,8 @@ Public Sub ImportMentionRequests()
         Set statusIds = CreateObject("Scripting.Dictionary")
         Set oldStatuses = CreateObject("Scripting.Dictionary")
         For Each fileName In statusNames
-            fields = ReadStatusCsv(files.BuildPath(inbox, fileName), _
-                Left$(fileName, Len(COMPLETED_PREFIX)) = COMPLETED_PREFIX, logPath)
+            isCompleted = Left$(fileName, Len(COMPLETED_PREFIX)) = COMPLETED_PREFIX
+            fields = ReadStatusCsv(files.BuildPath(inbox, fileName), isCompleted, logPath)
             If IsArray(fields) Then
                 requestId = fields(1)
                 If archiveDays.Exists(fileName) Then
@@ -109,10 +110,15 @@ Public Sub ImportMentionRequests()
                         LogProblem logPath, "ì«çû " & fileName, "RequestIDÇàÍà”Ç…è∆çáÇ≈Ç´Ç‹ÇπÇÒÅB"
                     Else
                         Set statusCell = summary.Cells(row, CSV_COLUMNS + 1)
-                        If Not oldStatuses.Exists(row) Then
-                            oldStatuses.Add row, Array(statusCell.HasFormula, statusCell.Formula, statusCell.Value2)
+                        currentStatus = statusCell.Value2
+                        If IsError(currentStatus) Then currentStatus = Empty
+                        ' ï ñºÇÃëŒâûíÜCSVÇ™å„Ç©ÇÁìÕÇ¢ÇƒÇ‡ÅAäÆóπçœÇ›ÇÃàÀóäÇñﬂÇ≥Ç»Ç¢ÅB
+                        If isCompleted Or CStr(currentStatus) <> COMPLETED Then
+                            If Not oldStatuses.Exists(row) Then
+                                oldStatuses.Add row, Array(statusCell.HasFormula, statusCell.Formula, statusCell.Value2)
+                            End If
+                            statusCell.Value2 = StatusCellValue(fields(UBound(fields)))
                         End If
-                        statusCell.Value2 = StatusCellValue(fields(UBound(fields)))
                         newNames.Add fileName
                         archiveDays.Add fileName, importDay
                         statusIds.Add fileName, requestId
@@ -471,18 +477,22 @@ End Sub
 
 Private Sub DeleteInProgressCsvs(ByVal files As Object, ByVal oldFolder As String, ByVal requestId As String)
     Dim dayFolder As Object, candidate As Object, paths As New Collection, path As Variant
-    Dim progressFolder As String, prefix As String, wrappedPrefix As String
-    Dim csvText As String, archivedId As String, position As Long
+    Dim progressFolder As String, prefix As String, wrappedPrefix As String, suffix As String
+    Dim fileName As String, csvText As String, archivedId As String, position As Long
     prefix = IN_PROGRESS_PREFIX & requestId
     wrappedPrefix = IN_PROGRESS_PREFIX & "(" & requestId & ")"
+    suffix = "_" & requestId & ".csv"
     For Each dayFolder In files.GetFolder(oldFolder).SubFolders
         If dayFolder.Name Like "########" Then
             progressFolder = files.BuildPath(dayFolder.Path, IN_PROGRESS)
             If files.FolderExists(progressFolder) Then
                 For Each candidate In files.GetFolder(progressFolder).Files
-                    If StrComp(files.GetExtensionName(candidate.Name), "csv", vbTextCompare) = 0 Then
-                        If Left$(candidate.Name, Len(prefix)) = prefix Or _
-                           Left$(candidate.Name, Len(wrappedPrefix)) = wrappedPrefix Then
+                    fileName = CStr(candidate.Name)
+                    If StrComp(files.GetExtensionName(fileName), "csv", vbTextCompare) = 0 And _
+                       Left$(fileName, Len(IN_PROGRESS_PREFIX)) = IN_PROGRESS_PREFIX Then
+                        If Left$(fileName, Len(prefix)) = prefix Or _
+                           Left$(fileName, Len(wrappedPrefix)) = wrappedPrefix Or _
+                           StrComp(Right$(fileName, Len(suffix)), suffix, vbTextCompare) = 0 Then
                             csvText = ReadCsvText(CStr(candidate.Path))
                             position = 1
                             archivedId = ReadCsvField(csvText, position)

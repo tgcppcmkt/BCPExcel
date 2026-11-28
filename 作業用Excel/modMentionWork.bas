@@ -227,7 +227,7 @@ End Sub
 Private Function CommitRequest(ByVal outboxPath As String, ByVal requestId As String, _
                                ByVal action As String, ByVal fresh As Object, _
                                ByRef reason As String) As String
-    Dim receipt As Variant, current As Variant
+    Dim current As Variant
 
     On Error GoTo Failed
     CommitRequest = "SKIP"
@@ -236,14 +236,8 @@ Private Function CommitRequest(ByVal outboxPath As String, ByVal requestId As St
     current = fresh(requestId)
     If AvailableAction(current) <> action Then Exit Function
 
-    receipt = WorkReadOneStatus(outboxPath, requestId)
-    If IsArray(receipt) Then
-        If action = IN_PROGRESS Then Exit Function
-        If receipt(0) <> IN_PROGRESS Then Exit Function
-        If StrComp(receipt(1), mAccount, vbTextCompare) <> 0 Then Exit Function
-    End If
     If Not WorkPublishStatus(outboxPath, requestId, action, mAccount) Then
-        reason = "同じCSVを別の操作で作成中、または作成済みです。"
+        reason = "依頼の状態が変わったか、CSVが作成中または作成済みです。"
         Exit Function
     End If
     reason = vbNullString
@@ -440,8 +434,9 @@ Private Function ReadWorkSnapshot(ByVal outboxPath As String, ByRef data As Vari
     Dim result As Object, receipts As Object, receipt As Variant
     Dim row As Long, requestId As String, owner As String, status As String
 
-    data = ReadSummaryData()
+    ' 集計側は保存してからCSVを移動するため、CSVの確認を先に行う。
     Set receipts = WorkReadStatus(outboxPath)
+    data = ReadSummaryData()
     Set result = NewRequestMap()
     For row = 2 To UBound(data, 1)
         requestId = TextValue(data(row, SOURCE_ID))
@@ -661,67 +656,89 @@ End Function
 
 ' CSV ファイルの入出力
 Private Function WorkReadStatus(ByVal outbox As String) As Object
-    Dim files As Object, statuses As Object, candidate As Object
-    Dim fileName As String, state As String, requestId As String
-    Dim key As Variant, receipt As Variant, owner As String
+    Dim files As Object, statuses As Object
 
     Set files = OpenOutbox(outbox)
-    Set statuses = CreateObject("Scripting.Dictionary")
-    statuses.CompareMode = vbTextCompare
+    Set statuses = NewRequestMap()
+    CollectFolderStatuses files.GetFolder(outbox), statuses
+    Set WorkReadStatus = statuses
+End Function
 
-    For Each candidate In files.GetFolder(outbox).Files
+Private Sub CollectFolderStatuses(ByVal folder As Object, ByVal statuses As Object, _
+                                  Optional ByVal requestId As String = "")
+    Dim candidate As Object, fields As Variant
+    Dim fileName As String, state As String, suffix As String
+
+    suffix = "_" & requestId & STATUS_EXTENSION
+    For Each candidate In folder.Files
         fileName = CStr(candidate.Name)
-        If StrComp(files.GetExtensionName(fileName), "csv", vbTextCompare) = 0 Then
-            state = ""
-            If Left$(fileName, Len(IN_PROGRESS) + 1) = IN_PROGRESS & "_" Then state = IN_PROGRESS
-            If Left$(fileName, Len(COMPLETED) + 1) = COMPLETED & "_" Then state = COMPLETED
-            If Len(state) > 0 And Len(fileName) > Len(state) + 1 + Len(STATUS_EXTENSION) Then
-                requestId = Mid$(fileName, Len(state) + 2, Len(fileName) - Len(state) - 1 - Len(STATUS_EXTENSION))
-                If state = COMPLETED Or Not statuses.Exists(requestId) Then
-                    statuses(requestId) = Array(state, CStr(candidate.Path))
+        state = StatusFileState(fileName)
+        If Len(state) > 0 Then
+            If Len(requestId) = 0 Or InStr(1, fileName, requestId, vbTextCompare) > 0 Then
+                ' 新旧どちらの名前でも、IDと担当者はCSV本文のA1/B1から照合する。
+                fields = ReadStatusFields(CStr(candidate.Path), state)
+                If IsArray(fields) Then
+                    If Len(requestId) = 0 Or StrComp(fields(0), requestId, vbTextCompare) = 0 Then
+                        AddReceiptStatus statuses, CStr(fields(0)), state, CStr(fields(1))
+                    End If
+                ElseIf Len(requestId) > 0 Then
+                    ' 対象の名前と一致するが読めないCSVがある場合は、担当の確定を保留する。
+                    If StrComp(Right$(fileName, Len(suffix)), suffix, vbTextCompare) = 0 Then
+                        AddReceiptStatus statuses, requestId, state, vbNullString
+                    End If
                 End If
             End If
         End If
     Next candidate
+End Sub
 
-    ' 完了済みの対応中CSVは開かず、担当中のものだけ担当者を照合する。
-    For Each key In statuses.Keys
-        receipt = statuses(key)
-        owner = ""
-        If receipt(0) = IN_PROGRESS Then owner = ReadReceiptOwner(CStr(receipt(1)), CStr(key), IN_PROGRESS)
-        statuses(key) = Array(receipt(0), owner)
-    Next key
-    Set WorkReadStatus = statuses
+Private Sub AddReceiptStatus(ByVal statuses As Object, ByVal requestId As String, _
+                             ByVal state As String, ByVal account As String)
+    Dim previous As Variant
+
+    If statuses.Exists(requestId) Then
+        previous = statuses(requestId)
+        If previous(0) = COMPLETED Then Exit Sub
+        If state = IN_PROGRESS Then
+            If StrComp(CStr(previous(1)), account, vbTextCompare) <> 0 Then account = vbNullString
+        End If
+    End If
+    statuses(requestId) = Array(state, account)
+End Sub
+
+Private Function StatusFileState(ByVal fileName As String) As String
+    If StrComp(Right$(fileName, Len(STATUS_EXTENSION)), STATUS_EXTENSION, vbTextCompare) <> 0 Then Exit Function
+    If Left$(fileName, Len(IN_PROGRESS) + 1) = IN_PROGRESS & "_" Then StatusFileState = IN_PROGRESS
+    If Left$(fileName, Len(COMPLETED) + 1) = COMPLETED & "_" Then StatusFileState = COMPLETED
 End Function
 
-Private Function WorkReadOneStatus(ByVal outbox As String, ByVal requestId As String) As Variant
-    Dim files As Object
-    If Not ValidRequestId(requestId) Then Exit Function
-    Set files = OpenOutbox(outbox)
-    WorkReadOneStatus = ReadOneStatus(files, outbox, requestId)
+Private Function StatusFileName(ByVal state As String, ByVal account As String, ByVal requestId As String) As String
+    StatusFileName = state & "_" & account & "_" & requestId & STATUS_EXTENSION
 End Function
 
 Private Function WorkPublishStatus(ByVal outbox As String, ByVal requestId As String, _
                                   ByVal state As String, ByVal account As String) As Boolean
     Dim files As Object
-    Dim destination As String, lockPath As String, tempPath As String, csvText As String
+    Dim fileName As String, destination As String, lockPath As String, tempPath As String, csvText As String
     Dim lockHandle As LongPtr, windowsError As Long, failure As Long, detail As String
     Dim previous As Variant
 
     lockHandle = -1
     On Error GoTo Failed
     Set files = OpenOutbox(outbox)
-    If Not ValidRequestId(requestId) Then
+    If Not ValidFileNamePart(requestId) Then
         Err.Raise STORAGE_ERROR, , "ファイル名に使えないRequestIDです。"
     End If
-    If Len(account) = 0 Or HasControlCharacters(account) Then
-        Err.Raise STORAGE_ERROR, , "PCのアカウント名を取得できません。"
+    If Not ValidFileNamePart(account) Then
+        Err.Raise STORAGE_ERROR, , "ファイル名に使えないPCのアカウント名です。"
     End If
     If state <> IN_PROGRESS And state <> COMPLETED Then
         Err.Raise STORAGE_ERROR, , "書き出す対応状況を確認してください。"
     End If
 
-    destination = StatusPath(files, outbox, requestId, state)
+    fileName = StatusFileName(state, account, requestId)
+    If Len(fileName) > 255 Then Err.Raise STORAGE_ERROR, , "書き出すファイル名が長すぎます。"
+    destination = files.BuildPath(outbox, fileName)
     lockPath = files.BuildPath(outbox, "~_" & requestId & ".lock")
     If Len(destination) >= MAX_PATH Or Len(lockPath) >= MAX_PATH Or Len(outbox) > MAX_PATH - 14 Then
         Err.Raise STORAGE_ERROR, , "書き出し先のパスが長すぎます。"
@@ -741,7 +758,7 @@ Private Function WorkPublishStatus(ByVal outbox As String, ByVal requestId As St
         RaiseWindowsError "依頼を書き出すためのロックを取得できません。", windowsError
     End If
 
-    previous = ReadOneStatus(files, outbox, requestId)
+    previous = ReadRequestReceipt(files, outbox, requestId)
     If IsArray(previous) Then
         If state = IN_PROGRESS Or previous(0) = COMPLETED Then GoTo CleanUp
         If StrComp(CStr(previous(1)), account, vbTextCompare) <> 0 Then GoTo CleanUp
@@ -784,37 +801,37 @@ Private Function OpenOutbox(ByVal outbox As String) As Object
     Set OpenOutbox = files
 End Function
 
-Private Function StatusPath(ByVal files As Object, ByVal outbox As String, _
-                            ByVal requestId As String, ByVal state As String) As String
-    StatusPath = files.BuildPath(outbox, state & "_" & requestId & STATUS_EXTENSION)
-End Function
+Private Function ReadRequestReceipt(ByVal files As Object, ByVal outbox As String, _
+                                    ByVal requestId As String) As Variant
+    Dim statuses As Object, dayFolder As Object
+    Dim archivePath As String, progressPath As String
 
-Private Function ReadOneStatus(ByVal files As Object, ByVal outbox As String, _
-                               ByVal requestId As String) As Variant
-    Dim path As String, state As String
-    state = COMPLETED
-    path = StatusPath(files, outbox, requestId, state)
-    If Not files.FileExists(path) Then
-        state = IN_PROGRESS
-        path = StatusPath(files, outbox, requestId, state)
-        If Not files.FileExists(path) Then Exit Function
-        ' 対応中を確認した直後に完了が公開されていれば、完了を優先する。
-        If files.FileExists(StatusPath(files, outbox, requestId, COMPLETED)) Then
-            state = COMPLETED
-            path = StatusPath(files, outbox, requestId, state)
-        End If
+    Set statuses = NewRequestMap()
+    CollectFolderStatuses files.GetFolder(outbox), statuses, requestId
+
+    ' 集計がCSVを移動した直後も、同じ依頼の受付記録を確認できるようにする。
+    archivePath = files.BuildPath(outbox, "OLD")
+    If files.FolderExists(archivePath) Then
+        For Each dayFolder In files.GetFolder(archivePath).SubFolders
+            If dayFolder.Name Like "########" Then
+                CollectFolderStatuses dayFolder, statuses, requestId
+                progressPath = files.BuildPath(dayFolder.Path, IN_PROGRESS)
+                If files.FolderExists(progressPath) Then
+                    CollectFolderStatuses files.GetFolder(progressPath), statuses, requestId
+                End If
+            End If
+        Next dayFolder
     End If
-    ReadOneStatus = Array(state, ReadReceiptOwner(path, requestId, state))
+    If statuses.Exists(requestId) Then ReadRequestReceipt = statuses(requestId)
 End Function
 
-Private Function ValidRequestId(ByVal requestId As String) As Boolean
+Private Function ValidFileNamePart(ByVal value As String) As Boolean
     Dim position As Long
-    If Len(requestId) = 0 Or Len(requestId) > 255 - Len("対応中_.csv") Then Exit Function
-    If HasControlCharacters(requestId) Then Exit Function
-    For position = 1 To Len(requestId)
-        If InStr(1, "<>:""/\|?*", Mid$(requestId, position, 1), vbBinaryCompare) > 0 Then Exit Function
+    If Len(value) = 0 Or HasControlCharacters(value) Then Exit Function
+    For position = 1 To Len(value)
+        If InStr(1, "<>:""/\|?*", Mid$(value, position, 1), vbBinaryCompare) > 0 Then Exit Function
     Next position
-    ValidRequestId = True
+    ValidFileNamePart = True
 End Function
 
 Private Function HasControlCharacters(ByVal value As String) As Boolean
@@ -869,8 +886,7 @@ Private Sub SaveCsv(ByVal path As String, ByVal text As String)
     stream.Close
 End Sub
 
-Private Function ReadReceiptOwner(ByVal path As String, ByVal requestId As String, _
-                                  ByVal state As String) As String
+Private Function ReadStatusFields(ByVal path As String, ByVal state As String) As Variant
     Dim stream As Object, csvText As String, fields As Variant
     Dim columnCount As Long
     On Error GoTo InvalidReceipt
@@ -883,14 +899,15 @@ Private Function ReadReceiptOwner(ByVal path As String, ByVal requestId As Strin
     If state = COMPLETED Then columnCount = 3
     fields = ReadRecord(csvText, columnCount)
     If Not IsArray(fields) Then Exit Function
-    If StrComp(fields(0), requestId, vbBinaryCompare) <> 0 Then Exit Function
+    If Len(fields(0)) = 0 Or HasControlCharacters(fields(0)) Then Exit Function
     If Len(fields(1)) = 0 Or HasControlCharacters(fields(1)) Then Exit Function
     If state = COMPLETED Then
         If fields(2) <> COMPLETED Then Exit Function
     End If
-    ReadReceiptOwner = fields(1)
+    ReadStatusFields = fields
+    Exit Function
 InvalidReceipt:
-    ' 読めないCSVも確保済みとして扱う。担当者の判定は保留する。
+    If Err.Number = 18 Then Err.Raise 18
 End Function
 
 Private Function ReadRecord(ByVal csvText As String, ByVal columnCount As Long) As Variant
