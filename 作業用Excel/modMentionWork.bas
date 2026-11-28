@@ -52,12 +52,10 @@ Public Sub ToggleMentionSelection()
     mSelecting = True
     If PaintSelection() = 0 Then
         EndMentionSelection
-        ShowMessage "現在、選べる依頼はありません。"
         Exit Sub
     End If
     If ActiveCell.Column = PICK_COL Then ActiveCell.Offset(0, 1).Select
     SetSelectionButtonCaption "選択を確定"
-    ShowMessage "選択中 0件"
     Exit Sub
 
 Failed:
@@ -75,13 +73,12 @@ Public Sub PickMentionRow(ByVal target As Range)
     If target.Worksheet.Name <> WORK_SHEET Then Exit Sub
     If target.CountLarge <> 1 Then Exit Sub
     If target.Column <> PICK_COL Or target.Row < 2 Then Exit Sub
-    If target.Row > UBound(mSourceRows, 1) Then Exit Sub
-    requestId = TextValue(mSourceRows(target.Row, SOURCE_ID))
-    If Len(requestId) = 0 Then Exit Sub
+    On Error GoTo Failed
+    requestId = TextValue(target.Worksheet.Cells(target.Row, LAST_DATA_COL).Value2)
+    If Len(requestId) = 0 Or Not mStates.Exists(requestId) Then Exit Sub
     action = AvailableAction(mStates(requestId))
     If Len(action) = 0 Then Exit Sub
 
-    On Error GoTo Failed
     If mPicked.Exists(requestId) Then
         mPicked.Remove requestId
         target.Value2 = PICKABLE
@@ -93,7 +90,6 @@ Public Sub PickMentionRow(ByVal target As Range)
         ' 行を選択したままD列をアクティブにし、C列を再クリックで解除できるようにする。
         target.Offset(0, 1).Activate
     End If
-    ShowMessage "選択中 " & mPicked.Count & "件"
     ThisWorkbook.Saved = True
     Exit Sub
 
@@ -112,7 +108,6 @@ Private Sub ConfirmMentionSelection()
 
     If mPicked.Count = 0 Then
         EndMentionSelection
-        ShowMessage "選択を終了しました。"
         Exit Sub
     End If
 
@@ -164,7 +159,6 @@ Private Sub ConfirmMentionSelection()
     If skipped > 0 Then result = result & vbCrLf & "スキップ " & skipped & "件"
     If failedCount > 0 Then result = result & vbCrLf & "書き出しエラー " & failedCount & "件"
     If Not RefreshView(failure) Then details = details & vbCrLf & "一覧の更新 " & Left$(failure, 140)
-    ShowMessage Replace$(result, vbCrLf, "／")
     If Len(details) > 0 Then
         MsgBox result & vbCrLf & details, vbExclamation, "確定結果"
     Else
@@ -232,8 +226,6 @@ Private Function RefreshView(ByRef failure As String) As Boolean
     mSourceRows = data
     Set mStates = states
     EndMentionSelection
-    ShowMessage "更新 " & Format$(Now, "hh:mm") & "・" & CStr(UBound(data, 1) - 1) & "件"
-    ThisWorkbook.Saved = True
     RefreshView = True
 
 Finished:
@@ -244,8 +236,6 @@ Failed:
     failure = Err.Description
     On Error Resume Next
     EndMentionSelection
-    ProtectWorkList
-    ShowMessage "更新できませんでした"
     On Error GoTo 0
     GoTo Finished
 End Function
@@ -270,7 +260,6 @@ Private Sub EnsureWorkList()
     Set ws = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
     ws.Name = WORK_SHEET
     FormatWorkList ws
-    ProtectWorkList
     ThisWorkbook.Saved = True
     Exit Sub
 
@@ -294,6 +283,13 @@ Private Sub UpdateWorkListLayout(ByVal ws As Worksheet)
     Dim pickedRows As Range, condition As Object
     Dim hasPickedRows As Boolean, hasOldHelp As Boolean
 
+    ws.Unprotect
+    If ws.Range("A2").MergeArea.Address = "$A$2:$B$2" Then
+        ws.Range("A2:B2").UnMerge
+        ws.Range("A2:B2").Clear
+        ws.Rows(2).RowHeight = ws.StandardHeight
+    End If
+
     Set pickedRows = ws.Range("C2:Y" & ws.Rows.Count)
     For Each condition In pickedRows.Cells(1, 1).FormatConditions
         If condition.Type = xlExpression Then
@@ -307,14 +303,12 @@ Private Sub UpdateWorkListLayout(ByVal ws As Worksheet)
                  ws.Range("A4").Value2 = "未対応は担当開始、自分の対応中は完了。"
     If hasPickedRows And Not hasOldHelp Then Exit Sub
 
-    ws.Unprotect
     If Not hasPickedRows Then AddPickedRowHighlight pickedRows
     If hasOldHelp Then
         ws.Range("A3:B4").UnMerge
         ws.Range("A3:B4").Clear
         ws.Rows("3:4").RowHeight = ws.StandardHeight
     End If
-    ProtectWorkList
 End Sub
 
 Private Sub FormatWorkList(ByVal ws As Worksheet)
@@ -326,7 +320,6 @@ Private Sub FormatWorkList(ByVal ws As Worksheet)
     With ws
         .Tab.Color = RGB(19, 121, 109)
         .Rows(1).RowHeight = 39
-        .Rows(2).RowHeight = 52
         .Columns("A").ColumnWidth = 13
         .Columns("B").ColumnWidth = 16
         .Columns("C").ColumnWidth = 11
@@ -350,13 +343,6 @@ Private Sub FormatWorkList(ByVal ws As Worksheet)
         End With
         .Range("A1:B1").Interior.Color = RGB(20, 43, 63)
         .Range("C1:D1").Interior.Color = RGB(19, 121, 109)
-
-        With .Range("A2:B2")
-            .Merge
-            .WrapText = True
-            .VerticalAlignment = xlCenter
-            .Interior.Color = RGB(229, 244, 240)
-        End With
 
         AddWorkButton .Range("A1"), "更新", "RefreshMentionWork"
         AddWorkButton .Range("B1"), "選択開始", "ToggleMentionSelection"
@@ -557,7 +543,6 @@ Private Sub RenderWorkList(ByRef data As Variant, ByVal states As Object)
     End If
 
     With WorkList()
-        .Unprotect
         previousRow = .Cells(.Rows.Count, LAST_DATA_COL).End(xlUp).Row
         If previousRow > 1 Then
             .Range(.Cells(2, PICK_COL), .Cells(previousRow, LAST_DATA_COL)).ClearContents
@@ -566,34 +551,13 @@ Private Sub RenderWorkList(ByRef data As Variant, ByVal states As Object)
             .Cells(2, DISPLAY_STATE).Resize(rowCount, LAST_DATA_COL - DISPLAY_STATE + 1).Value2 = display
         End If
     End With
-    ProtectWorkList
-End Sub
-
-Private Sub ProtectWorkList()
-    WorkList().Protect UserInterfaceOnly:=True
 End Sub
 
 Private Sub SetSelectionButtonCaption(ByVal caption As String)
-    Dim failureNumber As Long, failureSource As String, failureDescription As String
-
-    On Error GoTo Failed
-    With WorkList()
-        If .Buttons(2).Caption = caption Then Exit Sub
-        ' フォームボタンの表示を変更する間だけ、図形を含むシート保護を解除する。
-        .Unprotect
-        .Buttons(2).Caption = caption
+    With WorkList().Buttons(2)
+        If .Caption <> caption Then .Caption = caption
     End With
-    ProtectWorkList
-    Exit Sub
-
-Failed:
-    failureNumber = Err.Number
-    failureSource = Err.Source
-    failureDescription = Err.Description
-    On Error Resume Next
-    ProtectWorkList
-    On Error GoTo 0
-    Err.Raise failureNumber, failureSource, failureDescription
+    ThisWorkbook.Saved = True
 End Sub
 
 Private Function PaintSelection() As Long
@@ -627,7 +591,6 @@ Private Sub EndMentionSelection()
         If Application.ActiveSheet Is WorkList() Then ActiveCell.Select
     End If
     SetSelectionButtonCaption "選択開始"
-    ThisWorkbook.Saved = True
 End Sub
 
 Private Function AvailableAction(ByVal item As Variant) As String
@@ -649,7 +612,3 @@ Private Function TextValue(ByVal value As Variant) As String
     If Not IsEmpty(value) Then TextValue = CStr(value)
 End Function
 
-Private Sub ShowMessage(ByVal message As String)
-    WorkList().Range("A2").Value2 = message
-    ThisWorkbook.Saved = True
-End Sub
