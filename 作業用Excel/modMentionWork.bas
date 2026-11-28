@@ -15,6 +15,7 @@ Private Const IN_PROGRESS As String = "対応中"
 Private Const COMPLETED As String = "完了"
 Private Const PICKABLE As String = "選択可"
 Private Const PICKED As String = "選択済"
+Private Const PICKED_ROW_FORMULA As String = "=$C2=""選択済"""
 Private Const SOURCE_COLS As Long = 22
 Private Const SOURCE_ID As Long = 21
 Private Const PICK_COL As Long = 3
@@ -56,7 +57,7 @@ Public Sub ToggleMentionSelection()
     End If
     If ActiveCell.Column = PICK_COL Then ActiveCell.Offset(0, 1).Select
     SetSelectionButtonCaption "選択を確定"
-    ShowMessage "C列の「選択可」をクリック"
+    ShowMessage "選択中 0件"
     Exit Sub
 
 Failed:
@@ -84,13 +85,15 @@ Public Sub PickMentionRow(ByVal target As Range)
     If mPicked.Exists(requestId) Then
         mPicked.Remove requestId
         target.Value2 = PICKABLE
+        target.Offset(0, 1).Select
     Else
         mPicked.Add requestId, action
         target.Value2 = PICKED
+        target.Resize(1, LAST_DATA_COL - PICK_COL + 1).Select
+        ' 行を選択したままD列をアクティブにし、C列を再クリックで解除できるようにする。
+        target.Offset(0, 1).Activate
     End If
     ShowMessage "選択中 " & mPicked.Count & "件"
-    ' 横のセルに移動し、同じ選択セルを再クリックできるようにする。
-    target.Offset(0, 1).Select
     ThisWorkbook.Saved = True
     Exit Sub
 
@@ -258,7 +261,10 @@ Private Sub EnsureWorkList()
     On Error Resume Next
     Set ws = WorkList()
     On Error GoTo 0
-    If Not ws Is Nothing Then Exit Sub
+    If Not ws Is Nothing Then
+        UpdateWorkListLayout ws
+        Exit Sub
+    End If
 
     On Error GoTo Failed
     Set ws = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
@@ -284,8 +290,35 @@ Failed:
     Err.Raise failureNumber, failureSource, "「" & WORK_SHEET & "」シートを作成できません。" & vbCrLf & failureDescription
 End Sub
 
+Private Sub UpdateWorkListLayout(ByVal ws As Worksheet)
+    Dim pickedRows As Range, condition As Object
+    Dim hasPickedRows As Boolean, hasOldHelp As Boolean
+
+    Set pickedRows = ws.Range("C2:Y" & ws.Rows.Count)
+    For Each condition In pickedRows.Cells(1, 1).FormatConditions
+        If condition.Type = xlExpression Then
+            If condition.Formula1 = PICKED_ROW_FORMULA And condition.AppliesTo.Address = pickedRows.Address Then
+                hasPickedRows = True
+                Exit For
+            End If
+        End If
+    Next condition
+    hasOldHelp = ws.Range("A3").Value2 = "［選択開始］のあと、C列の「選択可」をクリック。" And _
+                 ws.Range("A4").Value2 = "未対応は担当開始、自分の対応中は完了。"
+    If hasPickedRows And Not hasOldHelp Then Exit Sub
+
+    ws.Unprotect
+    If Not hasPickedRows Then AddPickedRowHighlight pickedRows
+    If hasOldHelp Then
+        ws.Range("A3:B4").UnMerge
+        ws.Range("A3:B4").Clear
+        ws.Rows("3:4").RowHeight = ws.StandardHeight
+    End If
+    ProtectWorkList
+End Sub
+
 Private Sub FormatWorkList(ByVal ws As Worksheet)
-    Dim headers As Variant, widths As Variant, column As Long, row As Long
+    Dim headers As Variant, widths As Variant, column As Long
     Dim lastRow As Long
 
     headers = Split(SOURCE_HEADERS, "|")
@@ -294,8 +327,6 @@ Private Sub FormatWorkList(ByVal ws As Worksheet)
         .Tab.Color = RGB(19, 121, 109)
         .Rows(1).RowHeight = 39
         .Rows(2).RowHeight = 52
-        .Rows(3).RowHeight = 30
-        .Rows(4).RowHeight = 32
         .Columns("A").ColumnWidth = 13
         .Columns("B").ColumnWidth = 16
         .Columns("C").ColumnWidth = 11
@@ -320,27 +351,21 @@ Private Sub FormatWorkList(ByVal ws As Worksheet)
         .Range("A1:B1").Interior.Color = RGB(20, 43, 63)
         .Range("C1:D1").Interior.Color = RGB(19, 121, 109)
 
-        For row = 2 To 4
-            .Cells(row, 1).Resize(1, 2).Merge
-        Next row
-        With .Range("A2:B4")
+        With .Range("A2:B2")
+            .Merge
             .WrapText = True
             .VerticalAlignment = xlCenter
-            .Interior.Color = RGB(240, 244, 248)
+            .Interior.Color = RGB(229, 244, 240)
         End With
-        .Range("A2:B2").Interior.Color = RGB(229, 244, 240)
-        .Range("A2").Value2 = "起動時に集計を読み込みます。"
-        .Range("A3").Value2 = "［選択開始］のあと、C列の「選択可」をクリック。"
-        .Range("A4").Value2 = "未対応は担当開始、自分の対応中は完了。"
 
         AddWorkButton .Range("A1"), "更新", "RefreshMentionWork"
         AddWorkButton .Range("B1"), "選択開始", "ToggleMentionSelection"
         lastRow = .Rows.Count
-        ColorWorkCells .Range("C2:C" & lastRow), "=$C2=""選択済""", RGB(19, 121, 109), vbWhite
         ColorWorkCells .Range("C2:C" & lastRow), "=$C2=""選択可""", RGB(229, 244, 240), RGB(24, 84, 77)
         ColorWorkCells .Range("D2:D" & lastRow), "=$D2=""未対応""", RGB(237, 242, 247), RGB(48, 78, 102)
         ColorWorkCells .Range("D2:D" & lastRow), "=$D2=""対応中""", RGB(255, 242, 206), RGB(113, 80, 17)
         ColorWorkCells .Range("D2:D" & lastRow), "=$D2=""完了""", RGB(231, 237, 243), RGB(67, 88, 107)
+        AddPickedRowHighlight .Range("C2:Y" & lastRow)
     End With
 
     If Application.ActiveSheet Is ws Then
@@ -366,6 +391,15 @@ Private Sub ColorWorkCells(ByVal target As Range, ByVal formula As String, _
         .Interior.Color = fillColor
         .Font.Color = fontColor
         .Font.Bold = True
+    End With
+End Sub
+
+Private Sub AddPickedRowHighlight(ByVal pickedRows As Range)
+    With pickedRows.FormatConditions.Add(Type:=xlExpression, Formula1:=PICKED_ROW_FORMULA)
+        .Interior.Color = RGB(200, 233, 223)
+        .Font.Color = RGB(23, 60, 56)
+        .SetFirstPriority
+        .StopIfTrue = True
     End With
 End Sub
 
@@ -583,9 +617,15 @@ Private Function PaintSelection() As Long
 End Function
 
 Private Sub EndMentionSelection()
+    Dim wasSelecting As Boolean
+
+    wasSelecting = mSelecting
     mSelecting = False
     Set mPicked = Nothing
     PaintSelection
+    If wasSelecting Then
+        If Application.ActiveSheet Is WorkList() Then ActiveCell.Select
+    End If
     SetSelectionButtonCaption "選択開始"
     ThisWorkbook.Saved = True
 End Sub
