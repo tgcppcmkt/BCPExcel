@@ -2,6 +2,7 @@ Attribute VB_Name = "modMentionCsvImport"
 Option Explicit
 
 Private Const INBOX_NAME As String = "書き込み用"
+Private Const OUTBOX_NAME As String = "書き出し用"
 Private Const SUMMARY_SHEET As String = "集計"
 Private Const HISTORY_SHEET As String = "取込履歴"
 Private Const CSV_COLUMNS As Long = 21
@@ -25,11 +26,12 @@ Public Sub ImportMentionRequests()
     Dim newNames As New Collection, archiveNames As New Collection
     Dim requests As New Collection, fileRequests As Collection
     Dim statusNames As New Collection, completedNames As New Collection
-    Dim requestRows As Object, statusIds As Object, oldStatuses As Object
+    Dim requestRows As Object, statusPaths As Object, statusIds As Object, oldStatuses As Object
     Dim requestRow As Variant, fileName As Variant
-    Dim fields As Variant, requestId As String, row As Long
+    Dim fields As Variant, currentStatus As Variant, requestId As String, row As Long
+    Dim statusPath As String, isCompleted As Boolean, isLegacy As Boolean
     Dim statusCell As Range
-    Dim inbox As String, logPath As String, importDay As String
+    Dim inbox As String, outbox As String, logPath As String, importDay As String
     Dim dataTarget As Range, historyTarget As Range
     Dim oldEvents As Boolean, oldCancelKey As XlEnableCancelKey
     Dim restoreApplication As Boolean, saved As Boolean
@@ -57,25 +59,38 @@ Public Sub ImportMentionRequests()
     Set summary = PrepareSheet(book, SUMMARY_SHEET, CSV_HEADERS & "|対応状況")
     Set history = PrepareSheet(book, HISTORY_SHEET, "CSVファイル名|集計日")
     Set archiveDays = ReadHistory(history)
+    Set statusPaths = CreateObject("Scripting.Dictionary")
+    statusPaths.CompareMode = vbTextCompare
+
+    ' 作業用Excelが参照するCSVを残し、未取込の同名ファイルは書き出し用を優先する。
+    outbox = files.BuildPath(book.Path, OUTBOX_NAME)
+    If files.FolderExists(outbox) Then
+        For Each candidate In files.GetFolder(outbox).Files
+            If StrComp(files.GetExtensionName(candidate.Name), "csv", vbTextCompare) = 0 Then
+                fileName = CStr(candidate.Name)
+                If Not archiveDays.Exists(fileName) Then
+                    QueueStatusCsv CStr(fileName), CStr(candidate.Path), statusPaths, statusNames, completedNames
+                End If
+            End If
+        Next candidate
+    End If
 
     For Each candidate In files.GetFolder(inbox).Files
         If StrComp(files.GetExtensionName(candidate.Name), "csv", vbTextCompare) = 0 Then
             fileName = CStr(candidate.Name)
-            If Left$(fileName, Len(IN_PROGRESS_PREFIX)) = IN_PROGRESS_PREFIX Then
-                statusNames.Add fileName
-            ElseIf Left$(fileName, Len(COMPLETED_PREFIX)) = COMPLETED_PREFIX Then
-                completedNames.Add fileName
-            ElseIf archiveDays.Exists(fileName) Then
-                archiveNames.Add fileName
-            Else
-                Set fileRequests = ReadCsv(CStr(candidate.Path), logPath)
-                If Not fileRequests Is Nothing Then
-                    For Each requestRow In fileRequests
-                        requests.Add requestRow
-                    Next requestRow
-                    newNames.Add fileName
-                    archiveDays.Add fileName, importDay
+            If Not QueueStatusCsv(CStr(fileName), CStr(candidate.Path), statusPaths, statusNames, completedNames) Then
+                If archiveDays.Exists(fileName) Then
                     archiveNames.Add fileName
+                Else
+                    Set fileRequests = ReadCsv(CStr(candidate.Path), logPath)
+                    If Not fileRequests Is Nothing Then
+                        For Each requestRow In fileRequests
+                            requests.Add requestRow
+                        Next requestRow
+                        newNames.Add fileName
+                        archiveDays.Add fileName, importDay
+                        archiveNames.Add fileName
+                    End If
                 End If
             End If
         End If
@@ -96,12 +111,14 @@ Public Sub ImportMentionRequests()
         Set statusIds = CreateObject("Scripting.Dictionary")
         Set oldStatuses = CreateObject("Scripting.Dictionary")
         For Each fileName In statusNames
-            fields = ReadStatusCsv(files.BuildPath(inbox, fileName), _
-                Left$(fileName, Len(COMPLETED_PREFIX)) = COMPLETED_PREFIX, logPath)
+            statusPath = CStr(statusPaths(fileName))
+            isCompleted = Left$(fileName, Len(COMPLETED_PREFIX)) = COMPLETED_PREFIX
+            isLegacy = StrComp(files.GetParentFolderName(statusPath), inbox, vbTextCompare) = 0
+            fields = ReadStatusCsv(statusPath, isCompleted, logPath)
             If IsArray(fields) Then
                 requestId = fields(1)
                 If archiveDays.Exists(fileName) Then
-                    statusIds.Add fileName, requestId
+                    If isLegacy Then statusIds.Add fileName, requestId
                 Else
                     row = 0
                     If requestRows.Exists(requestId) Then row = requestRows(requestId)
@@ -109,13 +126,17 @@ Public Sub ImportMentionRequests()
                         LogProblem logPath, "読込 " & fileName, "RequestIDを一意に照合できません。"
                     Else
                         Set statusCell = summary.Cells(row, CSV_COLUMNS + 1)
-                        If Not oldStatuses.Exists(row) Then
-                            oldStatuses.Add row, Array(statusCell.HasFormula, statusCell.Formula, statusCell.Value2)
+                        currentStatus = statusCell.Value2
+                        If IsError(currentStatus) Then currentStatus = Empty
+                        If isCompleted Or CStr(currentStatus) <> COMPLETED Then
+                            If Not oldStatuses.Exists(row) Then
+                                oldStatuses.Add row, Array(statusCell.HasFormula, statusCell.Formula, statusCell.Value2)
+                            End If
+                            statusCell.Value2 = StatusCellValue(fields(UBound(fields)))
                         End If
-                        statusCell.Value2 = StatusCellValue(fields(UBound(fields)))
                         newNames.Add fileName
                         archiveDays.Add fileName, importDay
-                        statusIds.Add fileName, requestId
+                        If isLegacy Then statusIds.Add fileName, requestId
                     End If
                 End If
             End If
@@ -161,6 +182,24 @@ Failed:
     LogProblem logPath, "集計", failure
     GoTo CleanUp
 End Sub
+
+Private Function QueueStatusCsv(ByVal fileName As String, ByVal filePath As String, _
+                                ByVal statusPaths As Object, ByVal statusNames As Collection, _
+                                ByVal completedNames As Collection) As Boolean
+    Dim matchingNames As Collection
+    If Left$(fileName, Len(IN_PROGRESS_PREFIX)) = IN_PROGRESS_PREFIX Then
+        Set matchingNames = statusNames
+    ElseIf Left$(fileName, Len(COMPLETED_PREFIX)) = COMPLETED_PREFIX Then
+        Set matchingNames = completedNames
+    Else
+        Exit Function
+    End If
+
+    QueueStatusCsv = True
+    If statusPaths.Exists(fileName) Then Exit Function
+    statusPaths.Add fileName, filePath
+    matchingNames.Add fileName
+End Function
 
 Private Function PrepareSheet(ByVal book As Workbook, ByVal sheetName As String, _
                               ByVal headerText As String) As Worksheet
