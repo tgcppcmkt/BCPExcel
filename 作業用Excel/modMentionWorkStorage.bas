@@ -2,8 +2,8 @@ Attribute VB_Name = "modMentionWorkStorage"
 Option Explicit
 
 Private Const WORK_ERROR As Long = vbObjectError + 1600
-Private Const IN_PROGRESS As String = "‘Î‰’†"
-Private Const COMPLETED As String = "Š®—¹"
+Private Const IN_PROGRESS As String = "å¯¾å¿œä¸­"
+Private Const COMPLETED As String = "å®Œäº†"
 Private Const STATUS_EXTENSION As String = ".csv"
 Private Const QUOTE As String = """"
 Private Const MAX_PATH As Long = 260
@@ -56,7 +56,7 @@ Public Function WorkReadStatus(ByVal outbox As String) As Object
         End If
     Next candidate
 
-    ' Š®—¹Ï‚İ‚Ì‘Î‰’†CSV‚ÍŠJ‚©‚¸A’S“–’†‚Ì‚à‚Ì‚¾‚¯’S“–Ò‚ğÆ‡‚·‚éB
+    ' å®Œäº†æ¸ˆã¿ã®å¯¾å¿œä¸­CSVã¯é–‹ã‹ãšã€æ‹…å½“ä¸­ã®ã‚‚ã®ã ã‘æ‹…å½“è€…ã‚’ç…§åˆã™ã‚‹ã€‚
     For Each key In statuses.Keys
         receipt = statuses(key)
         owner = ""
@@ -84,22 +84,22 @@ Public Function WorkPublishStatus(ByVal outbox As String, ByVal requestId As Str
     On Error GoTo Failed
     Set files = OpenOutbox(outbox)
     If Not ValidRequestId(requestId) Then
-        Err.Raise WORK_ERROR, , "ƒtƒ@ƒCƒ‹–¼‚Ég‚¦‚È‚¢RequestID‚Å‚·B"
+        Err.Raise WORK_ERROR, , "ãƒ•ã‚¡ã‚¤ãƒ«åã«ä½¿ãˆãªã„RequestIDã§ã™ã€‚"
     End If
     If Len(account) = 0 Or HasControlCharacters(account) Then
-        Err.Raise WORK_ERROR, , "PC‚ÌƒAƒJƒEƒ“ƒg–¼‚ğæ“¾‚Å‚«‚Ü‚¹‚ñB"
+        Err.Raise WORK_ERROR, , "PCã®ã‚¢ã‚«ã‚¦ãƒ³ãƒˆåã‚’å–å¾—ã§ãã¾ã›ã‚“ã€‚"
     End If
     If state <> IN_PROGRESS And state <> COMPLETED Then
-        Err.Raise WORK_ERROR, , "‘‚«o‚·‘Î‰ó‹µ‚ğŠm”F‚µ‚Ä‚­‚¾‚³‚¢B"
+        Err.Raise WORK_ERROR, , "æ›¸ãå‡ºã™å¯¾å¿œçŠ¶æ³ã‚’ç¢ºèªã—ã¦ãã ã•ã„ã€‚"
     End If
 
     destination = StatusPath(files, outbox, requestId, state)
     lockPath = files.BuildPath(outbox, "~_" & requestId & ".lock")
     If Len(destination) >= MAX_PATH Or Len(lockPath) >= MAX_PATH Or Len(outbox) > MAX_PATH - 14 Then
-        Err.Raise WORK_ERROR, , "‘‚«o‚µæ‚ÌƒpƒX‚ª’·‚·‚¬‚Ü‚·B"
+        Err.Raise WORK_ERROR, , "æ›¸ãå‡ºã—å…ˆã®ãƒ‘ã‚¹ãŒé•·ã™ãã¾ã™ã€‚"
     End If
 
-    ' “¯‚¶ˆË—Š‚ÌŠJnEŠ®—¹‚ğ’¼—ñ‰»‚·‚éBExcelI—¹‚ÍOS‚ªƒnƒ“ƒhƒ‹‚ğ•Â‚¶‚éB
+    ' åŒã˜ä¾é ¼ã®é–‹å§‹ãƒ»å®Œäº†ã‚’ç›´åˆ—åŒ–ã™ã‚‹ã€‚Excelçµ‚äº†æ™‚ã¯OSãŒãƒãƒ³ãƒ‰ãƒ«ã‚’é–‰ã˜ã‚‹ã€‚
     lockHandle = CreateFileW(StrPtr(lockPath), GENERIC_WRITE Or DELETE_ACCESS, 0, _
                              0, OPEN_ALWAYS, FILE_ATTRIBUTE_HIDDEN Or FILE_FLAG_DELETE_ON_CLOSE, 0)
     windowsError = Err.LastDllError
@@ -110,7 +110,7 @@ Public Function WorkPublishStatus(ByVal outbox As String, ByVal requestId As Str
             Case ERROR_ACCESS_DENIED
                 If files.FileExists(lockPath) Then GoTo CleanUp
         End Select
-        RaiseWindowsError "ˆË—Š‚ğ‘‚«o‚·‚½‚ß‚ÌƒƒbƒN‚ğæ“¾‚Å‚«‚Ü‚¹‚ñB", windowsError
+        RaiseWindowsError "ä¾é ¼ã‚’æ›¸ãå‡ºã™ãŸã‚ã®ãƒ­ãƒƒã‚¯ã‚’å–å¾—ã§ãã¾ã›ã‚“ã€‚", windowsError
     End If
 
     previous = ReadOneStatus(files, outbox, requestId)
@@ -124,11 +124,11 @@ Public Function WorkPublishStatus(ByVal outbox As String, ByVal requestId As Str
     tempPath = ReserveTempFile(outbox)
     SaveCsv tempPath, csvText & vbCrLf
 
-    ' Š®¬‚µ‚½CSV‚ğ“¯‚¶ƒtƒHƒ‹ƒ_“à‚ÅŒöŠJ‚·‚éB“¯–¼CSV‚Íã‘‚«‚µ‚È‚¢B
+    ' å®Œæˆã—ãŸCSVã‚’åŒã˜ãƒ•ã‚©ãƒ«ãƒ€å†…ã§å…¬é–‹ã™ã‚‹ã€‚åŒåCSVã¯ä¸Šæ›¸ãã—ãªã„ã€‚
     If MoveFileW(StrPtr(tempPath), StrPtr(destination)) = 0 Then
         windowsError = Err.LastDllError
         If windowsError = ERROR_FILE_EXISTS Or windowsError = ERROR_ALREADY_EXISTS Then GoTo CleanUp
-        RaiseWindowsError "CSV‚ğŠm’è‚Å‚«‚Ü‚¹‚ñB", windowsError
+        RaiseWindowsError "CSVã‚’ç¢ºå®šã§ãã¾ã›ã‚“ã€‚", windowsError
     End If
     tempPath = ""
     WorkPublishStatus = True
@@ -138,7 +138,7 @@ CleanUp:
     If Len(tempPath) > 0 Then DeleteFileW StrPtr(tempPath)
     If lockHandle <> -1 Then CloseHandle lockHandle
     On Error GoTo 0
-    If failure <> 0 Then Err.Raise failure, "ƒƒ“ƒVƒ‡ƒ“ì‹Æ—p", detail
+    If failure <> 0 Then Err.Raise failure, "ãƒ¡ãƒ³ã‚·ãƒ§ãƒ³ä½œæ¥­ç”¨", detail
     Exit Function
 
 Failed:
@@ -151,7 +151,7 @@ Private Function OpenOutbox(ByVal outbox As String) As Object
     Dim files As Object
     Set files = CreateObject("Scripting.FileSystemObject")
     If Not files.FolderExists(outbox) Then
-        Err.Raise WORK_ERROR, , "u‘‚«o‚µ—pvƒtƒHƒ‹ƒ_‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñB" & vbCrLf & outbox
+        Err.Raise WORK_ERROR, , "ã€Œæ›¸ãè¾¼ã¿ç”¨ã€ãƒ•ã‚©ãƒ«ãƒ€ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚" & vbCrLf & outbox
     End If
     Set OpenOutbox = files
 End Function
@@ -170,7 +170,7 @@ Private Function ReadOneStatus(ByVal files As Object, ByVal outbox As String, _
         state = IN_PROGRESS
         path = StatusPath(files, outbox, requestId, state)
         If Not files.FileExists(path) Then Exit Function
-        ' ‘Î‰’†‚ğŠm”F‚µ‚½’¼Œã‚ÉŠ®—¹‚ªŒöŠJ‚³‚ê‚Ä‚¢‚ê‚ÎAŠ®—¹‚ğ—Dæ‚·‚éB
+        ' å¯¾å¿œä¸­ã‚’ç¢ºèªã—ãŸç›´å¾Œã«å®Œäº†ãŒå…¬é–‹ã•ã‚Œã¦ã„ã‚Œã°ã€å®Œäº†ã‚’å„ªå…ˆã™ã‚‹ã€‚
         If files.FileExists(StatusPath(files, outbox, requestId, COMPLETED)) Then
             state = COMPLETED
             path = StatusPath(files, outbox, requestId, state)
@@ -181,7 +181,7 @@ End Function
 
 Private Function ValidRequestId(ByVal requestId As String) As Boolean
     Dim position As Long
-    If Len(requestId) = 0 Or Len(requestId) > 255 - Len("‘Î‰’†_.csv") Then Exit Function
+    If Len(requestId) = 0 Or Len(requestId) > 255 - Len("å¯¾å¿œä¸­_.csv") Then Exit Function
     If HasControlCharacters(requestId) Then Exit Function
     For position = 1 To Len(requestId)
         If InStr(1, "<>:""/\|?*", Mid$(requestId, position, 1), vbBinaryCompare) > 0 Then Exit Function
@@ -206,7 +206,7 @@ Private Function ReserveTempFile(ByVal outbox As String) As String
     prefix = "mwc"
     If GetTempFileNameW(StrPtr(outbox), StrPtr(prefix), 0, StrPtr(buffer)) = 0 Then
         windowsError = Err.LastDllError
-        RaiseWindowsError "CSV‚Ìˆêƒtƒ@ƒCƒ‹‚ğì¬‚Å‚«‚Ü‚¹‚ñB", windowsError
+        RaiseWindowsError "CSVã®ä¸€æ™‚ãƒ•ã‚¡ã‚¤ãƒ«ã‚’ä½œæˆã§ãã¾ã›ã‚“ã€‚", windowsError
     End If
     ReserveTempFile = Left$(buffer, InStr(buffer, vbNullChar) - 1)
 End Function
@@ -234,10 +234,10 @@ Private Sub SaveCsv(ByVal path As String, ByVal text As String)
     stream.WriteText text
     stream.Position = 0
     If StrComp(stream.ReadText(-1), text, vbBinaryCompare) <> 0 Then
-        Err.Raise WORK_ERROR, , "RequestID‚Ü‚½‚ÍPC‚ÌƒAƒJƒEƒ“ƒg–¼‚ÉShift_JIS‚Å•Û‘¶‚Å‚«‚È‚¢•¶š‚ªŠÜ‚Ü‚ê‚Ä‚¢‚Ü‚·B"
+        Err.Raise WORK_ERROR, , "RequestIDã¾ãŸã¯PCã®ã‚¢ã‚«ã‚¦ãƒ³ãƒˆåã«Shift_JISã§ä¿å­˜ã§ããªã„æ–‡å­—ãŒå«ã¾ã‚Œã¦ã„ã¾ã™ã€‚"
     End If
     stream.Position = 0
-    stream.SaveToFile path, 2 ' adSaveCreateOverWriteA©•ª‚Ìˆêƒtƒ@ƒCƒ‹
+    stream.SaveToFile path, 2 ' adSaveCreateOverWriteã€è‡ªåˆ†ã®ä¸€æ™‚ãƒ•ã‚¡ã‚¤ãƒ«
     stream.Close
 End Sub
 
@@ -262,7 +262,7 @@ Private Function ReadReceiptOwner(ByVal path As String, ByVal requestId As Strin
     End If
     ReadReceiptOwner = fields(1)
 InvalidReceipt:
-    ' “Ç‚ß‚È‚¢CSV‚àŠm•ÛÏ‚İ‚Æ‚µ‚Äˆµ‚¤B’S“–Ò‚Ì”»’è‚Í•Û—¯‚·‚éB
+    ' èª­ã‚ãªã„CSVã‚‚ç¢ºä¿æ¸ˆã¿ã¨ã—ã¦æ‰±ã†ã€‚æ‹…å½“è€…ã®åˆ¤å®šã¯ä¿ç•™ã™ã‚‹ã€‚
 End Function
 
 Private Function ReadRecord(ByVal csvText As String, ByVal columnCount As Long) As Variant
