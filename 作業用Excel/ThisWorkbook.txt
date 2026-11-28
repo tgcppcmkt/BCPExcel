@@ -1,0 +1,9 @@
+Option Explicit
+
+Private Sub Workbook_Open()
+    RefreshMentionWork
+End Sub
+
+Private Sub Workbook_SheetSelectionChange(ByVal Sh As Object, ByVal Target As Range)
+    If Sh Is Sheet1 Then PickMentionRow Target
+End Sub
