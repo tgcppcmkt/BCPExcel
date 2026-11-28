@@ -41,6 +41,10 @@ Private Const DISPLAY_STATE As Long = 4
 Private Const FIRST_DATA_COL As Long = 5
 Private Const LAST_DATA_COL As Long = 25
 Private Const WORK_ERROR As Long = vbObjectError + 2100
+Private Const BUTTON_ROW_HEIGHT As Double = 42
+Private Const REFRESH_BUTTON_COLUMN_WIDTH As Double = 15
+Private Const SELECTION_BUTTON_COLUMN_WIDTH As Double = 19
+Private Const BUTTON_PADDING As Double = 5
 
 Private mStates As Object
 Private mPicked As Object
@@ -151,7 +155,7 @@ Private Sub ConfirmMentionSelection()
     Dim fresh As Object, data As Variant, outboxPath As String
     Dim details As String, failure As String, reason As String, result As String
     Dim oldCancelKey As XlEnableCancelKey
-    Dim restoreCancelKey As Boolean
+    Dim screenUpdates As Boolean, restoreApplication As Boolean
 
     If mPicked.Count = 0 Then
         EndMentionSelection
@@ -174,8 +178,10 @@ Private Sub ConfirmMentionSelection()
 
     On Error GoTo Failed
     oldCancelKey = Application.EnableCancelKey
-    restoreCancelKey = True
+    screenUpdates = Application.ScreenUpdating
+    restoreApplication = True
     Application.EnableCancelKey = xlErrorHandler
+    Application.ScreenUpdating = False
 
     outboxPath = GetOutbox()
     Set fresh = ReadWorkSnapshot(outboxPath, data)
@@ -199,13 +205,13 @@ Private Sub ConfirmMentionSelection()
             details = details & vbCrLf & Left$(CStr(requestId) & "  " & reason, 140)
         End If
     Next requestId
-    Application.EnableCancelKey = oldCancelKey
-    restoreCancelKey = False
-
     result = "担当開始 " & starts & "件・完了 " & finishes & "件"
     If skipped > 0 Then result = result & vbCrLf & "スキップ " & skipped & "件"
     If failedCount > 0 Then result = result & vbCrLf & "書き出しエラー " & failedCount & "件"
     If Not RefreshView(failure) Then details = details & vbCrLf & "一覧の更新 " & Left$(failure, 140)
+    Application.ScreenUpdating = screenUpdates
+    Application.EnableCancelKey = oldCancelKey
+    restoreApplication = False
     If Len(details) > 0 Then
         MsgBox result & vbCrLf & details, vbExclamation, "確定結果"
     Else
@@ -215,7 +221,12 @@ Private Sub ConfirmMentionSelection()
 
 Failed:
     failure = Err.Description
-    If restoreCancelKey Then Application.EnableCancelKey = oldCancelKey
+    On Error Resume Next
+    If restoreApplication Then
+        Application.ScreenUpdating = screenUpdates
+        Application.EnableCancelKey = oldCancelKey
+    End If
+    On Error GoTo 0
     If starts + finishes > 0 Then
         MsgBox "担当開始 " & starts & "件・完了 " & finishes & "件を保存済みです。" & _
                vbCrLf & failure, vbExclamation, "確定を中断"
@@ -325,6 +336,7 @@ Private Sub UpdateWorkListLayout(ByVal ws As Worksheet)
     Dim hasPickedRows As Boolean, hasOldHelp As Boolean
 
     ws.Unprotect
+    ResizeWorkButtons ws
     If ws.Range("A2").MergeArea.Address = "$A$2:$B$2" Then
         ws.Range("A2:B2").UnMerge
         ws.Range("A2:B2").Clear
@@ -360,9 +372,9 @@ Private Sub FormatWorkList(ByVal ws As Worksheet)
     widths = Array(21, 12, 15, 14, 16, 15, 14, 13, 13, 13, 13, 13, 13, 13, 13, 23, 42, 21, 24, 15, 39)
     With ws
         .Tab.Color = RGB(19, 121, 109)
-        .Rows(1).RowHeight = 39
-        .Columns("A").ColumnWidth = 13
-        .Columns("B").ColumnWidth = 16
+        .Rows(1).RowHeight = BUTTON_ROW_HEIGHT
+        .Columns("A").ColumnWidth = REFRESH_BUTTON_COLUMN_WIDTH
+        .Columns("B").ColumnWidth = SELECTION_BUTTON_COLUMN_WIDTH
         .Columns("C").ColumnWidth = 11
         .Columns("D").ColumnWidth = 13
         .Range("C:Y").NumberFormat = "@"
@@ -406,9 +418,37 @@ Private Sub FormatWorkList(ByVal ws As Worksheet)
 End Sub
 
 Private Sub AddWorkButton(ByVal anchor As Range, ByVal caption As String, ByVal action As String)
-    With anchor.Worksheet.Buttons.Add(anchor.Left + 4.5, anchor.Top + 7.5, anchor.Width - 8, 22.5)
+    Dim button As Object
+
+    Set button = anchor.Worksheet.Buttons.Add(anchor.Left, anchor.Top, anchor.Width, anchor.Height)
+    With button
         .Caption = caption
         .OnAction = "'" & Replace(ThisWorkbook.Name, "'", "''") & "'!modMentionWork." & action
+    End With
+    FitWorkButton button, anchor
+End Sub
+
+Private Sub ResizeWorkButtons(ByVal ws As Worksheet)
+    With ws
+        If .Buttons.Count < 2 Then Exit Sub
+        If .Rows(1).RowHeight < BUTTON_ROW_HEIGHT Then .Rows(1).RowHeight = BUTTON_ROW_HEIGHT
+        If .Columns("A").ColumnWidth < REFRESH_BUTTON_COLUMN_WIDTH Then
+            .Columns("A").ColumnWidth = REFRESH_BUTTON_COLUMN_WIDTH
+        End If
+        If .Columns("B").ColumnWidth < SELECTION_BUTTON_COLUMN_WIDTH Then
+            .Columns("B").ColumnWidth = SELECTION_BUTTON_COLUMN_WIDTH
+        End If
+        FitWorkButton .Buttons(1), .Range("A1")
+        FitWorkButton .Buttons(2), .Range("B1")
+    End With
+End Sub
+
+Private Sub FitWorkButton(ByVal button As Object, ByVal anchor As Range)
+    With button
+        .Left = anchor.Left + BUTTON_PADDING
+        .Top = anchor.Top + BUTTON_PADDING
+        .Width = anchor.Width - BUTTON_PADDING * 2
+        .Height = anchor.Height - BUTTON_PADDING * 2
     End With
 End Sub
 

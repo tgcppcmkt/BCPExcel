@@ -33,6 +33,7 @@ Public Sub ImportMentionRequests()
     Dim inbox As String, logPath As String, importDay As String
     Dim dataTarget As Range, historyTarget As Range
     Dim oldEvents As Boolean, oldCancelKey As XlEnableCancelKey
+    Dim oldScreenUpdating As Boolean
     Dim restoreApplication As Boolean, saved As Boolean
     Dim failure As String
 
@@ -51,9 +52,11 @@ Public Sub ImportMentionRequests()
 
     oldEvents = Application.EnableEvents
     oldCancelKey = Application.EnableCancelKey
+    oldScreenUpdating = Application.ScreenUpdating
     restoreApplication = True
     Application.EnableEvents = False
     Application.EnableCancelKey = xlErrorHandler
+    Application.ScreenUpdating = False
 
     Set summary = PrepareSheet(book, SUMMARY_SHEET, CSV_HEADERS & "|対応状況")
     Set history = PrepareSheet(book, HISTORY_SHEET, "CSVファイル名|集計日")
@@ -153,6 +156,7 @@ CleanUp:
     If restoreApplication Then
         Application.EnableCancelKey = oldCancelKey
         Application.EnableEvents = oldEvents
+        Application.ScreenUpdating = oldScreenUpdating
     End If
     Exit Sub
 
