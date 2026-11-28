@@ -3,6 +3,12 @@ Option Explicit
 
 Private Const SUMMARY_BOOK As String = "メンション集計用"
 Private Const SUMMARY_SHEET As String = "集計"
+Private Const WORK_SHEET As String = "依頼一覧"
+Private Const STATE_HEADER As String = "対応状況"
+Private Const SOURCE_HEADERS As String = _
+    "送信日時|拠点|依頼者|依頼No.|組織|CA名|出社状況|" & _
+    "代理CA1|代理CA2|代理CA3|代理CA4|代理CA5|代理CA6|代理CA7|代理CA8|" & _
+    "オプション|メールメモ|処理日時|期日または面接日程|タイプ|RequestID"
 Private Const OUTBOX As String = "書き出し用"
 Private Const UNASSIGNED As String = "未対応"
 Private Const IN_PROGRESS As String = "対応中"
@@ -65,6 +71,7 @@ Public Sub PickMentionRow(ByVal target As Range)
     Dim requestId As String, action As String
 
     If Not mSelecting Then Exit Sub
+    If target.Worksheet.Name <> WORK_SHEET Then Exit Sub
     If target.CountLarge <> 1 Then Exit Sub
     If target.Column <> PICK_COL Or target.Row < 2 Then Exit Sub
     If target.Row > UBound(mSourceRows, 1) Then Exit Sub
@@ -213,6 +220,7 @@ Private Function RefreshView(ByRef failure As String) As Boolean
     Application.ScreenUpdating = False
 
     If Not ThisWorkbook.ReadOnly Then ThisWorkbook.ChangeFileAccess xlReadOnly
+    EnsureWorkList
     mAccount = Environ$("USERNAME")
     If Len(mAccount) = 0 Then Err.Raise WORK_ERROR, , "PCのアカウント名を取得できません。"
 
@@ -238,6 +246,128 @@ Failed:
     On Error GoTo 0
     GoTo Finished
 End Function
+
+Private Function WorkList() As Worksheet
+    Set WorkList = ThisWorkbook.Worksheets(WORK_SHEET)
+End Function
+
+Private Sub EnsureWorkList()
+    Dim ws As Worksheet, restoreAlerts As Boolean
+    Dim failureNumber As Long, failureSource As String, failureDescription As String
+
+    On Error Resume Next
+    Set ws = WorkList()
+    On Error GoTo 0
+    If Not ws Is Nothing Then Exit Sub
+
+    On Error GoTo Failed
+    Set ws = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+    ws.Name = WORK_SHEET
+    FormatWorkList ws
+    ProtectWorkList
+    ThisWorkbook.Saved = True
+    Exit Sub
+
+Failed:
+    failureNumber = Err.Number
+    failureSource = Err.Source
+    failureDescription = Err.Description
+    If Not ws Is Nothing Then
+        ' 初期化できなかったシートだけを片付け、次の更新で作成を再試行できるようにする。
+        restoreAlerts = Application.DisplayAlerts
+        On Error Resume Next
+        Application.DisplayAlerts = False
+        ws.Delete
+        Application.DisplayAlerts = restoreAlerts
+        On Error GoTo 0
+    End If
+    Err.Raise failureNumber, failureSource, "「" & WORK_SHEET & "」シートを作成できません。" & vbCrLf & failureDescription
+End Sub
+
+Private Sub FormatWorkList(ByVal ws As Worksheet)
+    Dim headers As Variant, widths As Variant, column As Long, row As Long
+    Dim lastRow As Long
+
+    headers = Split(SOURCE_HEADERS, "|")
+    widths = Array(21, 12, 15, 14, 16, 15, 14, 13, 13, 13, 13, 13, 13, 13, 13, 23, 42, 21, 24, 15, 39)
+    With ws
+        .Tab.Color = RGB(19, 121, 109)
+        .Rows(1).RowHeight = 39
+        .Rows(2).RowHeight = 52
+        .Rows(3).RowHeight = 30
+        .Rows(4).RowHeight = 32
+        .Columns("A").ColumnWidth = 13
+        .Columns("B").ColumnWidth = 16
+        .Columns("C").ColumnWidth = 11
+        .Columns("D").ColumnWidth = 13
+        .Range("C:Y").NumberFormat = "@"
+        .Columns("C:D").HorizontalAlignment = xlCenter
+
+        .Cells(1, PICK_COL).Value2 = "選択"
+        .Cells(1, DISPLAY_STATE).Value2 = STATE_HEADER
+        For column = LBound(headers) To UBound(headers)
+            .Cells(1, FIRST_DATA_COL + column).Value2 = headers(column)
+            .Columns(FIRST_DATA_COL + column).ColumnWidth = widths(column)
+        Next column
+        With .Range("A1:Y1")
+            .Interior.Color = RGB(32, 59, 81)
+            .Font.Color = vbWhite
+            .Font.Bold = True
+            .HorizontalAlignment = xlCenter
+            .VerticalAlignment = xlCenter
+            .WrapText = True
+        End With
+        .Range("A1:B1").Interior.Color = RGB(20, 43, 63)
+        .Range("C1:D1").Interior.Color = RGB(19, 121, 109)
+
+        For row = 2 To 4
+            .Cells(row, 1).Resize(1, 2).Merge
+        Next row
+        With .Range("A2:B4")
+            .WrapText = True
+            .VerticalAlignment = xlCenter
+            .Interior.Color = RGB(240, 244, 248)
+        End With
+        .Range("A2:B2").Interior.Color = RGB(229, 244, 240)
+        .Range("A2").Value2 = "起動時に集計を読み込みます。"
+        .Range("A3").Value2 = "［選択開始］のあと、C列の「選択可」をクリック。"
+        .Range("A4").Value2 = "未対応は担当開始、自分の対応中は完了。"
+
+        AddWorkButton .Range("A1"), "更新", "RefreshMentionWork"
+        AddWorkButton .Range("B1"), "選択開始", "ToggleMentionSelection"
+        lastRow = .Rows.Count
+        ColorWorkCells .Range("C2:C" & lastRow), "=$C2=""選択済""", RGB(19, 121, 109), vbWhite
+        ColorWorkCells .Range("C2:C" & lastRow), "=$C2=""選択可""", RGB(229, 244, 240), RGB(24, 84, 77)
+        ColorWorkCells .Range("D2:D" & lastRow), "=$D2=""未対応""", RGB(237, 242, 247), RGB(48, 78, 102)
+        ColorWorkCells .Range("D2:D" & lastRow), "=$D2=""対応中""", RGB(255, 242, 206), RGB(113, 80, 17)
+        ColorWorkCells .Range("D2:D" & lastRow), "=$D2=""完了""", RGB(231, 237, 243), RGB(67, 88, 107)
+    End With
+
+    If Application.ActiveSheet Is ws Then
+        With Application.ActiveWindow
+            .DisplayGridlines = False
+            .SplitRow = 1
+            .SplitColumn = 4
+            .FreezePanes = True
+        End With
+    End If
+End Sub
+
+Private Sub AddWorkButton(ByVal anchor As Range, ByVal caption As String, ByVal action As String)
+    With anchor.Worksheet.Buttons.Add(anchor.Left + 4.5, anchor.Top + 7.5, anchor.Width - 8, 22.5)
+        .Caption = caption
+        .OnAction = "'" & Replace(ThisWorkbook.Name, "'", "''") & "'!" & action
+    End With
+End Sub
+
+Private Sub ColorWorkCells(ByVal target As Range, ByVal formula As String, _
+                           ByVal fillColor As Long, ByVal fontColor As Long)
+    With target.FormatConditions.Add(Type:=xlExpression, Formula1:=formula)
+        .Interior.Color = fillColor
+        .Font.Color = fontColor
+        .Font.Bold = True
+    End With
+End Sub
 
 Private Function ReadWorkSnapshot(ByVal outboxPath As String, ByRef data As Variant) As Object
     Dim result As Object, receipts As Object, receipt As Variant
@@ -277,7 +407,7 @@ End Function
 Private Function ReadSummaryData() As Variant
     Dim files As Object, source As String, sourceToOpen As String, tempPath As String
     Dim book As Workbook, existing As Workbook, summary As Worksheet
-    Dim lastRow As Long, col As Long, data As Variant
+    Dim lastRow As Long, col As Long, data As Variant, headers As Variant
     Dim prevEvents As Boolean, prevSecurity As Long, changedSettings As Boolean
     Dim createdTempFolder As Boolean
     Dim failure As String
@@ -313,12 +443,13 @@ Private Function ReadSummaryData() As Variant
 
     lastRow = summary.Cells(summary.Rows.Count, SOURCE_ID).End(xlUp).Row
     data = summary.Cells(1, 1).Resize(lastRow, SOURCE_COLS).Value2
+    headers = Split(SOURCE_HEADERS, "|")
     For col = 1 To SOURCE_ID
-        If TextValue(data(1, col)) <> TextValue(Sheet1.Cells(1, FIRST_DATA_COL + col - 1).Value2) Then
+        If TextValue(data(1, col)) <> headers(col - 1) Then
             Err.Raise WORK_ERROR, , "「集計」シートの見出しを確認してください。列 " & col
         End If
     Next col
-    If TextValue(data(1, SOURCE_COLS)) <> TextValue(Sheet1.Cells(1, DISPLAY_STATE).Value2) Then
+    If TextValue(data(1, SOURCE_COLS)) <> STATE_HEADER Then
         Err.Raise WORK_ERROR, , "「集計」シートのV1に「対応状況」が必要です。"
     End If
 
@@ -391,7 +522,7 @@ Private Sub RenderWorkList(ByRef data As Variant, ByVal states As Object)
         Next row
     End If
 
-    With Sheet1
+    With WorkList()
         .Unprotect
         previousRow = .Cells(.Rows.Count, LAST_DATA_COL).End(xlUp).Row
         If previousRow > 1 Then
@@ -405,17 +536,19 @@ Private Sub RenderWorkList(ByRef data As Variant, ByVal states As Object)
 End Sub
 
 Private Sub ProtectWorkList()
-    Sheet1.Protect UserInterfaceOnly:=True
+    WorkList().Protect UserInterfaceOnly:=True
 End Sub
 
 Private Sub SetSelectionButtonCaption(ByVal caption As String)
     Dim failureNumber As Long, failureSource As String, failureDescription As String
 
     On Error GoTo Failed
-    If Sheet1.Buttons(2).Caption = caption Then Exit Sub
-    ' フォームボタンの表示を変更する間だけ、図形を含むシート保護を解除する。
-    Sheet1.Unprotect
-    Sheet1.Buttons(2).Caption = caption
+    With WorkList()
+        If .Buttons(2).Caption = caption Then Exit Sub
+        ' フォームボタンの表示を変更する間だけ、図形を含むシート保護を解除する。
+        .Unprotect
+        .Buttons(2).Caption = caption
+    End With
     ProtectWorkList
     Exit Sub
 
@@ -445,7 +578,7 @@ Private Function PaintSelection() As Long
             End If
         Next row
     End If
-    Sheet1.Cells(2, PICK_COL).Resize(UBound(values, 1), 1).Value2 = values
+    WorkList().Cells(2, PICK_COL).Resize(UBound(values, 1), 1).Value2 = values
     ThisWorkbook.Saved = True
 End Function
 
@@ -477,6 +610,6 @@ Private Function TextValue(ByVal value As Variant) As String
 End Function
 
 Private Sub ShowMessage(ByVal message As String)
-    Sheet1.Range("A2").Value2 = message
+    WorkList().Range("A2").Value2 = message
     ThisWorkbook.Saved = True
 End Sub
