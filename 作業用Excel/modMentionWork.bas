@@ -1,20 +1,20 @@
 Attribute VB_Name = "modMentionWork"
 Option Explicit
 
-Private Const SUMMARY_BOOK As String = "ƒƒ“ƒVƒ‡ƒ“WŒv—p"
-Private Const SUMMARY_SHEET As String = "WŒv"
-Private Const WORK_SHEET As String = "ˆË—Šˆê——"
-Private Const STATE_HEADER As String = "‘Î‰ó‹µ"
+Private Const SUMMARY_BOOK As String = "ãƒ¡ãƒ³ã‚·ãƒ§ãƒ³é›†è¨ˆç”¨"
+Private Const SUMMARY_SHEET As String = "é›†è¨ˆ"
+Private Const WORK_SHEET As String = "ä¾é ¼ä¸€è¦§"
+Private Const STATE_HEADER As String = "å¯¾å¿œçŠ¶æ³"
 Private Const SOURCE_HEADERS As String = _
-    "‘—M“ú|‹’“_|ˆË—ŠÒ|ˆË—ŠNo.|‘gD|CA–¼|oĞó‹µ|" & _
-    "‘ã—CA1|‘ã—CA2|‘ã—CA3|‘ã—CA4|‘ã—CA5|‘ã—CA6|‘ã—CA7|‘ã—CA8|" & _
-    "ƒIƒvƒVƒ‡ƒ“|ƒ[ƒ‹ƒƒ‚|ˆ—“ú|Šú“ú‚Ü‚½‚Í–ÊÚ“ú’ö|ƒ^ƒCƒv|RequestID"
-Private Const OUTBOX As String = "‘‚«o‚µ—p"
-Private Const UNASSIGNED As String = "–¢‘Î‰"
-Private Const IN_PROGRESS As String = "‘Î‰’†"
-Private Const COMPLETED As String = "Š®—¹"
-Private Const PICKABLE As String = "‘I‘ğ‰Â"
-Private Const PICKED As String = "‘I‘ğÏ"
+    "é€ä¿¡æ—¥æ™‚|æ‹ ç‚¹|ä¾é ¼è€…|ä¾é ¼No.|çµ„ç¹”|CAå|å‡ºç¤¾çŠ¶æ³|" & _
+    "ä»£ç†CA1|ä»£ç†CA2|ä»£ç†CA3|ä»£ç†CA4|ä»£ç†CA5|ä»£ç†CA6|ä»£ç†CA7|ä»£ç†CA8|" & _
+    "ã‚ªãƒ—ã‚·ãƒ§ãƒ³|ãƒ¡ãƒ¼ãƒ«ãƒ¡ãƒ¢|å‡¦ç†æ—¥æ™‚|æœŸæ—¥ã¾ãŸã¯é¢æ¥æ—¥ç¨‹|ã‚¿ã‚¤ãƒ—|RequestID"
+Private Const OUTBOX As String = "æ›¸ãè¾¼ã¿ç”¨"
+Private Const UNASSIGNED As String = "æœªå¯¾å¿œ"
+Private Const IN_PROGRESS As String = "å¯¾å¿œä¸­"
+Private Const COMPLETED As String = "å®Œäº†"
+Private Const PICKABLE As String = "é¸æŠå¯"
+Private Const PICKED As String = "é¸æŠæ¸ˆ"
 Private Const SOURCE_COLS As Long = 22
 Private Const SOURCE_ID As Long = 21
 Private Const PICK_COL As Long = 3
@@ -31,7 +31,7 @@ Private mSelecting As Boolean
 
 Public Sub RefreshMentionWork()
     Dim failure As String
-    If Not RefreshView(failure) Then MsgBox failure, vbExclamation, "XV"
+    If Not RefreshView(failure) Then MsgBox failure, vbExclamation, "æ›´æ–°"
 End Sub
 
 Public Sub ToggleMentionSelection()
@@ -43,7 +43,7 @@ Public Sub ToggleMentionSelection()
         Exit Sub
     End If
     If Not RefreshView(failure) Then
-        MsgBox failure, vbExclamation, "‘I‘ğŠJn"
+        MsgBox failure, vbExclamation, "é¸æŠé–‹å§‹"
         Exit Sub
     End If
 
@@ -51,12 +51,12 @@ Public Sub ToggleMentionSelection()
     mSelecting = True
     If PaintSelection() = 0 Then
         EndMentionSelection
-        ShowMessage "Œ»İA‘I‚×‚éˆË—Š‚Í‚ ‚è‚Ü‚¹‚ñB"
+        ShowMessage "ç¾åœ¨ã€é¸ã¹ã‚‹ä¾é ¼ã¯ã‚ã‚Šã¾ã›ã‚“ã€‚"
         Exit Sub
     End If
     If ActiveCell.Column = PICK_COL Then ActiveCell.Offset(0, 1).Select
-    SetSelectionButtonCaption "‘I‘ğ‚ğŠm’è"
-    ShowMessage "C—ñ‚Ìu‘I‘ğ‰Âv‚ğƒNƒŠƒbƒN"
+    SetSelectionButtonCaption "é¸æŠã‚’ç¢ºå®š"
+    ShowMessage "Cåˆ—ã®ã€Œé¸æŠå¯ã€ã‚’ã‚¯ãƒªãƒƒã‚¯"
     Exit Sub
 
 Failed:
@@ -64,7 +64,7 @@ Failed:
     On Error Resume Next
     EndMentionSelection
     On Error GoTo 0
-    MsgBox failure, vbExclamation, "‘I‘ğ‘€ì"
+    MsgBox failure, vbExclamation, "é¸æŠæ“ä½œ"
 End Sub
 
 Public Sub PickMentionRow(ByVal target As Range)
@@ -88,14 +88,14 @@ Public Sub PickMentionRow(ByVal target As Range)
         mPicked.Add requestId, action
         target.Value2 = PICKED
     End If
-    ShowMessage "‘I‘ğ’† " & mPicked.Count & "Œ"
-    ' ‰¡‚ÌƒZƒ‹‚ÉˆÚ“®‚µA“¯‚¶‘I‘ğƒZƒ‹‚ğÄƒNƒŠƒbƒN‚Å‚«‚é‚æ‚¤‚É‚·‚éB
+    ShowMessage "é¸æŠä¸­ " & mPicked.Count & "ä»¶"
+    ' æ¨ªã®ã‚»ãƒ«ã«ç§»å‹•ã—ã€åŒã˜é¸æŠã‚»ãƒ«ã‚’å†ã‚¯ãƒªãƒƒã‚¯ã§ãã‚‹ã‚ˆã†ã«ã™ã‚‹ã€‚
     target.Offset(0, 1).Select
     ThisWorkbook.Saved = True
     Exit Sub
 
 Failed:
-    MsgBox Err.Description, vbExclamation, "ˆË—Š‚Ì‘I‘ğ"
+    MsgBox Err.Description, vbExclamation, "ä¾é ¼ã®é¸æŠ"
 End Sub
 
 Private Sub ConfirmMentionSelection()
@@ -109,11 +109,11 @@ Private Sub ConfirmMentionSelection()
 
     If mPicked.Count = 0 Then
         EndMentionSelection
-        ShowMessage "‘I‘ğ‚ğI—¹‚µ‚Ü‚µ‚½B"
+        ShowMessage "é¸æŠã‚’çµ‚äº†ã—ã¾ã—ãŸã€‚"
         Exit Sub
     End If
 
-    ' ‘I‚ñ‚¾“_‚Ì‘€ì‚ğŒÅ’è‚µAŠm’è‘OŒã‚Éó‘Ô‚ª•Ï‚í‚Á‚Ä‚à•Ê‚Ì‘€ì‚ÖØ‚è‘Ö‚¦‚È‚¢B
+    ' é¸ã‚“ã æ™‚ç‚¹ã®æ“ä½œã‚’å›ºå®šã—ã€ç¢ºå®šå‰å¾Œã«çŠ¶æ…‹ãŒå¤‰ã‚ã£ã¦ã‚‚åˆ¥ã®æ“ä½œã¸åˆ‡ã‚Šæ›¿ãˆãªã„ã€‚
     For Each requestId In mPicked.Keys
         If mPicked(requestId) = IN_PROGRESS Then
             startCount = startCount + 1
@@ -122,9 +122,9 @@ Private Sub ConfirmMentionSelection()
         End If
     Next requestId
     If finishCount > 0 Then
-        If MsgBox("’S“–ŠJn " & startCount & "ŒEŠ®—¹ " & finishCount & "Œ" & vbCrLf & _
-                  "‘I‘ğ‚µ‚½ˆË—Š‚ğŠm’è‚µ‚Ü‚·‚©H", _
-                  vbQuestion Or vbYesNo Or vbDefaultButton2, "‘I‘ğ‚ğŠm’è") <> vbYes Then Exit Sub
+        If MsgBox("æ‹…å½“é–‹å§‹ " & startCount & "ä»¶ãƒ»å®Œäº† " & finishCount & "ä»¶" & vbCrLf & _
+                  "é¸æŠã—ãŸä¾é ¼ã‚’ç¢ºå®šã—ã¾ã™ã‹ï¼Ÿ", _
+                  vbQuestion Or vbYesNo Or vbDefaultButton2, "é¸æŠã‚’ç¢ºå®š") <> vbYes Then Exit Sub
     End If
 
     On Error GoTo Failed
@@ -157,15 +157,15 @@ Private Sub ConfirmMentionSelection()
     Application.EnableCancelKey = oldCancelKey
     restoreCancelKey = False
 
-    result = "’S“–ŠJn " & starts & "ŒEŠ®—¹ " & finishes & "Œ"
-    If skipped > 0 Then result = result & vbCrLf & "ƒXƒLƒbƒv " & skipped & "Œ"
-    If failedCount > 0 Then result = result & vbCrLf & "‘‚«o‚µƒGƒ‰[ " & failedCount & "Œ"
-    If Not RefreshView(failure) Then details = details & vbCrLf & "ˆê——‚ÌXV " & Left$(failure, 140)
-    ShowMessage Replace$(result, vbCrLf, "^")
+    result = "æ‹…å½“é–‹å§‹ " & starts & "ä»¶ãƒ»å®Œäº† " & finishes & "ä»¶"
+    If skipped > 0 Then result = result & vbCrLf & "ã‚¹ã‚­ãƒƒãƒ— " & skipped & "ä»¶"
+    If failedCount > 0 Then result = result & vbCrLf & "æ›¸ãå‡ºã—ã‚¨ãƒ©ãƒ¼ " & failedCount & "ä»¶"
+    If Not RefreshView(failure) Then details = details & vbCrLf & "ä¸€è¦§ã®æ›´æ–° " & Left$(failure, 140)
+    ShowMessage Replace$(result, vbCrLf, "ï¼")
     If Len(details) > 0 Then
-        MsgBox result & vbCrLf & details, vbExclamation, "Šm’èŒ‹‰Ê"
+        MsgBox result & vbCrLf & details, vbExclamation, "ç¢ºå®šçµæœ"
     Else
-        MsgBox result, vbInformation, "Šm’èŒ‹‰Ê"
+        MsgBox result, vbInformation, "ç¢ºå®šçµæœ"
     End If
     Exit Sub
 
@@ -173,10 +173,10 @@ Failed:
     failure = Err.Description
     If restoreCancelKey Then Application.EnableCancelKey = oldCancelKey
     If starts + finishes > 0 Then
-        MsgBox "’S“–ŠJn " & starts & "ŒEŠ®—¹ " & finishes & "Œ‚ğ•Û‘¶Ï‚İ‚Å‚·B" & _
-               vbCrLf & failure, vbExclamation, "Šm’è‚ğ’†’f"
+        MsgBox "æ‹…å½“é–‹å§‹ " & starts & "ä»¶ãƒ»å®Œäº† " & finishes & "ä»¶ã‚’ä¿å­˜æ¸ˆã¿ã§ã™ã€‚" & _
+               vbCrLf & failure, vbExclamation, "ç¢ºå®šã‚’ä¸­æ–­"
     Else
-        MsgBox failure, vbExclamation, "Šm’è‚ğ’†’f"
+        MsgBox failure, vbExclamation, "ç¢ºå®šã‚’ä¸­æ–­"
     End If
 End Sub
 
@@ -187,7 +187,7 @@ Private Function CommitRequest(ByVal outboxPath As String, ByVal requestId As St
 
     On Error GoTo Failed
     CommitRequest = "SKIP"
-    reason = "’S“–‚Ü‚½‚Í‘Î‰ó‹µ‚ª•Ï‚í‚è‚Ü‚µ‚½B"
+    reason = "æ‹…å½“ã¾ãŸã¯å¯¾å¿œçŠ¶æ³ãŒå¤‰ã‚ã‚Šã¾ã—ãŸã€‚"
     If Not fresh.Exists(requestId) Then Exit Function
     current = fresh(requestId)
     If AvailableAction(current) <> action Then Exit Function
@@ -199,7 +199,7 @@ Private Function CommitRequest(ByVal outboxPath As String, ByVal requestId As St
         If StrComp(receipt(1), mAccount, vbTextCompare) <> 0 Then Exit Function
     End If
     If Not WorkPublishStatus(outboxPath, requestId, action, mAccount) Then
-        reason = "“¯‚¶CSV‚ğ•Ê‚Ì‘€ì‚Åì¬’†A‚Ü‚½‚Íì¬Ï‚İ‚Å‚·B"
+        reason = "åŒã˜CSVã‚’åˆ¥ã®æ“ä½œã§ä½œæˆä¸­ã€ã¾ãŸã¯ä½œæˆæ¸ˆã¿ã§ã™ã€‚"
         Exit Function
     End If
     reason = vbNullString
@@ -222,14 +222,14 @@ Private Function RefreshView(ByRef failure As String) As Boolean
     If Not ThisWorkbook.ReadOnly Then ThisWorkbook.ChangeFileAccess xlReadOnly
     EnsureWorkList
     mAccount = Environ$("USERNAME")
-    If Len(mAccount) = 0 Then Err.Raise WORK_ERROR, , "PC‚ÌƒAƒJƒEƒ“ƒg–¼‚ğæ“¾‚Å‚«‚Ü‚¹‚ñB"
+    If Len(mAccount) = 0 Then Err.Raise WORK_ERROR, , "PCã®ã‚¢ã‚«ã‚¦ãƒ³ãƒˆåã‚’å–å¾—ã§ãã¾ã›ã‚“ã€‚"
 
     Set states = ReadWorkSnapshot(GetOutbox(), data)
     RenderWorkList data, states
     mSourceRows = data
     Set mStates = states
     EndMentionSelection
-    ShowMessage "XV " & Format$(Now, "hh:mm") & "E" & CStr(UBound(data, 1) - 1) & "Œ"
+    ShowMessage "æ›´æ–° " & Format$(Now, "hh:mm") & "ãƒ»" & CStr(UBound(data, 1) - 1) & "ä»¶"
     ThisWorkbook.Saved = True
     RefreshView = True
 
@@ -242,7 +242,7 @@ Failed:
     On Error Resume Next
     EndMentionSelection
     ProtectWorkList
-    ShowMessage "XV‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½"
+    ShowMessage "æ›´æ–°ã§ãã¾ã›ã‚“ã§ã—ãŸ"
     On Error GoTo 0
     GoTo Finished
 End Function
@@ -273,7 +273,7 @@ Failed:
     failureSource = Err.Source
     failureDescription = Err.Description
     If Not ws Is Nothing Then
-        ' ‰Šú‰»‚Å‚«‚È‚©‚Á‚½ƒV[ƒg‚¾‚¯‚ğ•Ğ•t‚¯AŸ‚ÌXV‚Åì¬‚ğÄs‚Å‚«‚é‚æ‚¤‚É‚·‚éB
+        ' åˆæœŸåŒ–ã§ããªã‹ã£ãŸã‚·ãƒ¼ãƒˆã ã‘ã‚’ç‰‡ä»˜ã‘ã€æ¬¡ã®æ›´æ–°ã§ä½œæˆã‚’å†è©¦è¡Œã§ãã‚‹ã‚ˆã†ã«ã™ã‚‹ã€‚
         restoreAlerts = Application.DisplayAlerts
         On Error Resume Next
         Application.DisplayAlerts = False
@@ -281,7 +281,7 @@ Failed:
         Application.DisplayAlerts = restoreAlerts
         On Error GoTo 0
     End If
-    Err.Raise failureNumber, failureSource, "u" & WORK_SHEET & "vƒV[ƒg‚ğì¬‚Å‚«‚Ü‚¹‚ñB" & vbCrLf & failureDescription
+    Err.Raise failureNumber, failureSource, "ã€Œ" & WORK_SHEET & "ã€ã‚·ãƒ¼ãƒˆã‚’ä½œæˆã§ãã¾ã›ã‚“ã€‚" & vbCrLf & failureDescription
 End Sub
 
 Private Sub FormatWorkList(ByVal ws As Worksheet)
@@ -303,7 +303,7 @@ Private Sub FormatWorkList(ByVal ws As Worksheet)
         .Range("C:Y").NumberFormat = "@"
         .Columns("C:D").HorizontalAlignment = xlCenter
 
-        .Cells(1, PICK_COL).Value2 = "‘I‘ğ"
+        .Cells(1, PICK_COL).Value2 = "é¸æŠ"
         .Cells(1, DISPLAY_STATE).Value2 = STATE_HEADER
         For column = LBound(headers) To UBound(headers)
             .Cells(1, FIRST_DATA_COL + column).Value2 = headers(column)
@@ -329,18 +329,18 @@ Private Sub FormatWorkList(ByVal ws As Worksheet)
             .Interior.Color = RGB(240, 244, 248)
         End With
         .Range("A2:B2").Interior.Color = RGB(229, 244, 240)
-        .Range("A2").Value2 = "‹N“®‚ÉWŒv‚ğ“Ç‚İ‚İ‚Ü‚·B"
-        .Range("A3").Value2 = "m‘I‘ğŠJnn‚Ì‚ ‚ÆAC—ñ‚Ìu‘I‘ğ‰Âv‚ğƒNƒŠƒbƒNB"
-        .Range("A4").Value2 = "–¢‘Î‰‚Í’S“–ŠJnA©•ª‚Ì‘Î‰’†‚ÍŠ®—¹B"
+        .Range("A2").Value2 = "èµ·å‹•æ™‚ã«é›†è¨ˆã‚’èª­ã¿è¾¼ã¿ã¾ã™ã€‚"
+        .Range("A3").Value2 = "ï¼»é¸æŠé–‹å§‹ï¼½ã®ã‚ã¨ã€Cåˆ—ã®ã€Œé¸æŠå¯ã€ã‚’ã‚¯ãƒªãƒƒã‚¯ã€‚"
+        .Range("A4").Value2 = "æœªå¯¾å¿œã¯æ‹…å½“é–‹å§‹ã€è‡ªåˆ†ã®å¯¾å¿œä¸­ã¯å®Œäº†ã€‚"
 
-        AddWorkButton .Range("A1"), "XV", "RefreshMentionWork"
-        AddWorkButton .Range("B1"), "‘I‘ğŠJn", "ToggleMentionSelection"
+        AddWorkButton .Range("A1"), "æ›´æ–°", "RefreshMentionWork"
+        AddWorkButton .Range("B1"), "é¸æŠé–‹å§‹", "ToggleMentionSelection"
         lastRow = .Rows.Count
-        ColorWorkCells .Range("C2:C" & lastRow), "=$C2=""‘I‘ğÏ""", RGB(19, 121, 109), vbWhite
-        ColorWorkCells .Range("C2:C" & lastRow), "=$C2=""‘I‘ğ‰Â""", RGB(229, 244, 240), RGB(24, 84, 77)
-        ColorWorkCells .Range("D2:D" & lastRow), "=$D2=""–¢‘Î‰""", RGB(237, 242, 247), RGB(48, 78, 102)
-        ColorWorkCells .Range("D2:D" & lastRow), "=$D2=""‘Î‰’†""", RGB(255, 242, 206), RGB(113, 80, 17)
-        ColorWorkCells .Range("D2:D" & lastRow), "=$D2=""Š®—¹""", RGB(231, 237, 243), RGB(67, 88, 107)
+        ColorWorkCells .Range("C2:C" & lastRow), "=$C2=""é¸æŠæ¸ˆ""", RGB(19, 121, 109), vbWhite
+        ColorWorkCells .Range("C2:C" & lastRow), "=$C2=""é¸æŠå¯""", RGB(229, 244, 240), RGB(24, 84, 77)
+        ColorWorkCells .Range("D2:D" & lastRow), "=$D2=""æœªå¯¾å¿œ""", RGB(237, 242, 247), RGB(48, 78, 102)
+        ColorWorkCells .Range("D2:D" & lastRow), "=$D2=""å¯¾å¿œä¸­""", RGB(255, 242, 206), RGB(113, 80, 17)
+        ColorWorkCells .Range("D2:D" & lastRow), "=$D2=""å®Œäº†""", RGB(231, 237, 243), RGB(67, 88, 107)
     End With
 
     If Application.ActiveSheet Is ws Then
@@ -380,7 +380,7 @@ Private Function ReadWorkSnapshot(ByVal outboxPath As String, ByRef data As Vari
         requestId = TextValue(data(row, SOURCE_ID))
         If Len(requestId) > 0 Then
             If result.Exists(requestId) Then
-                Err.Raise WORK_ERROR, , "WŒv‚Éd•¡‚µ‚½RequestID‚ª‚ ‚è‚Ü‚·B" & vbCrLf & requestId
+                Err.Raise WORK_ERROR, , "é›†è¨ˆã«é‡è¤‡ã—ãŸRequestIDãŒã‚ã‚Šã¾ã™ã€‚" & vbCrLf & requestId
             End If
             owner = TextValue(data(row, SOURCE_COLS))
             Select Case owner
@@ -418,7 +418,7 @@ Private Function ReadSummaryData() As Variant
     sourceToOpen = source
     For Each existing In Application.Workbooks
         If StrComp(existing.Name, files.GetFileName(source), vbTextCompare) = 0 Then
-            ' “¯–¼ƒuƒbƒN‚ªŠJ‚¢‚Ä‚¢‚éê‡‚ÍAƒfƒBƒXƒNã‚Ì•Û‘¶Ï‚İ‚Ì”Å‚ğ•Ê–¼‚Å“Ç‚ŞB
+            ' åŒåãƒ–ãƒƒã‚¯ãŒé–‹ã„ã¦ã„ã‚‹å ´åˆã¯ã€ãƒ‡ã‚£ã‚¹ã‚¯ä¸Šã®ä¿å­˜æ¸ˆã¿ã®ç‰ˆã‚’åˆ¥åã§èª­ã‚€ã€‚
             tempPath = files.BuildPath(files.GetSpecialFolder(2).Path, files.GetTempName())
             files.CreateFolder tempPath
             createdTempFolder = True
@@ -439,18 +439,18 @@ Private Function ReadSummaryData() As Variant
     On Error Resume Next
     Set summary = book.Worksheets(SUMMARY_SHEET)
     On Error GoTo Failed
-    If summary Is Nothing Then Err.Raise WORK_ERROR, , "WŒv—pExcel‚ÉuWŒvvƒV[ƒg‚ª‚ ‚è‚Ü‚¹‚ñB"
+    If summary Is Nothing Then Err.Raise WORK_ERROR, , "é›†è¨ˆç”¨Excelã«ã€Œé›†è¨ˆã€ã‚·ãƒ¼ãƒˆãŒã‚ã‚Šã¾ã›ã‚“ã€‚"
 
     lastRow = summary.Cells(summary.Rows.Count, SOURCE_ID).End(xlUp).Row
     data = summary.Cells(1, 1).Resize(lastRow, SOURCE_COLS).Value2
     headers = Split(SOURCE_HEADERS, "|")
     For col = 1 To SOURCE_ID
         If TextValue(data(1, col)) <> headers(col - 1) Then
-            Err.Raise WORK_ERROR, , "uWŒvvƒV[ƒg‚ÌŒ©o‚µ‚ğŠm”F‚µ‚Ä‚­‚¾‚³‚¢B—ñ " & col
+            Err.Raise WORK_ERROR, , "ã€Œé›†è¨ˆã€ã‚·ãƒ¼ãƒˆã®è¦‹å‡ºã—ã‚’ç¢ºèªã—ã¦ãã ã•ã„ã€‚åˆ— " & col
         End If
     Next col
     If TextValue(data(1, SOURCE_COLS)) <> STATE_HEADER Then
-        Err.Raise WORK_ERROR, , "uWŒvvƒV[ƒg‚ÌV1‚Éu‘Î‰ó‹µv‚ª•K—v‚Å‚·B"
+        Err.Raise WORK_ERROR, , "ã€Œé›†è¨ˆã€ã‚·ãƒ¼ãƒˆã®V1ã«ã€Œå¯¾å¿œçŠ¶æ³ã€ãŒå¿…è¦ã§ã™ã€‚"
     End If
 
     ReadSummaryData = data
@@ -479,13 +479,13 @@ Private Function FindSummaryFile(ByVal files As Object) As String
         candidate = files.BuildPath(ThisWorkbook.Path, SUMMARY_BOOK & extension)
         If files.FileExists(candidate) Then
             If Len(FindSummaryFile) > 0 Then
-                Err.Raise WORK_ERROR, , "“¯–¼‚Ìuƒƒ“ƒVƒ‡ƒ“WŒv—pvƒtƒ@ƒCƒ‹‚ª•¡”‚ ‚è‚Ü‚·B"
+                Err.Raise WORK_ERROR, , "åŒåã®ã€Œãƒ¡ãƒ³ã‚·ãƒ§ãƒ³é›†è¨ˆç”¨ã€ãƒ•ã‚¡ã‚¤ãƒ«ãŒè¤‡æ•°ã‚ã‚Šã¾ã™ã€‚"
             End If
             FindSummaryFile = candidate
         End If
     Next extension
     If Len(FindSummaryFile) = 0 Then
-        Err.Raise WORK_ERROR, , "‚±‚ÌExcel‚Æ“¯‚¶ŠK‘w‚Éuƒƒ“ƒVƒ‡ƒ“WŒv—pv‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñB"
+        Err.Raise WORK_ERROR, , "ã“ã®Excelã¨åŒã˜éšå±¤ã«ã€Œãƒ¡ãƒ³ã‚·ãƒ§ãƒ³é›†è¨ˆç”¨ã€ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚"
     End If
 End Function
 
@@ -493,11 +493,11 @@ Private Function GetOutbox() As String
     Dim files As Object
     Set files = CreateObject("Scripting.FileSystemObject")
     If Len(ThisWorkbook.Path) = 0 Or InStr(1, ThisWorkbook.Path, "://", vbTextCompare) > 0 Then
-        Err.Raise WORK_ERROR, , "Windows‚Ì‹¤—LƒtƒHƒ‹ƒ_‚©‚çì‹Æ—pExcel‚ğŠJ‚¢‚Ä‚­‚¾‚³‚¢B"
+        Err.Raise WORK_ERROR, , "Windowsã®å…±æœ‰ãƒ•ã‚©ãƒ«ãƒ€ã‹ã‚‰ä½œæ¥­ç”¨Excelã‚’é–‹ã„ã¦ãã ã•ã„ã€‚"
     End If
     GetOutbox = files.BuildPath(ThisWorkbook.Path, OUTBOX)
     If Not files.FolderExists(GetOutbox) Then
-        Err.Raise WORK_ERROR, , "‚±‚ÌExcel‚Æ“¯‚¶ŠK‘w‚Éu‘‚«o‚µ—pvƒtƒHƒ‹ƒ_‚ª‚ ‚è‚Ü‚¹‚ñB"
+        Err.Raise WORK_ERROR, , "ã“ã®Excelã¨åŒã˜éšå±¤ã«ã€Œæ›¸ãè¾¼ã¿ç”¨ã€ãƒ•ã‚©ãƒ«ãƒ€ãŒã‚ã‚Šã¾ã›ã‚“ã€‚"
     End If
 End Function
 
@@ -545,7 +545,7 @@ Private Sub SetSelectionButtonCaption(ByVal caption As String)
     On Error GoTo Failed
     With WorkList()
         If .Buttons(2).Caption = caption Then Exit Sub
-        ' ƒtƒH[ƒ€ƒ{ƒ^ƒ“‚Ì•\¦‚ğ•ÏX‚·‚éŠÔ‚¾‚¯A}Œ`‚ğŠÜ‚ŞƒV[ƒg•ÛŒì‚ğ‰ğœ‚·‚éB
+        ' ãƒ•ã‚©ãƒ¼ãƒ ãƒœã‚¿ãƒ³ã®è¡¨ç¤ºã‚’å¤‰æ›´ã™ã‚‹é–“ã ã‘ã€å›³å½¢ã‚’å«ã‚€ã‚·ãƒ¼ãƒˆä¿è­·ã‚’è§£é™¤ã™ã‚‹ã€‚
         .Unprotect
         .Buttons(2).Caption = caption
     End With
@@ -586,7 +586,7 @@ Private Sub EndMentionSelection()
     mSelecting = False
     Set mPicked = Nothing
     PaintSelection
-    SetSelectionButtonCaption "‘I‘ğŠJn"
+    SetSelectionButtonCaption "é¸æŠé–‹å§‹"
     ThisWorkbook.Saved = True
 End Sub
 
@@ -605,7 +605,7 @@ Private Function NewRequestMap() As Object
 End Function
 
 Private Function TextValue(ByVal value As Variant) As String
-    If IsError(value) Then Err.Raise WORK_ERROR, , "WŒv‚ÌˆË—Šƒf[ƒ^‚ÉƒZƒ‹ƒGƒ‰[‚ª‚ ‚è‚Ü‚·B"
+    If IsError(value) Then Err.Raise WORK_ERROR, , "é›†è¨ˆã®ä¾é ¼ãƒ‡ãƒ¼ã‚¿ã«ã‚»ãƒ«ã‚¨ãƒ©ãƒ¼ãŒã‚ã‚Šã¾ã™ã€‚"
     If Not IsEmpty(value) Then TextValue = CStr(value)
 End Function
 
