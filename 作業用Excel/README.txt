@@ -35,6 +35,8 @@ Windows版Excelでの初回確認では、テスト用の依頼を2人で同時�
 VBAコード
 作業用Excelに組み込み済みのコードです。編集する場合は、次のファイルを使います。
 
-・modMentionWork.bas と modMentionWorkStorage.bas は標準モジュールです。
-  日本語版WindowsのVBAエディターでインポートできるように、CP932で保存しています。
+・modMentionWork.bas と modMentionWorkStorage.bas は、日本語版Windows向けのCP932の標準モジュールです。
+  両方のファイルをダウンロードしてVBAエディターにインポートします。既存の同名モジュールがある場合は置き換え、各モジュールを1つずつにします。
 ・ThisWorkbook.txt は作業用ブックの ThisWorkbook に貼り付けるイベントコードです。
+  既存の Workbook_Open と Workbook_SheetSelectionChange がある場合は、それぞれ置き換えます。
+  取り込み後は［デバッグ］→［VBAProject のコンパイル］で確認できます。

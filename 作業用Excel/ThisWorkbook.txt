@@ -1,9 +1,9 @@
 Option Explicit
 
 Private Sub Workbook_Open()
-    RefreshMentionWork
+    modMentionWork.RefreshMentionWork
 End Sub
 
 Private Sub Workbook_SheetSelectionChange(ByVal Sh As Object, ByVal Target As Range)
-    PickMentionRow Target
+    modMentionWork.PickMentionRow Target
 End Sub
